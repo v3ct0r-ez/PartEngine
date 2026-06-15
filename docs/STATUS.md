@@ -22,11 +22,11 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Inventory & movements | ✅ | Sprint 4: IN/OUT/TRANSFER/ADJUST txns, concurrency-safe no-oversell, reserve/release, location tree, stock rollup + health; UI page; 10 tests |
 | Auto-update system | ✅ | notify + one-click apply via GitHub Releases; semver compare (6 tests), gated/audited apply, backup-first updater script, admin banner; see docs/UPDATES.md |
 | Update verifier (`.exe`) | ✅ | standalone CLI → Windows .exe (PE32+ verified); logic/mock/check/gating commands; tools/update-verifier |
-| Suppliers / purchasing | ⬜ | schema ✅; Sprint 5 |
+| Suppliers / purchasing | ✅ | Sprint 5: suppliers + supplier parts, PO create/submit/receive (receiving stocks via transactional movements, onOrder + avg/last price + status); UI suppliers page |
 | BOM / kits | ⬜ | schema ✅; Sprint 6 |
 | Attachments / datasheet OCR | ⬜ | schema ✅ + S3 in compose; Sprint 7 |
 | Barcode/QR, reports, dashboard | ⬜ | Sprint 8 |
-| Notifications/alert engine | ⬜ | schema ✅; Sprint 5 |
+| Notifications/alert engine | ✅ | Sprint 5: pure rules (5 tests) + service (event-driven + periodic sweep, dedupe + auto-resolve); list/read endpoints; UI bell |
 | E2E (Playwright), 80% coverage | 🟡 | unit tests green; E2E config to add in Sprint 9 |
 
 See [`SPRINTS.md`](SPRINTS.md) for the build-out order.

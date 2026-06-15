@@ -72,6 +72,48 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface Notification {
+  id: string;
+  kind: 'LOW_STOCK' | 'CRITICAL_STOCK' | 'OUT_OF_STOCK' | 'ORDER_LATE' | 'MISSING_DATASHEET';
+  entity: string;
+  entityId: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export function listNotifications(unreadOnly = false) {
+  return request<Notification[]>(`/notifications${unreadOnly ? '?unread=true' : ''}`);
+}
+
+export function markNotificationRead(id: string) {
+  return request<Notification>(`/notifications/${id}/read`, { method: 'POST' });
+}
+
+export function markAllNotificationsRead() {
+  return request<{ success: boolean }>(`/notifications/read-all`, { method: 'POST' });
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactEmail?: string | null;
+  avgLeadTimeDays?: number | null;
+  reliability?: string | null;
+}
+
+export function listSuppliers() {
+  return request<Supplier[]>('/suppliers');
+}
+
+export function createSupplier(body: {
+  name: string;
+  contactEmail?: string;
+  avgLeadTimeDays?: number;
+}) {
+  return request<Supplier>('/suppliers', { method: 'POST', body: JSON.stringify(body) });
+}
+
 export interface UpdateInfo {
   currentVersion: string;
   latestVersion: string | null;

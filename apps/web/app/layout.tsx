@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { NotificationsBell } from '@/components/notifications-bell';
 import { UpdateBanner } from '@/components/update-banner';
 import { Providers } from './providers';
 
@@ -37,6 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </aside>
             <div className="flex-1">
               <UpdateBanner />
+              <div className="flex items-center justify-end border-b border-border px-6 py-2">
+                <NotificationsBell />
+              </div>
               <main className="p-6">{children}</main>
             </div>
           </div>

@@ -32,10 +32,14 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - **AC met:** reserved/available correct; no oversell (atomic guarded decrements
   prevent it even under concurrency); StockMovement ledger is append-only.
 
-## Sprint 5 — Suppliers, purchasing & notifications
-- Suppliers, SupplierPart, PurchaseOrder receiving (updates onOrder/stock).
-- Alert engine (low/critical/out-of-stock, late orders, missing datasheet) via queue.
-- **AC:** receiving a PO updates stock; crossing min qty raises a notification.
+## Sprint 5 — Suppliers, purchasing & notifications ✅
+- Suppliers + SupplierPart upsert; PO create → submit (onOrder) → receive.
+- Receiving stocks goods via the Sprint-4 transactional movement service, consumes
+  onOrder, updates last/avg price, and recomputes PARTIAL/RECEIVED status.
+- Alert engine: low/critical/out-of-stock, late orders, missing datasheet —
+  event-driven (after receiving) + periodic sweep; auto-resolves stale alerts.
+- **AC met:** receiving a PO raises stock; crossing min qty raises a notification
+  (verified by the +5 core alert tests; UI bell + suppliers page).
 
 ## Sprint 6 — BOM, kits & assemblies
 - BOM CRUD + versioning + CSV import; availability check (available/partial/missing).
