@@ -38,9 +38,10 @@ export class ServiceManager {
           HOST: this.cfg.host,
           WEB_ORIGIN: `http://localhost:${this.cfg.webPort},http://127.0.0.1:${this.cfg.webPort}`,
         },
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
+    this.pipeOutput('api', this.api);
     this.api.on('exit', (code) => log(`API exited (${code})`, code ? 'error' : 'info'));
 
     await this.waitForHealth(`http://127.0.0.1:${this.cfg.apiPort}/api/health`, 60_000);
@@ -57,9 +58,10 @@ export class ServiceManager {
           HOSTNAME: this.cfg.host,
           NEXT_PUBLIC_API_URL: `http://127.0.0.1:${this.cfg.apiPort}`,
         },
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
+    this.pipeOutput('web', this.web);
     this.web.on('exit', (code) => log(`Web exited (${code})`, code ? 'error' : 'info'));
 
     await this.waitForHttp(this.webUrl, 60_000);
@@ -69,6 +71,19 @@ export class ServiceManager {
   stop(): void {
     this.web?.kill();
     this.api?.kill();
+  }
+
+  /** Forward a child's stdout/stderr into the app log so failures are diagnosable. */
+  private pipeOutput(name: string, child: ChildProcess): void {
+    const forward = (level: 'info' | 'error') => (buf: Buffer) => {
+      buf
+        .toString()
+        .split(/\r?\n/)
+        .filter((l) => l.trim())
+        .forEach((l) => log(`[${name}] ${l}`, level));
+    };
+    child.stdout?.on('data', forward('info'));
+    child.stderr?.on('data', forward('error'));
   }
 
   /** Poll an API health endpoint until it reports the DB is reachable. */

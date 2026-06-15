@@ -76,11 +76,14 @@ export class DatabaseManager {
     const res = spawnSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
       cwd: apiDir,
       env,
-      stdio: 'inherit',
+      encoding: 'utf8',
     });
-    if (res.error) log(`WARNING: prisma migrate failed to spawn: ${res.error.message}`, 'warn');
-    else if (res.status !== 0) log(`WARNING: prisma migrate exited ${res.status}`, 'warn');
-    else log('Migrations applied.');
+    // Surface Prisma's own output in our log (stdio isn't inherited here).
+    const out = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim();
+    if (out) out.split(/\r?\n/).forEach((l) => log(`[prisma] ${l}`));
+    if (res.error) throw new Error(`prisma migrate failed to spawn: ${res.error.message}`);
+    if (res.status !== 0) throw new Error(`prisma migrate deploy exited ${res.status}`);
+    log('Migrations applied.');
 
     // FTS/trgm indexes are a performance optimisation (search works without
     // them, via Prisma `contains`); applying 001_search.sql is best-effort and
