@@ -121,6 +121,11 @@ If double-clicking the `.exe` shows no window:
    `PartEngine`/`postgres` processes in Task Manager, then relaunch.
 4. **First run is slower** — it initialises the Postgres cluster and runs migrations before the
    window appears; watch the splash.
+5. **Slow to even show the splash (minutes)?** You're likely running the **portable** build,
+   which self-extracts the whole app (~200 MB) to `%TEMP%` on *every* launch — and an unsigned
+   binary gets scanned by SmartScreen/Defender each time. Use the **installer**
+   (`PartEngine-Setup-<version>.exe`) instead: it unpacks once to disk, so subsequent launches
+   start in seconds. Code-signing (CSC_LINK) removes the AV scan delay too.
 
 Known root causes fixed in earlier revisions: the packaged app must include
 `node_modules` (electron-updater + embedded-postgres are required at launch), and

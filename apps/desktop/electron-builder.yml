@@ -39,11 +39,10 @@ publish:
 
 win:
   target:
-    - target: nsis        # installer
+    - target: nsis # installer — installs once to disk; fast subsequent launches
       arch: [x64]
-    - target: portable    # single .exe, no install
+    - target: portable # single self-extracting .exe; convenient but slower to start
       arch: [x64]
-  artifactName: "PartEngine-${version}-${arch}.${ext}"
 
 nsis:
   oneClick: false
@@ -51,6 +50,11 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  # Distinct names so installer and portable don't overwrite each other (both .exe).
+  artifactName: PartEngine-Setup-${version}.${ext}
+
+portable:
+  artifactName: PartEngine-Portable-${version}.${ext}
 
 # The app data (Postgres cluster, logs) lives in %APPDATA%/PartEngine and is
 # intentionally NOT bundled, so updates never destroy the user's inventory data.
