@@ -23,9 +23,11 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
 
   const port = Number(process.env.API_PORT ?? 4000);
-  await app.listen(port);
+  // HOST controls local-only (127.0.0.1) vs LAN (0.0.0.0) in the desktop build.
+  const host = process.env.HOST ?? '0.0.0.0';
+  await app.listen(port, host);
   // eslint-disable-next-line no-console
-  console.log(`PartEngine API listening on :${port}`);
+  console.log(`PartEngine API listening on ${host}:${port}`);
 }
 
 bootstrap();

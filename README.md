@@ -24,7 +24,8 @@ BOMs, and datasheet management.
 partengine/
 ├── apps/
 │   ├── api/          # NestJS + Prisma backend (REST, RBAC, audit, search)
-│   └── web/          # Next.js (App Router) + Tailwind + shadcn/ui frontend
+│   ├── web/          # Next.js (App Router) + Tailwind + shadcn/ui frontend
+│   └── desktop/      # Electron all-in-one Windows app (bundles PostgreSQL+API+UI)
 ├── packages/
 │   └── core/         # Framework-agnostic domain logic (units, search, schemas)
 │                     #   ← the "smart engine", fully unit-tested, shared by api & web
@@ -59,6 +60,7 @@ pnpm dev                # api on :4000, web on :3000
 | [`docs/SPRINTS.md`](docs/SPRINTS.md) | Delivery plan (sprints, with acceptance criteria) |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | RBAC, audit, backup, encryption, rate-limiting |
 | [`docs/UPDATES.md`](docs/UPDATES.md) | Auto-update (notify + one-click apply via GitHub Releases) |
+| [`docs/DESKTOP.md`](docs/DESKTOP.md) | All-in-one Windows `.exe` (Electron: bundled PostgreSQL+API+UI) |
 | [`docs/STATUS.md`](docs/STATUS.md) | What is implemented vs. scaffolded |
 
 ## Tech stack (summary)

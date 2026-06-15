@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { ComponentsModule } from './components/components.module';
+import { HealthController } from './health/health.controller';
 import { InventoryModule } from './inventory/inventory.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -32,6 +33,7 @@ import { UpdateModule } from './update/update.module';
     PurchasingModule,
     UpdateModule,
   ],
+  controllers: [HealthController],
   providers: [
     // Order matters: rate-limit → authenticate → authorize.
     { provide: APP_GUARD, useClass: ThrottlerGuard },

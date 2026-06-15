@@ -1,0 +1,41 @@
+appId: com.partengine.desktop
+productName: PartEngine
+copyright: PartEngine
+
+directories:
+  output: release
+  buildResources: static
+
+# The Electron main bundle (compiled from src/ → dist/) plus the loading/tray assets.
+files:
+  - dist/**/*
+  - static/**/*
+  - package.json
+
+# Server bundles are staged by scripts/prepare-bundles.mjs into ./staging and
+# shipped as resources (not packed into the asar), so child Node processes can
+# execute them directly. The embedded Postgres binaries ride along via the
+# embedded-postgres dependency's platform package.
+extraResources:
+  - from: staging/api
+    to: app.api
+  - from: staging/web
+    to: app.web
+
+win:
+  target:
+    - target: nsis        # installer
+      arch: [x64]
+    - target: portable    # single .exe, no install
+      arch: [x64]
+  artifactName: "PartEngine-${version}-${arch}.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# The app data (Postgres cluster, logs) lives in %APPDATA%/PartEngine and is
+# intentionally NOT bundled, so updates never destroy the user's inventory data.
