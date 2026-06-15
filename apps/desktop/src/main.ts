@@ -17,9 +17,16 @@ let loadingWindow: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let shuttingDown = false;
 
+// Never fail silently: surface any unexpected error as a dialog + log entry.
+process.on('uncaughtException', (err) => fatal(err));
+process.on('unhandledRejection', (reason) =>
+  fatal(reason instanceof Error ? reason : new Error(String(reason))),
+);
+
 // Single-instance: a second launch focuses the existing window instead of
 // starting a second Postgres against the same data dir.
 if (!app.requestSingleInstanceLock()) {
+  log('Another PartEngine instance is already running — exiting.', 'warn');
   app.quit();
 } else {
   app.on('second-instance', () => mainWindow?.focus());

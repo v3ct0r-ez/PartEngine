@@ -107,6 +107,26 @@ Flow (same notify + one-click model as the rest of PartEngine):
   makes the build emit `latest.yml`. Releases must be tagged `vX.Y.Z` with the artifacts attached.
 - `tools/update-verifier` continues to verify the version-detection logic.
 
+## Troubleshooting — "nothing happens" on launch
+
+If double-clicking the `.exe` shows no window:
+
+1. **Check the log.** `%APPDATA%\PartEngine\logs\partengine.log` (early crashes fall back to
+   `%TEMP%\PartEngine-logs\partengine.log`). The launcher now logs every startup phase and
+   surfaces any error as a dialog (global `uncaughtException`/`unhandledRejection` handlers).
+2. **Run from a terminal** to see stdout/stderr directly:
+   `"C:\Program Files\PartEngine\PartEngine.exe"` (or the portable exe path) from `cmd`/PowerShell.
+3. **A stale background instance?** PartEngine keeps running in the system tray; a second launch
+   exits immediately by design (single-instance lock). Quit it from the tray or kill leftover
+   `PartEngine`/`postgres` processes in Task Manager, then relaunch.
+4. **First run is slower** — it initialises the Postgres cluster and runs migrations before the
+   window appears; watch the splash.
+
+Known root cause fixed in this revision: the packaged app must include `node_modules`
+(electron-updater + embedded-postgres are required at launch) and unpack the Postgres binaries
+from the asar — see `electron-builder.yml`. Rebuild via the Desktop Release workflow to get a
+corrected installer.
+
 ## Security notes (desktop specifics)
 
 - `contextIsolation: true`, `nodeIntegration: false`; the renderer gets only the tiny

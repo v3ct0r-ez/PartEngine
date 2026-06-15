@@ -6,16 +6,24 @@ directories:
   output: release
   buildResources: static
 
-# The Electron main bundle (compiled from src/ → dist/) plus the loading/tray assets.
+# The Electron main bundle (dist/), assets, AND the runtime node_modules — the
+# main process requires electron-updater + embedded-postgres at launch, so they
+# MUST be packaged (omitting node_modules makes the app exit silently on start).
 files:
   - dist/**/*
   - static/**/*
   - package.json
+  - node_modules/**/*
+
+# embedded-postgres ships native PostgreSQL binaries that must execute from disk,
+# so they can't live inside the asar archive — unpack them.
+asarUnpack:
+  - node_modules/embedded-postgres/**
+  - node_modules/@embedded-postgres/**
 
 # Server bundles are staged by scripts/prepare-bundles.mjs into ./staging and
 # shipped as resources (not packed into the asar), so child Node processes can
-# execute them directly. The embedded Postgres binaries ride along via the
-# embedded-postgres dependency's platform package.
+# execute them directly.
 extraResources:
   - from: staging/api
     to: app.api

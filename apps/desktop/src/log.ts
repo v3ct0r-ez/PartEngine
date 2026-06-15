@@ -1,12 +1,23 @@
 import { app } from 'electron';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 let stream: fs.WriteStream | undefined;
 
+function logDir(): string {
+  // app.getPath('logs') throws before the app is ready; fall back to a temp dir
+  // so early-startup crashes are still captured.
+  try {
+    return app.getPath('logs');
+  } catch {
+    return path.join(os.tmpdir(), 'PartEngine-logs');
+  }
+}
+
 function file(): fs.WriteStream {
   if (!stream) {
-    const dir = app.getPath('logs');
+    const dir = logDir();
     fs.mkdirSync(dir, { recursive: true });
     stream = fs.createWriteStream(path.join(dir, 'partengine.log'), { flags: 'a' });
   }
