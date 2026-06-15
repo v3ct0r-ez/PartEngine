@@ -122,10 +122,13 @@ If double-clicking the `.exe` shows no window:
 4. **First run is slower** — it initialises the Postgres cluster and runs migrations before the
    window appears; watch the splash.
 
-Known root cause fixed in this revision: the packaged app must include `node_modules`
-(electron-updater + embedded-postgres are required at launch) and unpack the Postgres binaries
-from the asar — see `electron-builder.yml`. Rebuild via the Desktop Release workflow to get a
-corrected installer.
+Known root causes fixed in earlier revisions: the packaged app must include
+`node_modules` (electron-updater + embedded-postgres are required at launch), and
+**asar packing is disabled** (`asar: false`) — embedded-postgres spawns native
+PostgreSQL binaries (`initdb`/`pg_ctl`/`postgres`) by a path relative to its own
+module, which inside an asar archive resolves to a virtual path that
+`child_process` can't execute (`ENOENT`). Shipping files unpacked fixes it.
+Rebuild via the Desktop Release workflow to get a corrected installer.
 
 ## Security notes (desktop specifics)
 

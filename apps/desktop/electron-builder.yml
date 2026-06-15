@@ -6,20 +6,21 @@ directories:
   output: release
   buildResources: static
 
+# Disable asar packing. embedded-postgres spawns native binaries (initdb/pg_ctl/
+# postgres) using paths relative to its own module location; inside an asar those
+# resolve to a virtual path that child_process can't execute (ENOENT), and
+# asarUnpack alone doesn't make the library use the .unpacked path. Shipping
+# everything as real files on disk makes native-binary spawning just work.
+asar: false
+
 # The Electron main bundle (dist/), assets, AND the runtime node_modules — the
 # main process requires electron-updater + embedded-postgres at launch, so they
-# MUST be packaged (omitting node_modules makes the app exit silently on start).
+# MUST be packaged.
 files:
   - dist/**/*
   - static/**/*
   - package.json
   - node_modules/**/*
-
-# embedded-postgres ships native PostgreSQL binaries that must execute from disk,
-# so they can't live inside the asar archive — unpack them.
-asarUnpack:
-  - node_modules/embedded-postgres/**
-  - node_modules/@embedded-postgres/**
 
 # Server bundles are staged by scripts/prepare-bundles.mjs into ./staging and
 # shipped as resources (not packed into the asar), so child Node processes can
