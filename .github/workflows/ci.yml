@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: partengine
+          POSTGRES_PASSWORD: partengine
+          POSTGRES_DB: partengine
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U partengine"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://partengine:partengine@localhost:5432/partengine?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @partengine/core test
+      - run: pnpm --filter @partengine/core lint
+      - run: pnpm --filter @partengine/api prisma:generate
+      - run: pnpm -r build
