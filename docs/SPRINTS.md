@@ -25,10 +25,12 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - Web: components table (server-side sort/filter), filter sidebar, unit-aware sort.
 - **AC:** "resistenza 10k 1% 0603" returns expected rows; sort is by magnitude; <100ms on seed.
 
-## Sprint 4 — Inventory & movements
+## Sprint 4 — Inventory & movements ✅
 - StockLevel per location; INBOUND/OUTBOUND/TRANSFER/ADJUSTMENT in transactions.
 - Location tree (warehouse → zone → … → box).
-- **AC:** reserved/available correct; no oversell; movement ledger immutable.
+- Reserve/release (reserved never exceeds physical qty); stock rollup + health.
+- **AC met:** reserved/available correct; no oversell (atomic guarded decrements
+  prevent it even under concurrency); StockMovement ledger is append-only.
 
 ## Sprint 5 — Suppliers, purchasing & notifications
 - Suppliers, SupplierPart, PurchaseOrder receiving (updates onOrder/stock).

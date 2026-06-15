@@ -19,7 +19,7 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Component CRUD + search endpoint | 🟡 | service/controller stubs using core engine |
 | Next.js app + key components | 🟡 | layout, components table, filter sidebar, dynamic form |
 | Persistent memory (prefs/views/recent) | 🟡 | schema ✅; endpoints/UI scaffolded |
-| Inventory & movements | ⬜ | schema ✅; service logic per Sprint 4 |
+| Inventory & movements | ✅ | Sprint 4: IN/OUT/TRANSFER/ADJUST txns, concurrency-safe no-oversell, reserve/release, location tree, stock rollup + health; UI page; 10 tests |
 | Suppliers / purchasing | ⬜ | schema ✅; Sprint 5 |
 | BOM / kits | ⬜ | schema ✅; Sprint 6 |
 | Attachments / datasheet OCR | ⬜ | schema ✅ + S3 in compose; Sprint 7 |
