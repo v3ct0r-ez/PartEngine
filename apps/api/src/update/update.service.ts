@@ -31,6 +31,9 @@ export class UpdateService implements OnModuleInit, OnModuleDestroy {
 
   private readonly currentVersion = process.env.APP_VERSION ?? '0.1.0';
   private readonly repo = process.env.UPDATE_GITHUB_REPO ?? 'v3ct0r-ez/PartEngine';
+  // Overridable so a test harness (tools/update-verifier) can point the checker
+  // at a local mock release server for true end-to-end verification.
+  private readonly apiBase = process.env.UPDATE_GITHUB_API_BASE ?? 'https://api.github.com';
   private readonly token = process.env.GITHUB_TOKEN;
   private readonly allowApply = process.env.UPDATE_ALLOW_APPLY === 'true';
   private readonly scriptPath = process.env.UPDATE_SCRIPT_PATH ?? '/app/infra/update.sh';
@@ -72,7 +75,7 @@ export class UpdateService implements OnModuleInit, OnModuleDestroy {
 
   /** Query GitHub for the latest release and compare with the running version. */
   async check(): Promise<UpdateInfo> {
-    const url = `https://api.github.com/repos/${this.repo}/releases/latest`;
+    const url = `${this.apiBase}/repos/${this.repo}/releases/latest`;
     try {
       const res = await fetch(url, {
         headers: {

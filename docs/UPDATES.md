@@ -51,6 +51,19 @@ UPDATE_SCRIPT_PATH="/app/infra/update.sh"
 `APP_VERSION` should be injected at build/deploy time (e.g. the release tag) so the running
 container knows what it is. Tag releases on GitHub as `vX.Y.Z`; the checker strips the `v`.
 
+## Verifying the updater (`.exe`)
+
+`tools/update-verifier` is a standalone CLI (ships as a Windows `.exe`) that tests this whole
+mechanism — see [its README](../tools/update-verifier/README.md):
+
+- `logic` — offline self-test of the version-comparison engine.
+- `mock` — serves a fake GitHub `releases/latest` (point a dev API at it via
+  `UPDATE_GITHUB_API_BASE`) to watch detection + the banner work end-to-end.
+- `check` / `gating` — validate a live API's status/check and that `apply` is properly gated
+  (without mutating the deployment).
+
+Build: `pnpm --filter @partengine/update-verifier build:exe`.
+
 ## Safety properties
 
 - **Backup-first:** the script aborts the update if `pg_dump` fails.
