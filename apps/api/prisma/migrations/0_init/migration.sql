@@ -626,24 +626,33 @@ ALTER TABLE "KitLine" ADD CONSTRAINT "KitLine_componentId_fkey" FOREIGN KEY ("co
 ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_componentId_fkey" FOREIGN KEY ("componentId") REFERENCES "Component"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
--- Full-text search + fuzzy search (search_vector + GIN/trigram indexes)
--- Full-text search + fuzzy search setup for Component.
--- Apply after `prisma migrate` (Prisma can't express generated tsvector columns
--- or trigram indexes natively). See docs/SEARCH.md.
+-- Full-text search + fuzzy search for Component.
+-- search_vector is maintained by a TRIGGER, not a GENERATED column: the
+-- text->regconfig cast inside to_tsvector(...) is STABLE, which Postgres rejects
+-- in a generated/immutable expression ("generation expression is not immutable").
+-- A BEFORE trigger has no immutability constraint.
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Generated tsvector aggregating the searchable text fields.
-ALTER TABLE "Component"
-  ADD COLUMN IF NOT EXISTS search_vector tsvector
-  GENERATED ALWAYS AS (
-    setweight(to_tsvector('simple', coalesce("name", '')), 'A') ||
-    setweight(to_tsvector('simple', coalesce("internalCode", '')), 'A') ||
-    setweight(to_tsvector('simple', coalesce("mpn", '')), 'B') ||
-    setweight(to_tsvector('simple', coalesce("description", '')), 'C') ||
-    setweight(to_tsvector('simple', array_to_string("tags", ' ')), 'C') ||
-    setweight(to_tsvector('simple', array_to_string("aliases", ' ')), 'C')
-  ) STORED;
+ALTER TABLE "Component" ADD COLUMN IF NOT EXISTS search_vector tsvector;
+
+CREATE OR REPLACE FUNCTION pe_component_search_vector() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.search_vector :=
+    setweight(to_tsvector('simple', coalesce(NEW."name", '')), 'A') ||
+    setweight(to_tsvector('simple', coalesce(NEW."internalCode", '')), 'A') ||
+    setweight(to_tsvector('simple', coalesce(NEW."mpn", '')), 'B') ||
+    setweight(to_tsvector('simple', coalesce(NEW."description", '')), 'C') ||
+    setweight(to_tsvector('simple', array_to_string(NEW."tags", ' ')), 'C') ||
+    setweight(to_tsvector('simple', array_to_string(NEW."aliases", ' ')), 'C');
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS component_search_vector_trg ON "Component";
+CREATE TRIGGER component_search_vector_trg
+  BEFORE INSERT OR UPDATE ON "Component"
+  FOR EACH ROW EXECUTE FUNCTION pe_component_search_vector();
 
 -- Ranked full-text search.
 CREATE INDEX IF NOT EXISTS component_search_vector_idx

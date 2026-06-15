@@ -10,10 +10,20 @@ import { UpdaterManager } from './updater';
 // VERY FIRST thing: prove the process started and install crash handlers, so
 // any failure from here on is logged + shown rather than disappearing silently.
 log(`main process started (electron ${process.versions.electron}, pid ${process.pid})`);
-process.on('uncaughtException', (err) => fatal(err));
+process.on('uncaughtException', (err) => onUnexpected(err));
 process.on('unhandledRejection', (reason) =>
-  fatal(reason instanceof Error ? reason : new Error(String(reason))),
+  onUnexpected(reason instanceof Error ? reason : new Error(String(reason))),
 );
+
+// During shutdown, embedded-postgres (beta) can throw asynchronously
+// ("done is not a function"); don't let teardown noise pop a fatal dialog.
+function onUnexpected(err: Error) {
+  if (shuttingDown) {
+    log(`Ignored error during shutdown: ${err.message}`, 'warn');
+    return;
+  }
+  fatal(err);
+}
 
 // Managers are created during bootstrap (after app is ready) so that any error
 // in their construction is caught and logged.
