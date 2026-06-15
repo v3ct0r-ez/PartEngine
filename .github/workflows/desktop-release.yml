@@ -35,7 +35,7 @@ jobs:
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build workspace bundles
         run: |
