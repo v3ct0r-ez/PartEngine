@@ -49,7 +49,11 @@ jobs:
           pnpm --filter @partengine/web build
 
       - name: Stage bundles for packaging
-        run: node apps/desktop/scripts/prepare-bundles.mjs
+        run: |
+          # Self-contained API node_modules (handles all transitive pnpm deps)
+          pnpm --filter @partengine/api deploy --prod apps/desktop/staging/api
+          # Copy the generated Prisma client + stage the web bundle
+          node apps/desktop/scripts/prepare-bundles.mjs
 
       - name: Build & publish installer
         working-directory: apps/desktop

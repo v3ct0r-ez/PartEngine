@@ -55,9 +55,9 @@ export function loadConfig(): DesktopConfig {
     pgPassword,
     pgDatabase,
     dataDir,
-    // Packaged: resources/app.api/main.js · Dev: monorepo dist.
+    // pnpm deploy preserves the package layout, so dist/ is kept in both modes.
     apiEntry: isPackaged
-      ? path.join(resourcesRoot, 'app.api', 'main.js')
+      ? path.join(resourcesRoot, 'app.api', 'dist', 'main.js')
       : path.join(resourcesRoot, 'apps', 'api', 'dist', 'main.js'),
     // Next standalone in a monorepo nests the server under apps/web/.
     webEntry: isPackaged

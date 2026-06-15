@@ -3,6 +3,7 @@ lockfileVersion: '9.0'
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
+  injectWorkspacePackages: true
 
 importers:
 
@@ -105,10 +106,16 @@ importers:
       embedded-postgres:
         specifier: 17.10.0-beta.17
         version: 17.10.0-beta.17
+      pg:
+        specifier: ^8.13.1
+        version: 8.21.0
     devDependencies:
       '@types/node':
         specifier: ^22.7.0
         version: 22.19.21
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
       electron:
         specifier: ^33.0.0
         version: 33.4.11
@@ -1213,6 +1220,9 @@ packages:
 
   '@types/passport@1.0.17':
     resolution: {integrity: sha512-aciLyx+wDwT2t2/kJGJR2AEeBz0nJU4WuRX04Wu9Dqc5lSUtwu0WERPHYsLhF9PtseiAMPBGNUOtFjxZ56prsg==}
+
+  '@types/pg@8.20.0':
+    resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
 
   '@types/plist@3.0.5':
     resolution: {integrity: sha512-E6OCaRmAe4WDmWNsL/9RMqdkkzDCY1etutkflWk4c+AcjDU07Pcz1fQwTX0TQz+Pxqn9i4L1TU3UFpjnrcDgxA==}
@@ -4840,6 +4850,12 @@ snapshots:
   '@types/passport@1.0.17':
     dependencies:
       '@types/express': 5.0.6
+
+  '@types/pg@8.20.0':
+    dependencies:
+      '@types/node': 22.19.21
+      pg-protocol: 1.14.0
+      pg-types: 2.2.0
 
   '@types/plist@3.0.5':
     dependencies:
