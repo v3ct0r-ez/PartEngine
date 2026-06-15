@@ -58,6 +58,7 @@ pnpm dev                # api on :4000, web on :3000
 | [`docs/DYNAMIC_FIELDS.md`](docs/DYNAMIC_FIELDS.md) | Data-driven category/parameter engine |
 | [`docs/SPRINTS.md`](docs/SPRINTS.md) | Delivery plan (sprints, with acceptance criteria) |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | RBAC, audit, backup, encryption, rate-limiting |
+| [`docs/UPDATES.md`](docs/UPDATES.md) | Auto-update (notify + one-click apply via GitHub Releases) |
 | [`docs/STATUS.md`](docs/STATUS.md) | What is implemented vs. scaffolded |
 
 ## Tech stack (summary)

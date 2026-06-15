@@ -10,6 +10,7 @@ import { RolesGuard } from './auth/roles.guard';
 import { ComponentsModule } from './components/components.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UpdateModule } from './update/update.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     ComponentsModule,
     InventoryModule,
+    UpdateModule,
   ],
   providers: [
     // Order matters: rate-limit → authenticate → authorize.

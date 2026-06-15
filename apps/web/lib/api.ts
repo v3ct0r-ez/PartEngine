@@ -72,6 +72,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface UpdateInfo {
+  currentVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  releaseUrl: string | null;
+  releaseNotes: string | null;
+  publishedAt: string | null;
+  checkedAt: string | null;
+  applying: boolean;
+  error: string | null;
+}
+
+export function getUpdateStatus() {
+  return request<UpdateInfo>('/updates/status');
+}
+
+export function applyUpdate() {
+  return request<{ started: boolean; targetVersion: string | null }>('/updates/apply', {
+    method: 'POST',
+  });
+}
+
 export function getComponentStock(id: string) {
   return request<StockSummary>(`/inventory/components/${id}/stock`);
 }

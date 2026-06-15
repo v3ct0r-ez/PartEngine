@@ -20,6 +20,7 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Next.js app + key components | 🟡 | layout, components table, filter sidebar, dynamic form |
 | Persistent memory (prefs/views/recent) | 🟡 | schema ✅; endpoints/UI scaffolded |
 | Inventory & movements | ✅ | Sprint 4: IN/OUT/TRANSFER/ADJUST txns, concurrency-safe no-oversell, reserve/release, location tree, stock rollup + health; UI page; 10 tests |
+| Auto-update system | ✅ | notify + one-click apply via GitHub Releases; semver compare (6 tests), gated/audited apply, backup-first updater script, admin banner; see docs/UPDATES.md |
 | Suppliers / purchasing | ⬜ | schema ✅; Sprint 5 |
 | BOM / kits | ⬜ | schema ✅; Sprint 6 |
 | Attachments / datasheet OCR | ⬜ | schema ✅ + S3 in compose; Sprint 7 |
