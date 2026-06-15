@@ -1,0 +1,559 @@
+// PartEngine — PostgreSQL schema
+// Data model for an enterprise WMS for electronic components.
+//
+// Design notes:
+//  - Dynamic, per-category technical parameters live in Component.parameters (JSONB),
+//    described by the CategoryField registry, and are *projected* into the indexed
+//    ComponentParameterValue table for fast range filtering / unit-aware sorting.
+//  - Append-heavy tables (StockMovement, AuditLog) are designed for monthly partitioning
+//    (applied via a manual migration; see docs/ARCHITECTURE.md).
+//  - Full-text search uses a generated tsvector column + GIN index (raw-SQL migration).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, citext, uuidOssp(map: "uuid-ossp")]
+}
+
+// ─────────────────────────────────────────────────────────────
+// Identity, tenancy & RBAC
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  WAREHOUSE_MANAGER // Responsabile Magazzino
+  TECHNICIAN // Tecnico
+  PURCHASING // Acquisti
+  VIEWER // Visualizzatore
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(VIEWER)
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  preferences     UserPreference?
+  savedViews      SavedView[]
+  recentItems     RecentItem[]
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+  movements       StockMovement[]
+  warehouseAccess WarehouseAccess[]
+
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Granular per-warehouse access on top of the global Role.
+model WarehouseAccess {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  canWrite    Boolean   @default(false)
+
+  @@unique([userId, warehouseId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Persistent memory system
+// ─────────────────────────────────────────────────────────────
+
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme     String   @default("system") // light | dark | system
+  language  String   @default("it")
+  // Free-form per-screen UI state: column order/visibility, default sorts, density…
+  uiState   Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+// Saved filters / column sets / dashboards (Memoria Utente).
+model SavedView {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  scope     String // "components" | "boms" | "dashboard" | ...
+  isDefault Boolean  @default(false)
+  config    Json // columns, filters, sort, layout
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, scope])
+}
+
+// Operative memory: recent searches / components / suppliers / locations / categories.
+model RecentItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // "search" | "component" | "supplier" | "location" | "category"
+  refId     String? // entity id when applicable
+  label     String // display text / search text
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Audit log (immutable; nothing is ever lost)
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  entity     String // "Component" | "StockMovement" | ...
+  entityId   String
+  operation  String // CREATE | UPDATE | DELETE | LOGIN | EXPORT ...
+  oldValue   Json?
+  newValue   Json?
+  reason     String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Categories & data-driven dynamic fields
+// ─────────────────────────────────────────────────────────────
+
+model Category {
+  id          String     @id @default(uuid())
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  slug        String     @unique // "resistors", "capacitors", "mosfets", ...
+  name        String
+  description String?
+  icon        String?
+  isSystem    Boolean    @default(false) // seeded vs. admin-created
+  sortOrder   Int        @default(0)
+
+  fields     CategoryField[]
+  components Component[]
+
+  @@index([parentId])
+}
+
+enum FieldType {
+  STRING
+  TEXT
+  NUMBER
+  QUANTITY // numeric value WITH an engineering unit (Ω, F, V, A, H …)
+  BOOLEAN
+  ENUM
+  DATE
+}
+
+// Defines, per category, which parameters a component exposes — fully data-driven.
+// Lets an admin create new categories/fields without code (spec: "senza scrivere codice").
+model CategoryField {
+  id           String    @id @default(uuid())
+  categoryId   String
+  category     Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  key          String // "resistance", "tolerance", "vds", "rds_on" …
+  label        String
+  type         FieldType
+  unit         String? // base/display unit for QUANTITY ("Ω", "F", "V")
+  options      Json? // for ENUM: allowed values (e.g. dielectrics, footprints)
+  required     Boolean   @default(false)
+  defaultValue Json?
+  // Validation: { min, max, regex, step, ... } interpreted by the dynamic-form engine.
+  validation   Json?
+  isFilterable Boolean   @default(true)
+  isSortable   Boolean   @default(true)
+  sortOrder    Int       @default(0)
+
+  parameterValues ComponentParameterValue[]
+
+  @@unique([categoryId, key])
+  @@index([categoryId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Components
+// ─────────────────────────────────────────────────────────────
+
+enum Lifecycle {
+  ACTIVE
+  NRND // Not Recommended for New Designs
+  OBSOLETE
+  PREVIEW
+  EOL
+}
+
+model Component {
+  id           String    @id @default(uuid())
+  internalCode String    @unique // codice interno univoco
+  name         String
+  description  String?
+  aliases      String[] // alias
+  tags         String[]
+
+  categoryId   String
+  category     Category  @relation(fields: [categoryId], references: [id])
+
+  // Technical identification
+  manufacturerId String?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  mpn            String? // Manufacturer Part Number
+  package        String? // SMD/THT package e.g. SOT-23
+  footprint      String? // PCB footprint e.g. 0603
+  schematicSymbol String?
+  lifecycle      Lifecycle @default(ACTIVE)
+  rohs           Boolean?
+  reach          Boolean?
+  datasheetUrl   String?
+
+  // Per-category dynamic technical parameters (described by CategoryField).
+  parameters Json @default("{}")
+
+  // Inventory roll-ups (authoritative per-location detail in StockLevel).
+  minQty   Decimal @default(0) @db.Decimal(18, 4)
+  maxQty   Decimal? @db.Decimal(18, 4)
+  idealQty Decimal? @db.Decimal(18, 4)
+
+  // Costing
+  avgPrice  Decimal? @db.Decimal(18, 6)
+  lastPrice Decimal? @db.Decimal(18, 6)
+  currency  String   @default("EUR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // soft delete — history is never lost
+
+  parameterValues ComponentParameterValue[]
+  stockLevels     StockLevel[]
+  movements       StockMovement[]
+  attachments     Attachment[]
+  supplierParts   SupplierPart[]
+  bomLines        BomLine[]
+  kitLines        KitLine[]
+
+  @@index([categoryId])
+  @@index([manufacturerId])
+  @@index([mpn])
+  @@index([deletedAt])
+  // search_vector (tsvector) GIN index + trigram indexes added via raw-SQL migration.
+}
+
+// Normalized projection of a single filterable/sortable parameter.
+// `magnitude` is the value converted to the field's SI base unit so range filters
+// and unit-aware sorting use a plain B-tree index (100Ω, 1kΩ, 1MΩ sort correctly).
+model ComponentParameterValue {
+  id          String        @id @default(uuid())
+  componentId String
+  component   Component     @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  fieldId     String
+  field       CategoryField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  fieldKey    String // denormalized for fast filtering
+  numeric     Decimal?      @db.Decimal(40, 12) // value in base SI unit (Ω, F, H, V, A)
+  text        String?
+  boolean     Boolean?
+
+  @@unique([componentId, fieldId])
+  @@index([fieldKey, numeric])
+  @@index([componentId])
+}
+
+model Manufacturer {
+  id         String      @id @default(uuid())
+  name       String      @unique
+  website    String?
+  components  Component[]
+  createdAt  DateTime    @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// Suppliers & purchasing
+// ─────────────────────────────────────────────────────────────
+
+model Supplier {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  contactEmail  String?
+  contactPhone  String?
+  website       String?
+  catalogUrl    String?
+  avgLeadTimeDays Int?
+  reliability   Decimal? @db.Decimal(5, 2) // 0..100 score
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  supplierParts SupplierPart[]
+  orders        PurchaseOrder[]
+}
+
+// Per-supplier sourcing info for a component.
+model SupplierPart {
+  id           String   @id @default(uuid())
+  supplierId   String
+  supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  componentId  String
+  component    Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  supplierSku  String?
+  unitPrice    Decimal? @db.Decimal(18, 6)
+  currency     String   @default("EUR")
+  moq          Int? // minimum order quantity
+  leadTimeDays Int?
+  isPreferred  Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([supplierId, componentId, supplierSku])
+  @@index([componentId])
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  status      PurchaseOrderStatus @default(DRAFT)
+  orderedAt   DateTime?
+  expectedAt  DateTime?
+  receivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines PurchaseOrderLine[]
+
+  @@index([supplierId, status])
+}
+
+model PurchaseOrderLine {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  componentId String
+  quantity    Decimal  @db.Decimal(18, 4)
+  received    Decimal  @default(0) @db.Decimal(18, 4)
+  unitPrice   Decimal? @db.Decimal(18, 6)
+
+  @@index([orderId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Warehouses, physical locations & stock
+// ─────────────────────────────────────────────────────────────
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+
+  locations Location[]
+  access    WarehouseAccess[]
+}
+
+// Hierarchical physical location: zone → shelf → cabinet → drawer → box.
+model Location {
+  id          String    @id @default(uuid())
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Location? @relation("LocationTree", fields: [parentId], references: [id])
+  children    Location[] @relation("LocationTree")
+  kind        String // "zone" | "shelf" | "cabinet" | "drawer" | "box"
+  code        String // human label, e.g. "A-12-3"
+  barcode     String?   @unique
+
+  stockLevels StockLevel[]
+
+  @@unique([warehouseId, code])
+  @@index([parentId])
+}
+
+// Authoritative quantity of a component at a specific location.
+model StockLevel {
+  id          String    @id @default(uuid())
+  componentId String
+  component   Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  locationId  String
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  quantity    Decimal   @default(0) @db.Decimal(18, 4)
+  reserved    Decimal   @default(0) @db.Decimal(18, 4)
+  onOrder     Decimal   @default(0) @db.Decimal(18, 4)
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([componentId, locationId])
+  @@index([componentId])
+  @@index([locationId])
+}
+
+enum MovementType {
+  INBOUND // carico
+  OUTBOUND // scarico
+  TRANSFER // trasferimento
+  ADJUSTMENT // correzione
+}
+
+// Immutable ledger of every stock change (full traceability).
+// Designed for monthly partitioning on createdAt.
+model StockMovement {
+  id             String       @id @default(uuid())
+  type           MovementType
+  componentId    String
+  component      Component    @relation(fields: [componentId], references: [id])
+  fromLocationId String?
+  toLocationId   String?
+  quantity       Decimal      @db.Decimal(18, 4)
+  unitPrice      Decimal?     @db.Decimal(18, 6)
+  reference      String? // PO code, BOM build id, etc.
+  reason         String?
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+
+  @@index([componentId, createdAt])
+  @@index([type, createdAt])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOM, kits & assemblies
+// ─────────────────────────────────────────────────────────────
+
+model Bom {
+  id        String   @id @default(uuid())
+  code      String
+  name      String
+  version   String   @default("1.0")
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines BomLine[]
+
+  @@unique([code, version])
+}
+
+model BomLine {
+  id          String    @id @default(uuid())
+  bomId       String
+  bom         Bom       @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  componentId String?
+  component   Component? @relation(fields: [componentId], references: [id])
+  // Raw fields preserved from CSV import even when no component is matched yet.
+  rawMpn      String?
+  reference   String? // designators e.g. "R1,R2,R5"
+  quantity    Decimal   @db.Decimal(18, 4)
+  notes       String?
+
+  @@index([bomId])
+  @@index([componentId])
+}
+
+model Kit {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  lines KitLine[]
+}
+
+model KitLine {
+  id          String    @id @default(uuid())
+  kitId       String
+  kit         Kit       @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  componentId String
+  component   Component @relation(fields: [componentId], references: [id])
+  quantity    Decimal   @db.Decimal(18, 4)
+
+  @@index([kitId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Attachments (datasheets, images, labels) — stored in S3
+// ─────────────────────────────────────────────────────────────
+
+enum AttachmentKind {
+  DATASHEET
+  IMAGE
+  LABEL
+  OTHER
+}
+
+model Attachment {
+  id          String         @id @default(uuid())
+  componentId String
+  component   Component      @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  kind        AttachmentKind
+  fileName    String
+  contentType String
+  sizeBytes   Int
+  storageKey  String // S3 object key
+  ocrText     String? // extracted text (datasheet OCR) — also fed into search
+  createdAt   DateTime       @default(now())
+
+  @@index([componentId, kind])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Notifications / alerts
+// ─────────────────────────────────────────────────────────────
+
+enum NotificationKind {
+  LOW_STOCK
+  CRITICAL_STOCK
+  OUT_OF_STOCK
+  ORDER_LATE
+  MISSING_DATASHEET
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  kind      NotificationKind
+  entity    String
+  entityId  String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([kind, isRead])
+  @@index([createdAt])
+}
