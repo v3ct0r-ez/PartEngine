@@ -29,7 +29,9 @@ function copy(from, to) {
     return;
   }
   mkdirSync(dirname(to), { recursive: true });
-  cpSync(from, to, { recursive: true });
+  // dereference: resolve pnpm's symlinked node_modules into real files so the
+  // packaged app is self-contained and works on Windows (no symlink support).
+  cpSync(from, to, { recursive: true, dereference: true });
   console.log(`✓ ${from} -> ${to}`);
 }
 

@@ -59,8 +59,9 @@ export function loadConfig(): DesktopConfig {
     apiEntry: isPackaged
       ? path.join(resourcesRoot, 'app.api', 'main.js')
       : path.join(resourcesRoot, 'apps', 'api', 'dist', 'main.js'),
+    // Next standalone in a monorepo nests the server under apps/web/.
     webEntry: isPackaged
-      ? path.join(resourcesRoot, 'app.web', 'server.js')
+      ? path.join(resourcesRoot, 'app.web', 'apps', 'web', 'server.js')
       : path.join(resourcesRoot, 'apps', 'web', '.next', 'standalone', 'apps', 'web', 'server.js'),
     prismaDir: isPackaged
       ? path.join(resourcesRoot, 'app.api', 'prisma')

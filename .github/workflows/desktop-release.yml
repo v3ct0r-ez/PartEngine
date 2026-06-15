@@ -1,0 +1,73 @@
+name: Desktop Release (Windows .exe)
+
+# Builds the all-in-one Windows installer + portable .exe on a Windows runner.
+#  - push a tag vX.Y.Z  → builds and PUBLISHES to the matching GitHub Release
+#                          (electron-updater then serves it to installed clients)
+#  - manual dispatch     → builds and uploads the .exe as a workflow artifact
+#                          (download from the run page; no release published)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to publish release assets
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Derive version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          node -e "const fs=require('fs');const f='apps/desktop/package.json';const p=JSON.parse(fs.readFileSync(f));p.version='$VERSION';fs.writeFileSync(f,JSON.stringify(p,null,2))"
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace bundles
+        run: |
+          pnpm --filter @partengine/core build
+          pnpm --filter @partengine/api prisma:generate
+          pnpm --filter @partengine/api build
+          pnpm --filter @partengine/web build
+
+      - name: Stage bundles for packaging
+        run: node apps/desktop/scripts/prepare-bundles.mjs
+
+      - name: Build & publish installer
+        working-directory: apps/desktop
+        env:
+          # electron-builder publishes to the GitHub Release on tag builds.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          pnpm build
+          if [ "${{ github.event_name }}" = "push" ]; then
+            pnpm exec electron-builder --win --config electron-builder.yml --publish always
+          else
+            pnpm exec electron-builder --win --config electron-builder.yml --publish never
+          fi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PartEngine-windows
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/latest.yml
+          if-no-files-found: error

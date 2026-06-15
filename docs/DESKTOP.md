@@ -65,10 +65,21 @@ pnpm --filter @partengine/desktop dist:win            # NSIS installer + portabl
 The embedded PostgreSQL binaries are pulled in by the `embedded-postgres` dependency's
 platform package (`@embedded-postgres/windows-x64`) and bundled automatically.
 
-> **Note:** producing the final Windows `.exe` must run on Windows (or Linux+Wine) with
-> network access to fetch Electron + Postgres binaries. The scaffold here is complete and the
-> launcher logic is implemented; the binary itself is built in CI on a Windows runner
-> (see the suggested GitHub Actions job in the repo issues/PR).
+### Producing the `.exe` via CI (recommended)
+
+The final installer is built by [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml)
+on a `windows-latest` runner (a real Windows `.exe` can't be produced from a plain Linux box
+without Wine + large binary downloads):
+
+- **Manual run** (Actions → "Desktop Release" → *Run workflow*): builds and uploads
+  `PartEngine-<version>-x64.exe` (+ `latest.yml`) as a **workflow artifact** — download it from
+  the run page. No release is published.
+- **Tag `vX.Y.Z`**: builds and **publishes** the installer to the matching GitHub Release;
+  `electron-updater` then serves it to already-installed clients.
+
+> The installer is currently **unsigned**, so Windows SmartScreen will warn on first run. Add a
+> code-signing certificate via the `CSC_LINK`/`CSC_KEY_PASSWORD` electron-builder secrets to
+> remove the warning.
 
 ## Updates on desktop (`electron-updater` — wired)
 
