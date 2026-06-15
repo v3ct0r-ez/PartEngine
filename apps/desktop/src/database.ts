@@ -1,9 +1,18 @@
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import EmbeddedPostgres from 'embedded-postgres';
+// embedded-postgres is ESM-only; it is imported dynamically (await import) inside
+// start() since this is a CommonJS module. The instance is held loosely-typed as
+// it's a thin lifecycle wrapper.
 import type { DesktopConfig } from './config';
 import { log } from './log';
+
+type EmbeddedPostgresInstance = {
+  initialise: () => Promise<void>;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  createDatabase: (name: string) => Promise<void>;
+};
 
 /**
  * Manages an embedded PostgreSQL instance bundled inside the app — no Docker, no
@@ -12,7 +21,7 @@ import { log } from './log';
  * database exists, and applies Prisma migrations + the FTS/trgm SQL.
  */
 export class DatabaseManager {
-  private pg?: EmbeddedPostgres;
+  private pg?: EmbeddedPostgresInstance;
 
   constructor(private readonly cfg: DesktopConfig) {}
 
@@ -20,7 +29,10 @@ export class DatabaseManager {
     const firstRun = !fs.existsSync(path.join(this.cfg.dataDir, 'PG_VERSION'));
     fs.mkdirSync(this.cfg.dataDir, { recursive: true });
 
-    this.pg = new EmbeddedPostgres({
+    const { default: EmbeddedPostgresCtor } = (await import('embedded-postgres')) as {
+      default: new (opts: Record<string, unknown>) => EmbeddedPostgresInstance;
+    };
+    this.pg = new EmbeddedPostgresCtor({
       databaseDir: this.cfg.dataDir,
       user: this.cfg.pgUser,
       password: this.cfg.pgPassword,

@@ -46,7 +46,12 @@ export class UpdaterManager {
   init(isPackaged: boolean) {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.logger = { info: (m) => log(`[updater] ${m}`), warn: (m) => log(`[updater] ${m}`, 'warn'), error: (m) => log(`[updater] ${m}`, 'error'), debug: () => undefined } as never;
+    autoUpdater.logger = {
+      info: (m: string) => log(`[updater] ${m}`),
+      warn: (m: string) => log(`[updater] ${m}`, 'warn'),
+      error: (m: string) => log(`[updater] ${m}`, 'error'),
+      debug: () => undefined,
+    } as never;
 
     autoUpdater.on('checking-for-update', () => this.set({ phase: 'checking', error: null }));
     autoUpdater.on('update-available', (info) =>

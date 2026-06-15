@@ -11,7 +11,9 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+  // FTS is implemented via raw SQL (search_vector + GIN), so no FTS preview flag
+  // is needed; postgresqlExtensions enables the `extensions` block below.
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateLocationDto } from './inventory.dto';
 
-interface LocationNode {
+export interface LocationNode {
   id: string;
   code: string;
   kind: string;
