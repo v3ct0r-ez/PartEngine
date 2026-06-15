@@ -1,27 +1,31 @@
 import { app, BrowserWindow, dialog, Menu, shell, Tray } from 'electron';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { loadConfig } from './config';
+import { loadConfig, type DesktopConfig } from './config';
 import { DatabaseManager } from './database';
 import { log } from './log';
 import { ServiceManager } from './services';
 import { UpdaterManager } from './updater';
 
-const cfg = loadConfig();
-const db = new DatabaseManager(cfg);
-const services = new ServiceManager(cfg);
-const updater = new UpdaterManager(() => mainWindow);
+// VERY FIRST thing: prove the process started and install crash handlers, so
+// any failure from here on is logged + shown rather than disappearing silently.
+log(`main process started (electron ${process.versions.electron}, pid ${process.pid})`);
+process.on('uncaughtException', (err) => fatal(err));
+process.on('unhandledRejection', (reason) =>
+  fatal(reason instanceof Error ? reason : new Error(String(reason))),
+);
+
+// Managers are created during bootstrap (after app is ready) so that any error
+// in their construction is caught and logged.
+let cfg: DesktopConfig;
+let db: DatabaseManager | undefined;
+let services: ServiceManager | undefined;
+let updater: UpdaterManager | undefined;
 
 let mainWindow: BrowserWindow | undefined;
 let loadingWindow: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let shuttingDown = false;
-
-// Never fail silently: surface any unexpected error as a dialog + log entry.
-process.on('uncaughtException', (err) => fatal(err));
-process.on('unhandledRejection', (reason) =>
-  fatal(reason instanceof Error ? reason : new Error(String(reason))),
-);
 
 // Single-instance: a second launch focuses the existing window instead of
 // starting a second Postgres against the same data dir.
@@ -31,6 +35,24 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on('second-instance', () => mainWindow?.focus());
   app.whenReady().then(bootstrap).catch(fatal);
+}
+
+async function bootstrap() {
+  log('app ready — bootstrapping');
+  createLoadingWindow(); // show something immediately, before the heavy work
+
+  cfg = loadConfig();
+  log(`config: packaged=${cfg.isPackaged} apiPort=${cfg.apiPort} webPort=${cfg.webPort}`);
+  db = new DatabaseManager(cfg);
+  services = new ServiceManager(cfg);
+  updater = new UpdaterManager(() => mainWindow);
+
+  await db.start(); // embedded Postgres + migrations
+  await services.start(); // API (health-gated) then Next.js
+  createMainWindow();
+  createTray();
+  updater.init(cfg.isPackaged); // electron-updater (GitHub Releases, NSIS)
+  log('PartEngine is ready.');
 }
 
 function createLoadingWindow() {
@@ -64,7 +86,7 @@ function createMainWindow() {
     return { action: 'deny' };
   });
 
-  mainWindow.loadURL(services.webUrl);
+  mainWindow.loadURL(services!.webUrl);
   mainWindow.once('ready-to-show', () => {
     loadingWindow?.close();
     loadingWindow = undefined;
@@ -78,7 +100,7 @@ function createTray() {
   try {
     tray = new Tray(path.join(__dirname, '..', 'static', 'tray.png'));
   } catch {
-    return; // icon optional in dev
+    return; // icon optional in dev / when missing
   }
   const lanAddr = cfg.lanEnabled ? `http://${firstLanIp()}:${cfg.webPort}` : 'solo locale';
   tray.setToolTip(`PartEngine — ${lanAddr}`);
@@ -92,20 +114,6 @@ function createTray() {
   );
 }
 
-async function bootstrap() {
-  createLoadingWindow();
-  try {
-    await db.start(); // embedded Postgres + migrations
-    await services.start(); // API (health-gated) then Next.js
-    createMainWindow();
-    createTray();
-    updater.init(cfg.isPackaged); // electron-updater (GitHub Releases, NSIS)
-    log('PartEngine is ready.');
-  } catch (err) {
-    fatal(err as Error);
-  }
-}
-
 function firstLanIp(): string {
   const nets = os.networkInterfaces();
   for (const ifaces of Object.values(nets)) {
@@ -117,8 +125,15 @@ function firstLanIp(): string {
 }
 
 function fatal(err: Error) {
-  log(`FATAL: ${err.message}`, 'error');
-  dialog.showErrorBox('PartEngine — avvio fallito', `${err.message}\n\nConsulta il log applicativo.`);
+  log(`FATAL: ${err.stack ?? err.message}`, 'error');
+  try {
+    dialog.showErrorBox(
+      'PartEngine — avvio fallito',
+      `${err.message}\n\nLog: %APPDATA%\\PartEngine\\logs\\partengine.log`,
+    );
+  } catch {
+    /* dialog may be unavailable very early */
+  }
   app.quit();
 }
 
@@ -126,8 +141,8 @@ async function gracefulShutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   log('Shutting down…');
-  services.stop();
-  await db.stop().catch(() => undefined);
+  services?.stop();
+  await db?.stop().catch(() => undefined);
 }
 
 app.on('before-quit', (e) => {

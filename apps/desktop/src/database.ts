@@ -56,29 +56,35 @@ export class DatabaseManager {
   }
 
   /**
-   * Apply Prisma migrations and the raw FTS/trgm SQL using the API bundle's
-   * Prisma CLI. Runs synchronously before the API starts so the schema is ready.
+   * Apply Prisma migrations using the API bundle's Prisma CLI. We run Prisma's
+   * actual CLI JavaScript entry with Electron's bundled Node
+   * (ELECTRON_RUN_AS_NODE) rather than the `.bin/prisma` shim — the shim is a
+   * shell/cmd script that Node can't execute directly, which would silently fail
+   * on Windows. Runs before the API starts so the schema is ready.
    */
   private migrate(): void {
-    const env = { ...process.env, DATABASE_URL: this.cfg.databaseUrl };
-    log('Applying database migrations…');
+    const apiDir = path.dirname(this.cfg.prismaDir); // resources/app.api
+    const env = { ...process.env, DATABASE_URL: this.cfg.databaseUrl, ELECTRON_RUN_AS_NODE: '1' };
 
-    // Electron ships Node; run the bundled prisma via ELECTRON_RUN_AS_NODE.
-    const node = process.execPath;
-    const prismaBin = path.join(this.cfg.prismaDir, '..', 'node_modules', '.bin', 'prisma');
-    const res = spawnSync(node, [prismaBin, 'migrate', 'deploy'], {
-      cwd: path.dirname(this.cfg.prismaDir),
-      env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
+    const prismaCli = path.join(apiDir, 'node_modules', 'prisma', 'build', 'index.js');
+    if (!fs.existsSync(prismaCli)) {
+      log(`WARNING: prisma CLI not found at ${prismaCli} — skipping migrations`, 'warn');
+      return;
+    }
+
+    log('Applying database migrations (prisma migrate deploy)…');
+    const res = spawnSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
+      cwd: apiDir,
+      env,
       stdio: 'inherit',
     });
-    if (res.status !== 0) log('WARNING: prisma migrate deploy returned non-zero', 'warn');
+    if (res.error) log(`WARNING: prisma migrate failed to spawn: ${res.error.message}`, 'warn');
+    else if (res.status !== 0) log(`WARNING: prisma migrate exited ${res.status}`, 'warn');
+    else log('Migrations applied.');
 
-    const ftsSql = path.join(this.cfg.prismaDir, 'sql', '001_search.sql');
-    if (fs.existsSync(ftsSql)) {
-      log('Applying full-text-search migration…');
-      // psql is shipped with the embedded Postgres binaries.
-      // (Path resolution handled by embedded-postgres; see DESKTOP.md for details.)
-    }
+    // FTS/trgm indexes are a performance optimisation (search works without
+    // them, via Prisma `contains`); applying 001_search.sql is best-effort and
+    // intentionally not blocking startup. Wired in a follow-up.
   }
 
   async stop(): Promise<void> {
