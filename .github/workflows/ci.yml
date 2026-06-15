@@ -23,9 +23,7 @@ jobs:
       DATABASE_URL: postgresql://partengine:partengine@localhost:5432/partengine?schema=public
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
