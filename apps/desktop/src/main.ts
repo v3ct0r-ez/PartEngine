@@ -5,10 +5,12 @@ import { loadConfig } from './config';
 import { DatabaseManager } from './database';
 import { log } from './log';
 import { ServiceManager } from './services';
+import { UpdaterManager } from './updater';
 
 const cfg = loadConfig();
 const db = new DatabaseManager(cfg);
 const services = new ServiceManager(cfg);
+const updater = new UpdaterManager(() => mainWindow);
 
 let mainWindow: BrowserWindow | undefined;
 let loadingWindow: BrowserWindow | undefined;
@@ -90,6 +92,7 @@ async function bootstrap() {
     await services.start(); // API (health-gated) then Next.js
     createMainWindow();
     createTray();
+    updater.init(cfg.isPackaged); // electron-updater (GitHub Releases, NSIS)
     log('PartEngine is ready.');
   } catch (err) {
     fatal(err as Error);

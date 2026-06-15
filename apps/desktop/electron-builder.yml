@@ -22,6 +22,12 @@ extraResources:
   - from: staging/web
     to: app.web
 
+# electron-updater reads this to find updates (and the build emits latest.yml).
+publish:
+  provider: github
+  owner: v3ct0r-ez
+  repo: PartEngine
+
 win:
   target:
     - target: nsis        # installer

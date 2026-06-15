@@ -70,14 +70,31 @@ platform package (`@embedded-postgres/windows-x64`) and bundled automatically.
 > launcher logic is implemented; the binary itself is built in CI on a Windows runner
 > (see the suggested GitHub Actions job in the repo issues/PR).
 
-## Updates on desktop
+## Updates on desktop (`electron-updater` — wired)
 
-The Docker `infra/update.sh` path ([UPDATES.md](UPDATES.md)) is for the server deployment.
-The desktop build instead uses **`electron-updater`** against GitHub Releases (NSIS
-differential updates). The existing version-comparison logic in `@partengine/core` and the
-in-app update banner remain the trigger; only the *apply* step differs (electron-updater
-download+install vs. docker pull). Wiring `electron-updater` is the next step for the desktop
-target. The `tools/update-verifier` `.exe` continues to verify the version-detection logic.
+The Docker `infra/update.sh` path ([UPDATES.md](UPDATES.md)) is for the server deployment. The
+desktop build uses **`electron-updater`** against GitHub Releases (NSIS differential updates).
+
+Flow (same notify + one-click model as the rest of PartEngine):
+
+```
+ main process (apps/desktop/src/updater.ts)
+   autoUpdater.autoDownload = false
+   checkForUpdates() ──▶ 'update-available' ──▶ banner: "Scarica aggiornamento"
+        │                                              │ download()
+        ▼                                              ▼
+   'download-progress' (percent) ──▶ 'update-downloaded' ──▶ banner: "Installa e riavvia"
+                                                              │ quitAndInstall()
+                                                              ▼
+                                                         app restarts on new version
+```
+
+- State + events are bridged to the renderer over IPC (`preload.ts` → `window.partengine.updater`).
+- The web `UpdateBanner` detects `window.partengine?.isDesktop` and drives the updater bridge
+  on desktop, or the server-side `/updates/apply` endpoint on web — one component, both modes.
+- `publish: { provider: github }` in `electron-builder.yml` is what the updater queries and what
+  makes the build emit `latest.yml`. Releases must be tagged `vX.Y.Z` with the artifacts attached.
+- `tools/update-verifier` continues to verify the version-detection logic.
 
 ## Security notes (desktop specifics)
 

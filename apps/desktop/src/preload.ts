@@ -1,12 +1,27 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 /**
  * Minimal, locked-down preload. contextIsolation is on and nodeIntegration is
  * off, so the web UI gets only this small, explicit surface — no raw Node/IPC
  * access from the renderer.
+ *
+ * The `updater` bridge lets the existing web UpdateBanner drive the desktop
+ * auto-updater (electron-updater) with no server round-trip.
  */
 contextBridge.exposeInMainWorld('partengine', {
   isDesktop: true,
   platform: process.platform,
   version: process.env.APP_VERSION ?? '0.1.0',
+  updater: {
+    status: () => ipcRenderer.invoke('updater:status'),
+    check: () => ipcRenderer.invoke('updater:check'),
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    /** Subscribe to live updater state; returns an unsubscribe function. */
+    onEvent: (cb: (state: unknown) => void) => {
+      const listener = (_e: unknown, state: unknown) => cb(state);
+      ipcRenderer.on('updater:event', listener);
+      return () => ipcRenderer.removeListener('updater:event', listener);
+    },
+  },
 });
