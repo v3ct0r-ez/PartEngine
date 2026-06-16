@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -69,5 +70,57 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
     return { success: true };
+  }
+
+  // ── User & access administration (SUPER_ADMIN) ───────────
+  async createUser(input: {
+    email: string;
+    fullName: string;
+    password: string;
+    role: Role;
+  }) {
+    const user = await this.prisma.user.create({
+      data: {
+        email: input.email,
+        fullName: input.fullName,
+        role: input.role,
+        passwordHash: await argon2.hash(input.password),
+      },
+    });
+    return this.publicUser(user);
+  }
+
+  async listUsers() {
+    const users = await this.prisma.user.findMany({ orderBy: { email: 'asc' } });
+    return users.map((u) => this.publicUser(u));
+  }
+
+  /** Grant or update per-warehouse access for a user. */
+  grantWarehouseAccess(input: { userId: string; warehouseId: string; canWrite: boolean }) {
+    return this.prisma.warehouseAccess.upsert({
+      where: {
+        userId_warehouseId: { userId: input.userId, warehouseId: input.warehouseId },
+      },
+      create: input,
+      update: { canWrite: input.canWrite },
+    });
+  }
+
+  private publicUser(u: {
+    id: string;
+    email: string;
+    fullName: string;
+    role: Role;
+    isActive: boolean;
+    lastLoginAt: Date | null;
+  }) {
+    return {
+      id: u.id,
+      email: u.email,
+      fullName: u.fullName,
+      role: u.role,
+      isActive: u.isActive,
+      lastLoginAt: u.lastLoginAt,
+    };
   }
 }

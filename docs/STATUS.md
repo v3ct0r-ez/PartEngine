@@ -14,8 +14,8 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Data-driven category templates | ✅ | resistors, caps, inductors, MOSFET, buck, MCU built-in |
 | Parameter validation + projection | ✅ | `packages/core`, drives forms + indexed sort |
 | NestJS app skeleton + modules | 🟡 | bootstrap, config, auth/RBAC/audit/components module stubs |
-| Auth (JWT + refresh) & RBAC guard | 🟡 | guard + decorators + strategy scaffolded |
-| Audit interceptor | 🟡 | interceptor wired; persists old/new/reason/ip |
+| Auth (JWT + refresh) & RBAC guard | ✅ | Sprint 1: JWT+rotating refresh, argon2, RolesGuard, per-warehouse access (WarehouseAccessService), admin users/grant endpoints, /auth/me |
+| Audit interceptor | ✅ | global interceptor persists user/op/new/reason/ip on every mutation |
 | Component CRUD + search endpoint | ✅ | Sprint 10: create/update/delete + search; UI modal editor (dynamic per-category params) |
 | Search, filters & listing | ✅ | Sprint 3: category + range filters, cursor pagination, unit-aware server-side sort (orders by indexed base-SI magnitude); sortable "Valore" column |
 | Category management (admin) | ✅ | Sprint 10: create categories + add/edit/delete recognition fields, no code; UI at /categories; API categories(+fields) CRUD |

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
+import { WarehouseAccessService, type Actor } from '../auth/warehouse-access.service';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import {
   CreatePurchaseOrderDto,
@@ -18,6 +19,7 @@ export class PurchasingController {
   constructor(
     private readonly suppliers: SuppliersService,
     private readonly orders: PurchaseOrdersService,
+    private readonly access: WarehouseAccessService,
   ) {}
 
   // ── Suppliers ────────────────────────────────────────────
@@ -63,11 +65,13 @@ export class PurchasingController {
 
   @Roles('PURCHASING', 'WAREHOUSE_MANAGER', 'TECHNICIAN')
   @Post('purchase-orders/:id/receive')
-  receiveOrder(
+  async receiveOrder(
     @Param('id') id: string,
     @Body() dto: ReceiveOrderDto,
-    @Req() req: { user?: { id: string } },
+    @Req() req: { user?: Actor },
   ) {
+    // Goods land in dto.locationId — require write access to its warehouse.
+    await this.access.assertCanWrite(req.user, await this.access.warehouseOfLocation(dto.locationId));
     return this.orders.receive(id, dto, req.user?.id);
   }
 }

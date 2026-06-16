@@ -1,8 +1,11 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Role } from '@prisma/client';
+import { IsBoolean, IsEmail, IsIn, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
-import { Public } from './roles.decorator';
+import { Public, Roles } from './roles.decorator';
+
+const ROLES: Role[] = ['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'TECHNICIAN', 'PURCHASING', 'VIEWER'];
 
 class LoginDto {
   @IsEmail() email: string;
@@ -11,6 +14,19 @@ class LoginDto {
 
 class RefreshDto {
   @IsString() refreshToken: string;
+}
+
+class CreateUserDto {
+  @IsEmail() email: string;
+  @IsString() fullName: string;
+  @IsString() @MinLength(8) password: string;
+  @IsIn(ROLES) role: Role;
+}
+
+class GrantAccessDto {
+  @IsString() userId: string;
+  @IsString() warehouseId: string;
+  @IsBoolean() canWrite: boolean;
 }
 
 @ApiTags('auth')
@@ -34,5 +50,30 @@ export class AuthController {
   @Post('logout')
   logout(@Body() dto: RefreshDto) {
     return this.auth.logout(dto.refreshToken);
+  }
+
+  /** Current authenticated user (from the JWT). */
+  @Get('me')
+  me(@Req() req: { user?: unknown }) {
+    return req.user;
+  }
+
+  // ── Admin: users & per-warehouse access ──────────────────
+  @Roles('SUPER_ADMIN')
+  @Get('users')
+  listUsers() {
+    return this.auth.listUsers();
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Post('users')
+  createUser(@Body() dto: CreateUserDto) {
+    return this.auth.createUser(dto);
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Post('warehouse-access')
+  grantAccess(@Body() dto: GrantAccessDto) {
+    return this.auth.grantWarehouseAccess(dto);
   }
 }

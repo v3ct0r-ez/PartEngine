@@ -8,11 +8,17 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - `@partengine/core`: unit parser/sorter, search parser, dynamic fields, validation (tested).
 - **AC:** `pnpm test` green; `docker compose up` brings up Postgres + MinIO.
 
-## Sprint 1 — Auth, RBAC & audit
-- JWT access/refresh, password hashing, login/refresh/logout.
-- Roles (SUPER_ADMIN … VIEWER) + per-warehouse access guards.
-- Global audit interceptor (old/new/reason/ip).
-- **AC:** unauthorized requests rejected; every mutation produces an `AuditLog` row.
+## Sprint 1 — Auth, RBAC & audit ✅
+- JWT access + rotating refresh, argon2 hashing, login/refresh/logout. ✅
+- Roles (SUPER_ADMIN … VIEWER) via RolesGuard/@Roles + global JwtAuthGuard/@Public. ✅
+- **Per-warehouse access guards**: WarehouseAccessService enforced on inventory
+  movements / reserve / release / location create and PO receiving
+  (SUPER_ADMIN & WAREHOUSE_MANAGER global; others need WarehouseAccess.canWrite). ✅
+- Admin user management: `/auth/users` (create/list), `/auth/warehouse-access`
+  (grant), `/auth/me`. ✅
+- Global audit interceptor (user/op/new/reason/ip on every mutation). ✅
+- **AC met:** unauthorized requests rejected (401/403); every mutation writes an
+  `AuditLog` row.
 
 ## Sprint 2 — Components & categories CRUD ✅
 - Category + CategoryField admin (data-driven), seed built-in categories. ✅
