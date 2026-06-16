@@ -13,6 +13,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PurchasingModule } from './purchasing/purchasing.module';
+import { SeedModule } from './seed/seed.module';
 import { UpdateModule } from './update/update.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { UpdateModule } from './update/update.module';
     InventoryModule,
     NotificationsModule,
     PurchasingModule,
+    SeedModule,
     UpdateModule,
   ],
   controllers: [HealthController],
