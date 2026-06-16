@@ -38,6 +38,7 @@ publish:
   repo: PartEngine
 
 win:
+  icon: static/icon.ico
   target:
     - target: nsis # installer — installs once to disk; fast subsequent launches
       arch: [x64]
@@ -50,11 +51,17 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  runAfterFinish: true
+  installerIcon: static/icon.ico
+  uninstallerIcon: static/icon.ico
   # Distinct names so installer and portable don't overwrite each other (both .exe).
   artifactName: PartEngine-Setup-${version}.${ext}
 
 portable:
   artifactName: PartEngine-Portable-${version}.${ext}
+  # Extract to a FIXED dir and reuse it, so only the FIRST launch is slow
+  # (default portable re-extracts ~200MB to a random temp dir every launch).
+  unpackDirName: PartEngine
 
 # The app data (Postgres cluster, logs) lives in %APPDATA%/PartEngine and is
 # intentionally NOT bundled, so updates never destroy the user's inventory data.
