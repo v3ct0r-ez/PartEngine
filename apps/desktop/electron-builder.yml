@@ -1,6 +1,11 @@
 appId: com.partengine.desktop
 productName: PartEngine
 copyright: PartEngine
+# Pinned so electron-builder doesn't need to locate the `electron` module — with
+# node-linker=hoisted it lives in the root node_modules, not apps/desktop's, and
+# electron-builder (run from apps/desktop) can't compute the version from it.
+# With this set, electron-builder fetches the matching Electron binaries itself.
+electronVersion: 33.4.11
 
 directories:
   output: release

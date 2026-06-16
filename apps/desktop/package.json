@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "productName": "PartEngine",
+  "author": "PartEngine",
   "description": "PartEngine all-in-one Windows desktop app (Electron): bundles PostgreSQL + API + UI.",
   "main": "dist/main.js",
   "scripts": {
