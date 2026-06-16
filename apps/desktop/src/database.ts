@@ -22,7 +22,10 @@ type EmbeddedPostgresInstance = {
 export class DatabaseManager {
   private pg?: EmbeddedPostgresInstance;
 
-  constructor(private readonly cfg: DesktopConfig) {}
+  constructor(
+    private readonly cfg: DesktopConfig,
+    private readonly onProgress: (label: string) => void = () => undefined,
+  ) {}
 
   async start(): Promise<void> {
     const firstRun = !fs.existsSync(path.join(this.cfg.dataDir, 'PG_VERSION'));
@@ -40,14 +43,14 @@ export class DatabaseManager {
     });
 
     if (firstRun) {
-      log('First run — initialising PostgreSQL cluster…');
+      this.onProgress('Inizializzazione database (prima esecuzione)…');
       await this.pg.initialise();
     }
-    log(`Starting PostgreSQL on 127.0.0.1:${this.cfg.pgPort}…`);
+    this.onProgress('Avvio del database PostgreSQL…');
     await this.pg.start();
 
     if (firstRun) {
-      log('Creating database…');
+      this.onProgress('Creazione del database…');
       await this.pg.createDatabase(this.cfg.pgDatabase);
     }
 
@@ -93,6 +96,7 @@ export class DatabaseManager {
         return;
       }
 
+      this.onProgress('Applicazione delle migrazioni…');
       for (const name of pending) {
         log(`Applying migration ${name}…`);
         const sql = fs.readFileSync(path.join(migrationsDir, name, 'migration.sql'), 'utf8');

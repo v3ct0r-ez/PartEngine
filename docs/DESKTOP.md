@@ -23,6 +23,11 @@ enterprise stack locally, with an optional switch to expose it on the LAN for mu
         • wait for HTTP 200
    4. BrowserWindow loads http://127.0.0.1:<webPort>  ·  loading splash closes
    5. Tray icon (keeps the all-in-one server alive in the background; shows LAN URL)
+
+The loading window shows a live, installer-style checklist of the first-run steps
+(init database → migrations → start API → start UI), driven by progress events the
+main process pushes to it (src/loading-preload.ts → window.peLoading.onStatus), so
+the user gets immediate feedback during the heavy first launch.
 ```
 
 Ports default to a high, app-specific range (`47532` pg / `47600` api / `47700` web) to avoid

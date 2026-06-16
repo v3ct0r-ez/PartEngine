@@ -12,7 +12,10 @@ export class ServiceManager {
   private api?: ChildProcess;
   private web?: ChildProcess;
 
-  constructor(private readonly cfg: DesktopConfig) {}
+  constructor(
+    private readonly cfg: DesktopConfig,
+    private readonly onProgress: (label: string) => void = () => undefined,
+  ) {}
 
   get webUrl(): string {
     return `http://127.0.0.1:${this.cfg.webPort}`;
@@ -26,7 +29,7 @@ export class ServiceManager {
       APP_VERSION: process.env.APP_VERSION ?? '0.1.0',
     };
 
-    log('Starting API…');
+    this.onProgress('Avvio del servizio API…');
     this.api = spawn(
       process.execPath,
       [this.cfg.apiEntry],
@@ -47,7 +50,7 @@ export class ServiceManager {
     await this.waitForHealth(`http://127.0.0.1:${this.cfg.apiPort}/api/health`, 60_000);
     log('API is healthy.');
 
-    log('Starting web UI…');
+    this.onProgress("Avvio dell'interfaccia…");
     this.web = spawn(
       process.execPath,
       [this.cfg.webEntry],

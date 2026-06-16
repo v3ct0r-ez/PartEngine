@@ -41,6 +41,28 @@ let loadingWindow: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let shuttingDown = false;
 
+// ── Progress reporting to the loading window ─────────────────
+let loadingReady = false;
+const pendingStatus: Array<{ label: string; state: 'active' | 'done' | 'error' }> = [];
+let lastStepLabel: string | undefined;
+
+function sendStatus(label: string, state: 'active' | 'done' | 'error') {
+  const payload = { label, state };
+  if (loadingWindow && loadingReady) loadingWindow.webContents.send('pe:status', payload);
+  else pendingStatus.push(payload);
+}
+
+/** Mark the previous step done and start a new active step (also logged). */
+function progress(label: string) {
+  log(label);
+  if (lastStepLabel && lastStepLabel !== label) sendStatus(lastStepLabel, 'done');
+  lastStepLabel = label;
+  sendStatus(label, 'active');
+}
+function progressDone() {
+  if (lastStepLabel) sendStatus(lastStepLabel, 'done');
+}
+
 // Single-instance: a second launch focuses the existing window instead of
 // starting a second Postgres against the same data dir.
 if (!app.requestSingleInstanceLock()) {
@@ -57,12 +79,14 @@ async function bootstrap() {
 
   cfg = loadConfig();
   log(`config: packaged=${cfg.isPackaged} apiPort=${cfg.apiPort} webPort=${cfg.webPort}`);
-  db = new DatabaseManager(cfg);
-  services = new ServiceManager(cfg);
+  db = new DatabaseManager(cfg, progress);
+  services = new ServiceManager(cfg, progress);
   updater = new UpdaterManager(() => mainWindow);
 
   await db.start(); // embedded Postgres + migrations
   await services.start(); // API (health-gated) then Next.js
+  progress('Apertura applicazione…');
+  progressDone();
   createMainWindow();
   createTray();
   updater.init(cfg.isPackaged); // electron-updater (GitHub Releases, NSIS)
@@ -71,14 +95,23 @@ async function bootstrap() {
 
 function createLoadingWindow() {
   loadingWindow = new BrowserWindow({
-    width: 460,
-    height: 300,
+    width: 480,
+    height: 380,
     frame: false,
     resizable: false,
     show: true,
-    webPreferences: { contextIsolation: true },
+    webPreferences: {
+      contextIsolation: true,
+      preload: path.join(__dirname, 'loading-preload.js'),
+    },
   });
   loadingWindow.loadFile(path.join(__dirname, '..', 'static', 'loading.html'));
+  // Flush any progress emitted before the page finished loading.
+  loadingWindow.webContents.on('did-finish-load', () => {
+    loadingReady = true;
+    for (const p of pendingStatus) loadingWindow?.webContents.send('pe:status', p);
+    pendingStatus.length = 0;
+  });
 }
 
 function createMainWindow() {
