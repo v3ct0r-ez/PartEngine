@@ -23,5 +23,20 @@
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
     "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "argon2",
+      "prisma",
+      "@prisma/client",
+      "@prisma/engines",
+      "sharp",
+      "@embedded-postgres/windows-x64",
+      "@embedded-postgres/linux-x64",
+      "@embedded-postgres/darwin-arm64",
+      "@embedded-postgres/darwin-x64"
+    ]
   }
 }
