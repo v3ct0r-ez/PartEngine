@@ -54,6 +54,9 @@ export class SearchComponentsDto {
   @ApiPropertyOptional({ example: 'resistenza 10k 1% 0603' })
   @IsOptional() @IsString() q?: string;
 
+  /** Explicit category filter (slug) from the filter sidebar. */
+  @IsOptional() @IsString() categorySlug?: string;
+
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => RangeFilterDto)
   ranges?: RangeFilterDto[];
 

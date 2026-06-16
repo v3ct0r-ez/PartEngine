@@ -12,11 +12,12 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
  * with engineering formatting for readability.
  */
 export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow) => void }) {
-  const { query, ranges, sortField, sortDir, setSort } = useUiStore();
+  const { query, category, ranges, sortField, sortDir, setSort } = useUiStore();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['components', query, ranges, sortField, sortDir],
-    queryFn: () => searchComponents({ q: query, ranges, sortField, sortDir, limit: 50 }),
+    queryKey: ['components', query, category, ranges, sortField, sortDir],
+    queryFn: () =>
+      searchComponents({ q: query, categorySlug: category, ranges, sortField, sortDir, limit: 50 }),
     placeholderData: keepPreviousData,
   });
 

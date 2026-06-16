@@ -244,6 +244,7 @@ export function deleteComponent(id: string) {
 
 export async function searchComponents(params: {
   q?: string;
+  categorySlug?: string;
   ranges?: RangeFilter[];
   sortField?: string;
   sortDir?: 'asc' | 'desc';
@@ -252,6 +253,7 @@ export async function searchComponents(params: {
 }): Promise<SearchResult> {
   const search = new URLSearchParams();
   if (params.q) search.set('q', params.q);
+  if (params.categorySlug) search.set('categorySlug', params.categorySlug);
   if (params.sortField) search.set('sortField', params.sortField);
   if (params.sortDir) search.set('sortDir', params.sortDir);
   if (params.cursor) search.set('cursor', params.cursor);

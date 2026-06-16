@@ -16,6 +16,7 @@ interface UiState {
   setQuery: (q: string) => void;
   setCategory: (c?: string) => void;
   setRange: (field: string, from?: string, to?: string) => void;
+  clearRanges: () => void;
   setSort: (field: string, dir?: 'asc' | 'desc') => void;
 }
 
@@ -32,6 +33,7 @@ export const useUiStore = create<UiState>()(
         if (from || to) ranges.push({ field, from, to });
         set({ ranges });
       },
+      clearRanges: () => set({ ranges: [] }),
       setSort: (sortField, sortDir) =>
         set({ sortField, sortDir: sortDir ?? (get().sortDir === 'asc' ? 'desc' : 'asc') }),
     }),

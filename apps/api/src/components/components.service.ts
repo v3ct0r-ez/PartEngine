@@ -160,7 +160,10 @@ export class ComponentsService {
     const take = Math.min(dto.limit ?? 50, 200);
 
     const where: Prisma.ComponentWhereInput = { deletedAt: null };
-    if (parsed.category) where.category = { slug: parsed.category };
+    // Explicit category from the filter sidebar takes precedence over a category
+    // keyword parsed out of the free-text query.
+    const categorySlug = dto.categorySlug ?? parsed.category;
+    if (categorySlug) where.category = { slug: categorySlug };
     if (parsed.footprint) where.footprint = { equals: parsed.footprint, mode: 'insensitive' };
 
     // Structured numeric parameters become projection filters.
