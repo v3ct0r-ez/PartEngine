@@ -1,6 +1,13 @@
+import path from 'node:path';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Trace from the monorepo root so the standalone bundle includes all
+  // dependencies (incl. Next's own, e.g. styled-jsx) with a resolvable layout —
+  // without this, pnpm-workspace tracing misses deps ("Cannot find module
+  // 'styled-jsx/package.json'").
+  outputFileTracingRoot: path.join(import.meta.dirname, '..', '..'),
   reactStrictMode: true,
   transpilePackages: ['@partengine/core'],
   webpack: (config) => {
