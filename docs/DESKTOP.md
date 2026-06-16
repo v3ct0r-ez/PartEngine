@@ -140,6 +140,14 @@ module, which inside an asar archive resolves to a virtual path that
 `child_process` can't execute (`ENOENT`). Shipping files unpacked fixes it.
 Rebuild via the Desktop Release workflow to get a corrected installer.
 
+## Database encoding (UTF-8)
+
+The embedded cluster is initialised with `--encoding=UTF8 --no-locale` so symbols
+in component units (Ω, µ, °C) store correctly — on Windows `initdb` otherwise
+defaults to WIN1252 ("character … has no equivalent in encoding WIN1252"). This
+applies to the **first** initialisation only; a cluster created by an older build
+stays WIN1252, so delete `%APPDATA%\PartEngine\pgdata` once to re-initialise.
+
 ## Security notes (desktop specifics)
 
 - `contextIsolation: true`, `nodeIntegration: false`; the renderer gets only the tiny

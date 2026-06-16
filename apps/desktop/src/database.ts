@@ -40,6 +40,11 @@ export class DatabaseManager {
       password: this.cfg.pgPassword,
       port: this.cfg.pgPort,
       persistent: true,
+      // Force UTF-8: on Windows initdb otherwise defaults to WIN1252, which
+      // cannot store symbols like "Ω"/"µ"/"°C" used in component units
+      // ("no equivalent in encoding WIN1252"). --no-locale uses the C locale,
+      // which is compatible with UTF-8. Applies to FIRST init only.
+      initdbFlags: ['--encoding=UTF8', '--no-locale'],
     });
 
     if (firstRun) {
