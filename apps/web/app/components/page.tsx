@@ -36,6 +36,7 @@ export default function ComponentsPage() {
         internalCode: editing.internalCode,
         name: editing.name,
         categoryId: categories.find((c: Category) => c.slug === editing.category?.slug)?.id,
+        manufacturerId: editing.manufacturerId,
         mpn: editing.mpn,
         footprint: editing.footprint,
         parameters: editing.parameters,

@@ -2,12 +2,15 @@
 
 import {
   createComponent,
+  createManufacturer,
   deleteComponent,
+  listManufacturers,
   updateComponent,
   type Category,
   type CategoryField,
 } from '@/lib/api';
 import { validateParameters, type FieldTemplate } from '@partengine/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 interface EditingComponent {
@@ -15,6 +18,7 @@ interface EditingComponent {
   internalCode: string;
   name: string;
   categoryId?: string;
+  manufacturerId?: string | null;
   mpn?: string | null;
   footprint?: string | null;
   tags?: string[];
@@ -42,10 +46,29 @@ export function ComponentEditor({
   const [name, setName] = useState(component?.name ?? '');
   const [mpn, setMpn] = useState(component?.mpn ?? '');
   const [footprint, setFootprint] = useState(component?.footprint ?? '');
+  const [manufacturerId, setManufacturerId] = useState(component?.manufacturerId ?? '');
   const [tags, setTags] = useState((component?.tags ?? []).join(', '));
   const [params, setParams] = useState<Record<string, unknown>>(component?.parameters ?? {});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const qc = useQueryClient();
+  const { data: manufacturers = [] } = useQuery({
+    queryKey: ['manufacturers'],
+    queryFn: listManufacturers,
+  });
+
+  async function addManufacturer() {
+    const name = window.prompt('Nome del nuovo produttore:')?.trim();
+    if (!name) return;
+    try {
+      const m = await createManufacturer({ name });
+      await qc.invalidateQueries({ queryKey: ['manufacturers'] });
+      setManufacturerId(m.id);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
 
   const category = categories.find((c) => c.id === categoryId);
   const fields = category?.fields ?? [];
@@ -79,6 +102,7 @@ export function ComponentEditor({
       categoryId,
       mpn: mpn || undefined,
       footprint: footprint || undefined,
+      manufacturerId: manufacturerId || undefined,
       tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       parameters: params,
     };
@@ -124,6 +148,15 @@ export function ComponentEditor({
           </Field>
           <Field label="MPN"><input className={inp} value={mpn ?? ''} onChange={(e) => setMpn(e.target.value)} /></Field>
           <Field label="Footprint"><input className={inp} value={footprint ?? ''} onChange={(e) => setFootprint(e.target.value)} /></Field>
+          <Field label="Produttore">
+            <div className="flex gap-1">
+              <select className={inp} value={manufacturerId ?? ''} onChange={(e) => setManufacturerId(e.target.value)}>
+                <option value="">—</option>
+                {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+              <button type="button" onClick={addManufacturer} className="rounded border border-border px-2 text-sm" title="Nuovo produttore">+</button>
+            </div>
+          </Field>
           <Field label="Tag (separati da virgola)"><input className={inp} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
         </div>
 

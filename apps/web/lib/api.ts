@@ -8,6 +8,7 @@ export interface ComponentRow {
   mpn?: string | null;
   footprint?: string | null;
   parameters: Record<string, unknown>;
+  manufacturerId?: string | null;
   category?: { slug: string; name: string };
   manufacturer?: { name: string } | null;
 }
@@ -212,6 +213,19 @@ export function deleteCategoryField(fieldId: string) {
   return request<{ deleted: boolean }>(`/categories/fields/${fieldId}`, { method: 'DELETE' });
 }
 
+// ── Manufacturers ─────────────────────────────────────────────
+export interface Manufacturer {
+  id: string;
+  name: string;
+  website?: string | null;
+}
+export function listManufacturers() {
+  return request<Manufacturer[]>('/manufacturers');
+}
+export function createManufacturer(body: { name: string; website?: string }) {
+  return request<Manufacturer>('/manufacturers', { method: 'POST', body: JSON.stringify(body) });
+}
+
 // ── Component CRUD ────────────────────────────────────────────
 export interface ComponentInput {
   internalCode: string;
@@ -220,6 +234,7 @@ export interface ComponentInput {
   description?: string;
   mpn?: string;
   footprint?: string;
+  manufacturerId?: string;
   tags?: string[];
   parameters?: Record<string, unknown>;
 }

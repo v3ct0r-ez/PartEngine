@@ -14,11 +14,12 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - Global audit interceptor (old/new/reason/ip).
 - **AC:** unauthorized requests rejected; every mutation produces an `AuditLog` row.
 
-## Sprint 2 — Components & categories CRUD
-- Category + CategoryField admin (data-driven), seed built-in categories.
-- Component CRUD with dynamic parameter validation + indexed projection.
-- Manufacturers.
-- **AC:** create a resistor with `parameters`, see `ComponentParameterValue` populated.
+## Sprint 2 — Components & categories CRUD ✅
+- Category + CategoryField admin (data-driven), seed built-in categories. ✅
+- Component CRUD with dynamic parameter validation + indexed projection. ✅
+- Manufacturers: list/create API + inline "Produttore" select in the component editor. ✅
+- **AC met:** create a resistor with `parameters` → `ComponentParameterValue` populated;
+  components can be associated to a manufacturer (created on the fly).
 
 ## Sprint 3 — Search, filters & listing
 - FTS + trgm migration; `/components/search` with NL parsing, range filters, keyset pagination.

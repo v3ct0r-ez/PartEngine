@@ -11,6 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ComponentsModule } from './components/components.module';
 import { HealthController } from './health/health.controller';
 import { InventoryModule } from './inventory/inventory.module';
+import { ManufacturersModule } from './manufacturers/manufacturers.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PurchasingModule } from './purchasing/purchasing.module';
@@ -32,6 +33,7 @@ import { UpdateModule } from './update/update.module';
     CategoriesModule,
     ComponentsModule,
     InventoryModule,
+    ManufacturersModule,
     NotificationsModule,
     PurchasingModule,
     SeedModule,
