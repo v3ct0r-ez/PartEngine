@@ -21,10 +21,17 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - **AC met:** create a resistor with `parameters` → `ComponentParameterValue` populated;
   components can be associated to a manufacturer (created on the fly).
 
-## Sprint 3 — Search, filters & listing
-- FTS + trgm migration; `/components/search` with NL parsing, range filters, keyset pagination.
-- Web: components table (server-side sort/filter), filter sidebar, unit-aware sort.
-- **AC:** "resistenza 10k 1% 0603" returns expected rows; sort is by magnitude; <100ms on seed.
+## Sprint 3 — Search, filters & listing ✅
+- FTS + trgm migration (trigger-maintained search_vector + gin_trgm indexes) ✅
+- `/components/search`: NL parsing (built-in + custom categories), explicit
+  category filter, numeric range filters, cursor pagination ✅
+- **Unit-aware server-side sort**: sorting by a QUANTITY parameter orders by the
+  indexed base-SI magnitude in ComponentParameterValue (100Ω < 1kΩ < 1MΩ), not
+  lexically; scalar columns sort directly ✅
+- Web: server-side sort/filter table, API-driven filter sidebar, sortable
+  unit-aware "Valore" column (active category's primary QUANTITY field) ✅
+- **AC met:** "resistenza 10k 1% 0603" returns expected rows; value sort is by
+  magnitude.
 
 ## Sprint 4 — Inventory & movements ✅
 - StockLevel per location; INBOUND/OUTBOUND/TRANSFER/ADJUSTMENT in transactions.

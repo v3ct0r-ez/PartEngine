@@ -15,6 +15,10 @@ import type {
   UpdateComponentDto,
 } from './components.dto';
 
+/** Scalar Component columns that can be sorted directly; anything else is
+ * treated as a (unit-aware) parameter sort against the indexed projection. */
+const SCALAR_SORT_FIELDS = new Set(['internalCode', 'name', 'mpn', 'createdAt', 'updatedAt']);
+
 @Injectable()
 export class ComponentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -214,14 +218,37 @@ export class ComponentsService {
       ];
     }
 
+    const dir: Prisma.SortOrder = dto.sortDir === 'desc' ? 'desc' : 'asc';
+    const include = { category: true, manufacturer: true };
+
+    // Sorting by a QUANTITY parameter must be UNIT-AWARE: order by the indexed
+    // base-SI magnitude in ComponentParameterValue, not by the lexical string.
+    // We query the projection (whose `numeric` is already in base units) with the
+    // component filter applied, so 100Ω < 1kΩ < 1MΩ comes out correctly.
+    if (dto.sortField && !SCALAR_SORT_FIELDS.has(dto.sortField)) {
+      const rows = await this.prisma.componentParameterValue.findMany({
+        where: { fieldKey: dto.sortField, numeric: { not: null }, component: where },
+        orderBy: { numeric: dir },
+        take: take + 1,
+        ...(dto.cursor ? { cursor: { id: dto.cursor }, skip: 1 } : {}),
+        include: { component: { include } },
+      });
+      const items = rows.map((r) => r.component);
+      const nextCursor = rows.length > take ? rows[take].id : null;
+      return { items: items.slice(0, take), nextCursor, parsed };
+    }
+
+    // Scalar column sort (or default).
+    const orderBy: Prisma.ComponentOrderByWithRelationInput = dto.sortField
+      ? { [dto.sortField]: dir }
+      : { internalCode: 'asc' };
+
     const items = await this.prisma.component.findMany({
       where,
       take: take + 1,
       ...(dto.cursor ? { cursor: { id: dto.cursor }, skip: 1 } : {}),
-      orderBy: dto.sortField
-        ? undefined // unit-aware sort handled by joining the projection (raw SQL)
-        : { internalCode: 'asc' },
-      include: { category: true, manufacturer: true },
+      orderBy,
+      include,
     });
 
     const nextCursor = items.length > take ? items[take].id : null;

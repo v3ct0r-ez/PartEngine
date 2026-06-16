@@ -1,6 +1,6 @@
 'use client';
 
-import { searchComponents, type ComponentRow } from '@/lib/api';
+import { listCategories, searchComponents, type Category, type ComponentRow } from '@/lib/api';
 import { useUiStore } from '@/lib/store';
 import { formatEngineering, parseQuantity } from '@partengine/core';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -21,6 +21,12 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
     placeholderData: keepPreviousData,
   });
 
+  // The active category's primary QUANTITY field drives the sortable "Valore"
+  // column (unit-aware sort by magnitude on the server).
+  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: listCategories });
+  const activeCat = categories.find((c: Category) => c.slug === category);
+  const valueField = activeCat?.fields.find((f) => f.type === 'QUANTITY');
+
   if (isError) return <div className="p-4 text-sm text-red-500">Errore nel caricamento.</div>;
 
   return (
@@ -32,7 +38,11 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
             <Th label="Nome" field="name" {...{ sortField, sortDir, setSort }} />
             <th className="px-3 py-2">Categoria</th>
             <th className="px-3 py-2">MPN</th>
-            <th className="px-3 py-2">Valore</th>
+            {valueField ? (
+              <Th label={`Valore${valueField.unit ? ` (${valueField.unit})` : ''}`} field={valueField.key} {...{ sortField, sortDir, setSort }} />
+            ) : (
+              <th className="px-3 py-2">Valore</th>
+            )}
             <th className="px-3 py-2">Footprint</th>
           </tr>
         </thead>
@@ -54,7 +64,7 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
               <td className="px-3 py-2">{c.name}</td>
               <td className="px-3 py-2">{c.category?.name ?? '—'}</td>
               <td className="px-3 py-2">{c.mpn ?? '—'}</td>
-              <td className="px-3 py-2">{primaryValue(c)}</td>
+              <td className="px-3 py-2">{primaryValue(c, valueField)}</td>
               <td className="px-3 py-2">{c.footprint ?? '—'}</td>
             </tr>
           ))}
@@ -95,15 +105,23 @@ function Th({
   );
 }
 
-/** Render the category's primary quantity parameter in engineering notation. */
-function primaryValue(c: ComponentRow): string {
-  const key = { resistors: 'resistance', capacitors: 'capacitance', inductors: 'inductance' }[
-    c.category?.slug ?? ''
-  ];
+/** Render the active category's primary quantity parameter in engineering
+ * notation. Works for any (incl. custom) category via its first QUANTITY field;
+ * falls back to a built-in guess when no category is selected. */
+function primaryValue(
+  c: ComponentRow,
+  valueField?: { key: string; unit?: string | null },
+): string {
+  const key =
+    valueField?.key ??
+    { resistors: 'resistance', capacitors: 'capacitance', inductors: 'inductance' }[
+      c.category?.slug ?? ''
+    ];
   if (!key) return '—';
   const raw = c.parameters?.[key];
   if (raw == null) return '—';
-  const unit = { resistance: 'Ω', capacitance: 'F', inductance: 'H' }[key] ?? '';
-  const q = parseQuantity(String(raw), unit);
-  return q ? formatEngineering(q.magnitude, unit) : String(raw);
+  const unit =
+    valueField?.unit ?? { resistance: 'Ω', capacitance: 'F', inductance: 'H' }[key] ?? '';
+  const q = parseQuantity(String(raw), unit ?? '');
+  return q ? formatEngineering(q.magnitude, unit ?? '') : String(raw);
 }

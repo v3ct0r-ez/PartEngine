@@ -10,13 +10,14 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Monorepo, tooling, Docker infra | ✅ / 🟡 | workspace, compose (Postgres+MinIO), Dockerfiles present |
 | Prisma data model (all entities) | ✅ | full schema; FTS/trgm via raw-SQL migration (documented) |
 | Engineering-unit parser & sorter | ✅ | `packages/core`, 10 tests; Ω/kΩ/MΩ, pF/nF/µF, EIA notation |
-| Natural-language search parser | ✅ | `packages/core`, 4 tests; "resistenza 10k 1% 0603" etc. |
+| Natural-language search parser | ✅ | `packages/core`, 5 tests; "resistenza 10k 1% 0603"; aware of custom categories |
 | Data-driven category templates | ✅ | resistors, caps, inductors, MOSFET, buck, MCU built-in |
 | Parameter validation + projection | ✅ | `packages/core`, drives forms + indexed sort |
 | NestJS app skeleton + modules | 🟡 | bootstrap, config, auth/RBAC/audit/components module stubs |
 | Auth (JWT + refresh) & RBAC guard | 🟡 | guard + decorators + strategy scaffolded |
 | Audit interceptor | 🟡 | interceptor wired; persists old/new/reason/ip |
 | Component CRUD + search endpoint | ✅ | Sprint 10: create/update/delete + search; UI modal editor (dynamic per-category params) |
+| Search, filters & listing | ✅ | Sprint 3: category + range filters, cursor pagination, unit-aware server-side sort (orders by indexed base-SI magnitude); sortable "Valore" column |
 | Category management (admin) | ✅ | Sprint 10: create categories + add/edit/delete recognition fields, no code; UI at /categories; API categories(+fields) CRUD |
 | Manufacturers | ✅ | list/create API (upsert by name) + inline "Produttore" select in the component editor (closes Sprint 2) |
 | Next.js app + key components | 🟡 | layout, components table, filter sidebar, dynamic form |
