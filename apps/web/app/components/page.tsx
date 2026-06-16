@@ -6,10 +6,18 @@ import { FilterSidebar } from '@/components/filter-sidebar';
 import { listCategories, type Category, type ComponentRow } from '@/lib/api';
 import { useUiStore } from '@/lib/store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ComponentsPage() {
   const { query, setQuery } = useUiStore();
+  // Local input state debounced into the store, so typing doesn't trigger a
+  // query refetch + global re-render on every keystroke.
+  const [text, setText] = useState(query);
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(text), 300);
+    return () => clearTimeout(t);
+  }, [text, setQuery]);
+
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: listCategories });
 
@@ -49,8 +57,8 @@ export default function ComponentsPage() {
         <h1 className="text-2xl font-bold">Componenti</h1>
         <div className="flex items-center gap-2">
           <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             placeholder='Ricerca intelligente — es. "resistenza 10k 1% 0603"'
             className="w-96 rounded-md border border-border bg-background px-3 py-2 text-sm"
           />
