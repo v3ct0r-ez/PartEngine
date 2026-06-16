@@ -50,9 +50,11 @@ jobs:
 
       - name: Stage bundles for packaging
         run: |
-          # Self-contained API node_modules (handles all transitive pnpm deps)
-          pnpm --filter @partengine/api deploy --prod apps/desktop/staging/api
-          # Copy the generated Prisma client + stage the web bundle
+          # Self-contained API node_modules. node-linker=hoisted produces a flat,
+          # symlink-free tree (pnpm's default .pnpm symlinks break when
+          # electron-builder copies them on Windows -> 'Cannot find module tslib').
+          pnpm --filter @partengine/api --config.node-linker=hoisted deploy --prod apps/desktop/staging/api
+          # Copy compiled dist + generated Prisma client, strip .bin, stage web
           node apps/desktop/scripts/prepare-bundles.mjs
 
       - name: Build & publish installer

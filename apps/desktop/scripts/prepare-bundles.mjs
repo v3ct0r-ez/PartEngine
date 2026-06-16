@@ -17,9 +17,25 @@
  *   pnpm --filter @partengine/api deploy --prod apps/desktop/staging/api
  *   node apps/desktop/scripts/prepare-bundles.mjs
  */
-import { cpSync, existsSync, mkdirSync, realpathSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+function countSymlinks(dir) {
+  let n = 0;
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, e.name);
+    if (e.isSymbolicLink()) n++;
+    else if (e.isDirectory()) {
+      try {
+        if (!lstatSync(full).isSymbolicLink()) n += countSymlinks(full);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return n;
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '..', '..', '..');
@@ -50,7 +66,25 @@ try {
   console.warn(`! could not resolve generated Prisma client: ${e.message}`);
 }
 
-// 2) Web standalone bundle (self-contained Next server) + static/public.
+// 2) Strip every node_modules/.bin directory from the API bundle.
+// With node-linker=hoisted (see the deploy step) the only remaining symlinks are
+// .bin shims, which the runtime never uses (we launch dist/main.js directly) and
+// which would otherwise be dangling symlinks after the Windows copy.
+function stripBinDirs(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.name === '.bin') rmSync(full, { recursive: true, force: true });
+    else if (entry.isDirectory() && !entry.isSymbolicLink()) stripBinDirs(full);
+  }
+}
+const apiNm = join(staging, 'api/node_modules');
+if (existsSync(apiNm)) {
+  stripBinDirs(apiNm);
+  const left = countSymlinks(apiNm);
+  console.log(`✓ stripped .bin dirs (remaining symlinks: ${left})`);
+}
+
+// 3) Web standalone bundle (self-contained Next server) + static/public.
 copy(join(repo, 'apps/web/.next/standalone'), join(staging, 'web'));
 copy(join(repo, 'apps/web/.next/static'), join(staging, 'web/apps/web/.next/static'));
 copy(join(repo, 'apps/web/public'), join(staging, 'web/apps/web/public'));
