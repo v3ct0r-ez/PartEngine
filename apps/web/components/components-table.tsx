@@ -11,7 +11,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
  * ordering is correct even across millions of rows. Quantity cells are rendered
  * with engineering formatting for readability.
  */
-export function ComponentsTable() {
+export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow) => void }) {
   const { query, ranges, sortField, sortDir, setSort } = useUiStore();
 
   const { data, isLoading, isError } = useQuery({
@@ -44,7 +44,11 @@ export function ComponentsTable() {
             </tr>
           )}
           {data?.items.map((c) => (
-            <tr key={c.id} className="border-t border-border hover:bg-muted/40">
+            <tr
+              key={c.id}
+              onClick={() => onRowClick?.(c)}
+              className={`border-t border-border hover:bg-muted/40 ${onRowClick ? 'cursor-pointer' : ''}`}
+            >
               <td className="px-3 py-2 font-mono text-xs">{c.internalCode}</td>
               <td className="px-3 py-2">{c.name}</td>
               <td className="px-3 py-2">{c.category?.name ?? '—'}</td>

@@ -159,6 +159,89 @@ export function createMovement(body: {
   });
 }
 
+// ── Categories & fields (admin) ──────────────────────────────
+export type FieldType = 'STRING' | 'TEXT' | 'NUMBER' | 'QUANTITY' | 'BOOLEAN' | 'ENUM' | 'DATE';
+
+export interface CategoryField {
+  id: string;
+  key: string;
+  label: string;
+  type: FieldType;
+  unit?: string | null;
+  options?: string[] | null;
+  required: boolean;
+  isFilterable?: boolean;
+  isSortable?: boolean;
+  sortOrder?: number;
+}
+
+export interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  icon?: string | null;
+  fields: CategoryField[];
+  _count?: { components: number };
+}
+
+export function listCategories() {
+  return request<Category[]>('/categories');
+}
+export function createCategory(body: { slug: string; name: string; icon?: string }) {
+  return request<Category>('/categories', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateCategory(id: string, body: { name?: string; icon?: string }) {
+  return request<Category>(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+}
+export function deleteCategory(id: string) {
+  return request<{ deleted: boolean }>(`/categories/${id}`, { method: 'DELETE' });
+}
+export function addCategoryField(categoryId: string, body: Partial<CategoryField> & { key: string; label: string; type: FieldType }) {
+  return request<CategoryField>(`/categories/${categoryId}/fields`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+export function updateCategoryField(fieldId: string, body: Partial<CategoryField>) {
+  return request<CategoryField>(`/categories/fields/${fieldId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+export function deleteCategoryField(fieldId: string) {
+  return request<{ deleted: boolean }>(`/categories/fields/${fieldId}`, { method: 'DELETE' });
+}
+
+// ── Component CRUD ────────────────────────────────────────────
+export interface ComponentInput {
+  internalCode: string;
+  name: string;
+  categoryId: string;
+  description?: string;
+  mpn?: string;
+  footprint?: string;
+  tags?: string[];
+  parameters?: Record<string, unknown>;
+}
+
+export function getComponent(id: string) {
+  return request<ComponentRow & { parameters: Record<string, unknown>; categoryId?: string }>(
+    `/components/${id}`,
+  );
+}
+export function createComponent(body: ComponentInput) {
+  return request<{ id: string }>('/components', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateComponent(id: string, body: Partial<ComponentInput>) {
+  return request<{ id: string }>(`/components/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+export function deleteComponent(id: string) {
+  return request<{ deleted: boolean }>(`/components/${id}`, { method: 'DELETE' });
+}
+
 export async function searchComponents(params: {
   q?: string;
   ranges?: RangeFilter[];

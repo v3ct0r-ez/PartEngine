@@ -1,7 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
-import { CreateComponentDto, SearchComponentsDto } from './components.dto';
+import {
+  CreateComponentDto,
+  SearchComponentsDto,
+  UpdateComponentDto,
+} from './components.dto';
 import { ComponentsService } from './components.service';
 
 @ApiTags('components')
@@ -25,6 +29,12 @@ export class ComponentsController {
   @Post()
   create(@Body() dto: CreateComponentDto, @Req() req: { user?: { id: string } }) {
     return this.components.create(dto, req.user?.id);
+  }
+
+  @Roles('WAREHOUSE_MANAGER', 'TECHNICIAN')
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateComponentDto) {
+    return this.components.update(id, dto);
   }
 
   @Roles('WAREHOUSE_MANAGER')

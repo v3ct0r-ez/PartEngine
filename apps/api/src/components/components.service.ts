@@ -8,7 +8,11 @@ import {
 } from '@partengine/core';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import type { CreateComponentDto, SearchComponentsDto } from './components.dto';
+import type {
+  CreateComponentDto,
+  SearchComponentsDto,
+  UpdateComponentDto,
+} from './components.dto';
 
 @Injectable()
 export class ComponentsService {
@@ -82,6 +86,68 @@ export class ComponentsService {
     });
     if (!component) throw new NotFoundException('Component not found');
     return component;
+  }
+
+  /**
+   * Update a component. Parameters are re-validated against the (possibly
+   * changed) category's fields and the indexed projection is rebuilt. Only the
+   * provided fields are changed. The audit interceptor records the change.
+   */
+  async update(id: string, dto: UpdateComponentDto) {
+    const existing = await this.prisma.component.findFirst({ where: { id, deletedAt: null } });
+    if (!existing) throw new NotFoundException('Component not found');
+
+    const categoryId = dto.categoryId ?? existing.categoryId;
+    // If parameters (or the category) change, validate + reproject them.
+    const reproject = dto.parameters !== undefined || dto.categoryId !== undefined;
+    const params = (dto.parameters ?? (existing.parameters as Record<string, unknown>)) ?? {};
+
+    if (reproject) {
+      const fields = await this.fieldsFor(categoryId);
+      const errors = validateParameters(fields, params);
+      if (errors.length) throw new BadRequestException({ message: 'Validation failed', errors });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const data: Prisma.ComponentUpdateInput = {
+        name: dto.name,
+        description: dto.description,
+        aliases: dto.aliases,
+        tags: dto.tags,
+        mpn: dto.mpn,
+        footprint: dto.footprint,
+        package: dto.package,
+        ...(dto.internalCode ? { internalCode: dto.internalCode } : {}),
+        ...(dto.categoryId ? { category: { connect: { id: dto.categoryId } } } : {}),
+        ...(dto.manufacturerId
+          ? { manufacturer: { connect: { id: dto.manufacturerId } } }
+          : {}),
+        ...(reproject ? { parameters: params as Prisma.InputJsonValue } : {}),
+      };
+
+      if (reproject) {
+        const fields = await this.fieldsFor(categoryId);
+        const projected = projectParameters(fields, params);
+        const fieldByKey = new Map(
+          (await tx.categoryField.findMany({ where: { categoryId } })).map((f) => [f.key, f]),
+        );
+        // Replace the indexed projection wholesale.
+        await tx.componentParameterValue.deleteMany({ where: { componentId: id } });
+        data.parameterValues = {
+          create: projected
+            .filter((p) => fieldByKey.has(p.fieldKey))
+            .map((p) => ({
+              fieldId: fieldByKey.get(p.fieldKey)!.id,
+              fieldKey: p.fieldKey,
+              numeric: p.numeric ?? undefined,
+              text: p.text ?? undefined,
+              boolean: p.boolean ?? undefined,
+            })),
+        };
+      }
+
+      return tx.component.update({ where: { id }, data });
+    });
   }
 
   /**

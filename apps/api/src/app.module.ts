@@ -7,6 +7,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
+import { CategoriesModule } from './categories/categories.module';
 import { ComponentsModule } from './components/components.module';
 import { HealthController } from './health/health.controller';
 import { InventoryModule } from './inventory/inventory.module';
@@ -28,6 +29,7 @@ import { UpdateModule } from './update/update.module';
     PrismaModule,
     AuditModule,
     AuthModule,
+    CategoriesModule,
     ComponentsModule,
     InventoryModule,
     NotificationsModule,

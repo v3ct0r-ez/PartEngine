@@ -16,7 +16,8 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | NestJS app skeleton + modules | 🟡 | bootstrap, config, auth/RBAC/audit/components module stubs |
 | Auth (JWT + refresh) & RBAC guard | 🟡 | guard + decorators + strategy scaffolded |
 | Audit interceptor | 🟡 | interceptor wired; persists old/new/reason/ip |
-| Component CRUD + search endpoint | 🟡 | service/controller stubs using core engine |
+| Component CRUD + search endpoint | ✅ | Sprint 10: create/update/delete + search; UI modal editor (dynamic per-category params) |
+| Category management (admin) | ✅ | Sprint 10: create categories + add/edit/delete recognition fields, no code; UI at /categories; API categories(+fields) CRUD |
 | Next.js app + key components | 🟡 | layout, components table, filter sidebar, dynamic form |
 | Persistent memory (prefs/views/recent) | 🟡 | schema ✅; endpoints/UI scaffolded |
 | Inventory & movements | ✅ | Sprint 4: IN/OUT/TRANSFER/ADJUST txns, concurrency-safe no-oversell, reserve/release, location tree, stock rollup + health; UI page; 10 tests |

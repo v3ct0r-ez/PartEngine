@@ -29,6 +29,21 @@ export class CreateComponentDto {
   @IsOptional() @IsString() _reason?: string;
 }
 
+export class UpdateComponentDto {
+  @IsOptional() @IsString() internalCode?: string;
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() categoryId?: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsArray() aliases?: string[];
+  @IsOptional() @IsArray() tags?: string[];
+  @IsOptional() @IsString() manufacturerId?: string;
+  @IsOptional() @IsString() mpn?: string;
+  @IsOptional() @IsString() footprint?: string;
+  @IsOptional() @IsString() package?: string;
+  @IsOptional() @IsObject() parameters?: Record<string, unknown>;
+  @IsOptional() @IsString() _reason?: string;
+}
+
 export class RangeFilterDto {
   @IsString() field: string;
   @IsOptional() from?: string | number;

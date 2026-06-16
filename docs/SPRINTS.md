@@ -57,6 +57,15 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - Dashboard KPIs + charts.
 - **AC:** scan a QR → component opens; export inventory to Excel.
 
+## Sprint 10 — Component CRUD & category management ✅
+- Components: full create / edit / delete from the UI (modal editor, dynamic
+  per-category parameters, shared client/server validation, audited).
+- Categories: admin CRUD — create new categories and add/edit/delete their
+  "recognition" fields (the data-driven parameters) without code, via a
+  dedicated UI (`/categories`). API: `categories` + `categories/:id/fields`.
+- **AC:** add/modify/remove a stocked component; create a category and define
+  its parameters, then use it when creating a component.
+
 ## Sprint 9 — Hardening
 - Performance pass (1M-row seed, partitioning, query plans), rate limiting, backups,
   E2E (Playwright), accessibility (WCAG) audit.
