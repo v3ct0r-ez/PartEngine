@@ -84,8 +84,39 @@ const UNIT_TO_PARAM: Record<string, string> = {
   Hz: 'frequency',
 };
 
-export function parseSearchQuery(input: string): SearchQuery {
+export interface ParseSearchOptions {
+  /**
+   * Extra/override category keywords (lowercased word → category slug), e.g.
+   * built from the live categories so admin-created categories are recognised.
+   */
+  categoryKeywords?: Record<string, string>;
+}
+
+/**
+ * Build a keyword→slug map from a list of categories. Each category contributes
+ * its slug, its full lowercased name, and each word of the name (so multi-word
+ * names like "Buck Converter" still match token-by-token). Use the result as
+ * `categoryKeywords` in {@link parseSearchQuery}.
+ */
+export function buildCategoryKeywords(
+  categories: ReadonlyArray<{ slug: string; name: string }>,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const c of categories) {
+    map[c.slug.toLowerCase()] = c.slug;
+    const name = c.name.toLowerCase().trim();
+    if (name) map[name] = c.slug;
+    for (const word of name.split(/\s+/)) {
+      if (word.length > 2 && !(word in map)) map[word] = c.slug;
+    }
+  }
+  return map;
+}
+
+export function parseSearchQuery(input: string, options: ParseSearchOptions = {}): SearchQuery {
   const query: SearchQuery = { params: {}, text: [] };
+  // Live/custom category keywords extend (and can override) the built-in ones.
+  const categoryKeywords = { ...CATEGORY_KEYWORDS, ...(options.categoryKeywords ?? {}) };
   const tokens = String(input ?? '')
     .trim()
     .split(/\s+/)
@@ -94,9 +125,9 @@ export function parseSearchQuery(input: string): SearchQuery {
   for (const token of tokens) {
     const lower = token.toLowerCase();
 
-    // Category keyword
-    if (CATEGORY_KEYWORDS[lower]) {
-      query.category = CATEGORY_KEYWORDS[lower];
+    // Category keyword (built-in + custom)
+    if (categoryKeywords[lower]) {
+      query.category = categoryKeywords[lower];
       continue;
     }
 

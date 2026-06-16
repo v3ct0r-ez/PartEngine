@@ -10,7 +10,10 @@
 3. **Structured / natural-language parsing** — `parseSearchQuery` (`@partengine/core`) turns
    "resistenza 10k 1% 0603" into `{ category: 'resistors', params: { resistance: 10000 },
    tolerance: 1, footprint: '0603' }`, which becomes indexed predicates against
-   `ComponentParameterValue`.
+   `ComponentParameterValue`. It recognises both built-in category keywords **and
+   admin-created categories**: the API builds a keyword→slug map from the live
+   categories (`buildCategoryKeywords`, slug + name + name-words) and passes it via
+   `parseSearchQuery(q, { categoryKeywords })` (cached ~60s).
 
 A query string flows through all three: recognised tokens become structured predicates, the
 remainder becomes an FTS/trgm query, and results are ranked and paginated server-side.

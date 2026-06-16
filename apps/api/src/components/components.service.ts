@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  buildCategoryKeywords,
   parseQuantity,
   parseSearchQuery,
   projectParameters,
@@ -17,6 +18,20 @@ import type {
 @Injectable()
 export class ComponentsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // Short-lived cache of category keywords so the NL search parser recognises
+  // admin-created categories without a DB hit on every keystroke.
+  private catKeywordsCache?: { at: number; keywords: Record<string, string> };
+
+  private async categoryKeywords(): Promise<Record<string, string>> {
+    if (this.catKeywordsCache && Date.now() - this.catKeywordsCache.at < 60_000) {
+      return this.catKeywordsCache.keywords;
+    }
+    const cats = await this.prisma.category.findMany({ select: { slug: true, name: true } });
+    const keywords = buildCategoryKeywords(cats);
+    this.catKeywordsCache = { at: Date.now(), keywords };
+    return keywords;
+  }
 
   /** Load a category's field definitions as core FieldTemplates. */
   private async fieldsFor(categoryId: string): Promise<FieldTemplate[]> {
@@ -156,7 +171,7 @@ export class ComponentsService {
    * projection. (FTS/trgm ranking is applied via raw SQL — see docs/SEARCH.md.)
    */
   async search(dto: SearchComponentsDto) {
-    const parsed = parseSearchQuery(dto.q ?? '');
+    const parsed = parseSearchQuery(dto.q ?? '', { categoryKeywords: await this.categoryKeywords() });
     const take = Math.min(dto.limit ?? 50, 200);
 
     const where: Prisma.ComponentWhereInput = { deletedAt: null };
