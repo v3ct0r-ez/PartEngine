@@ -36,6 +36,38 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// ── Authentication ────────────────────────────────────────────
+export function getToken(): string | null {
+  return typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+}
+
+export async function login(email: string, password: string) {
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw new Error('Credenziali non valide');
+  const data = await res.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+  return data;
+}
+
+export function logout() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  location.reload();
+}
+
+/** Drop the token and bounce to the login gate when the session is invalid. */
+function handleUnauthorized() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('accessToken');
+  location.reload();
+}
+
 export type MovementType = 'INBOUND' | 'OUTBOUND' | 'TRANSFER' | 'ADJUSTMENT';
 
 export interface StockSummary {
@@ -73,6 +105,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     cache: 'no-store',
   });
   if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `Request failed: ${res.status}`);
   }
@@ -289,6 +322,9 @@ export async function searchComponents(params: {
     headers: { ...authHeaders() },
     cache: 'no-store',
   });
-  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
+    throw new Error(`Search failed: ${res.status}`);
+  }
   return res.json();
 }

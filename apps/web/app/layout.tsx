@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AuthGate } from '@/components/auth-gate';
+import { LogoutButton } from '@/components/logout-button';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { UpdateBanner } from '@/components/update-banner';
 import { Providers } from './providers';
@@ -14,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="it" suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <Providers>
+          <AuthGate>
           <div className="flex min-h-screen">
             <aside className="hidden w-60 shrink-0 border-r border-border bg-muted/30 p-4 md:block">
               <div className="mb-6 text-lg font-bold">PartEngine</div>
@@ -39,12 +42,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </aside>
             <div className="flex-1">
               <UpdateBanner />
-              <div className="flex items-center justify-end border-b border-border px-6 py-2">
+              <div className="flex items-center justify-end gap-1 border-b border-border px-6 py-2">
                 <NotificationsBell />
+                <LogoutButton />
               </div>
               <main className="p-6">{children}</main>
             </div>
           </div>
+          </AuthGate>
         </Providers>
       </body>
     </html>
