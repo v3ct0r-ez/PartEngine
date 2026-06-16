@@ -84,7 +84,20 @@ export class UpdateService implements OnModuleInit, OnModuleDestroy {
           ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
         },
       });
-      if (!res.ok) throw new Error(`GitHub responded ${res.status}`);
+      if (!res.ok) {
+        // 404 = no releases published yet (or private repo without a token):
+        // that's a normal "up to date" state, not an error worth alarming about.
+        if (res.status === 404) {
+          this.state = {
+            ...this.state,
+            updateAvailable: false,
+            checkedAt: new Date().toISOString(),
+            error: null,
+          };
+          return this.state;
+        }
+        throw new Error(`GitHub responded ${res.status}`);
+      }
       const data = (await res.json()) as {
         tag_name: string;
         html_url: string;

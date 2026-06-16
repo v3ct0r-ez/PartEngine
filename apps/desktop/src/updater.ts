@@ -68,9 +68,17 @@ export class UpdaterManager {
     autoUpdater.on('update-downloaded', (info) =>
       this.set({ phase: 'downloaded', latestVersion: info.version, percent: 100 }),
     );
-    autoUpdater.on('error', (err) =>
-      this.set({ phase: 'error', error: err?.message ?? String(err) }),
-    );
+    autoUpdater.on('error', (err) => {
+      const msg = err?.message ?? String(err);
+      // No published release yet (or private repo without a token) → 404 on the
+      // releases feed. That's "nothing to update to", not a real error.
+      if (/404/.test(msg)) {
+        log('[updater] no published release yet (404) — nothing to update');
+        this.set({ phase: 'not-available', error: null });
+        return;
+      }
+      this.set({ phase: 'error', error: msg });
+    });
 
     // IPC surface consumed by the renderer (web UI) via the preload bridge.
     ipcMain.handle('updater:status', () => this.state);
