@@ -1,5 +1,11 @@
-/** Thin typed client for the PartEngine API. */
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+/** Thin typed client for the PartEngine API.
+ *
+ * Default is RELATIVE (same-origin): the browser calls `/api/...` on the Next
+ * server, which proxies to the API via next.config rewrites. This avoids the
+ * build-time-frozen NEXT_PUBLIC_API_URL pointing at the wrong port (the desktop
+ * API is on 47600, not 4000) and sidesteps CORS. Override only if you really
+ * want cross-origin calls. */
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 export interface ComponentRow {
   id: string;
