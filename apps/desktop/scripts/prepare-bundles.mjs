@@ -57,13 +57,19 @@ function copy(from, to, label = '') {
 copy(join(repo, 'apps/api/dist'), join(staging, 'api/dist'), 'run the api build first');
 
 // 1) Generated Prisma client (.prisma) → deployed API node_modules.
-// Resolve where `prisma generate` actually wrote it (inside the pnpm store).
-try {
-  const clientReal = realpathSync(join(repo, 'apps/api/node_modules/@prisma/client'));
-  const dotPrisma = join(dirname(dirname(clientReal)), '.prisma'); // .../node_modules/.prisma
-  copy(dotPrisma, join(staging, 'api/node_modules/.prisma'), 'run prisma:generate first');
-} catch (e) {
-  console.warn(`! could not resolve generated Prisma client: ${e.message}`);
+// Locate it robustly: under node-linker=hoisted it's at <repo>/node_modules/.prisma;
+// otherwise it sits next to the resolved @prisma/client package.
+let dotPrisma = join(repo, 'node_modules', '.prisma');
+if (!existsSync(dotPrisma)) {
+  try {
+    const clientReal = realpathSync(join(repo, 'node_modules/@prisma/client'));
+    dotPrisma = join(dirname(dirname(clientReal)), '.prisma');
+  } catch {
+    /* fall through to the warning below */
+  }
+}
+if (!copy(dotPrisma, join(staging, 'api/node_modules/.prisma'), 'run prisma:generate first')) {
+  console.warn('! Prisma client (.prisma) NOT staged — the API will fail at runtime');
 }
 
 // 2) Strip every node_modules/.bin directory from the API bundle.
