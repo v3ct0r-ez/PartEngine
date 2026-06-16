@@ -7,6 +7,10 @@ import { log } from './log';
 import { ServiceManager } from './services';
 import { UpdaterManager } from './updater';
 
+// Set the app name BEFORE any getPath() call so userData/logs live under
+// %APPDATA%/PartEngine (not the npm-scoped package name, "@partengine…").
+app.setName('PartEngine');
+
 // VERY FIRST thing: prove the process started and install crash handlers, so
 // any failure from here on is logged + shown rather than disappearing silently.
 log(`main process started (electron ${process.versions.electron}, pid ${process.pid})`);
