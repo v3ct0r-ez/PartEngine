@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
 import { WarehouseAccessService, type Actor } from '../auth/warehouse-access.service';
@@ -8,6 +8,7 @@ import {
   CreateSupplierDto,
   ReceiveOrderDto,
   SubmitOrderDto,
+  UpdateSupplierDto,
   UpsertSupplierPartDto,
 } from './purchasing.dto';
 import { SuppliersService } from './suppliers.service';
@@ -37,6 +38,18 @@ export class PurchasingController {
   @Post('suppliers')
   createSupplier(@Body() dto: CreateSupplierDto) {
     return this.suppliers.create(dto);
+  }
+
+  @Roles('PURCHASING', 'WAREHOUSE_MANAGER')
+  @Patch('suppliers/:id')
+  updateSupplier(@Param('id') id: string, @Body() dto: UpdateSupplierDto) {
+    return this.suppliers.update(id, dto);
+  }
+
+  @Roles('WAREHOUSE_MANAGER')
+  @Delete('suppliers/:id')
+  deleteSupplier(@Param('id') id: string) {
+    return this.suppliers.remove(id);
   }
 
   @Roles('PURCHASING', 'WAREHOUSE_MANAGER')

@@ -267,20 +267,36 @@ export interface Supplier {
   id: string;
   name: string;
   contactEmail?: string | null;
+  contactPhone?: string | null;
+  website?: string | null;
   avgLeadTimeDays?: number | null;
   reliability?: string | null;
+  notes?: string | null;
+  _count?: { supplierParts: number; orders: number };
+}
+
+export interface SupplierInput {
+  name?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  avgLeadTimeDays?: number;
+  reliability?: number;
+  notes?: string;
 }
 
 export function listSuppliers() {
   return request<Supplier[]>('/suppliers');
 }
 
-export function createSupplier(body: {
-  name: string;
-  contactEmail?: string;
-  avgLeadTimeDays?: number;
-}) {
+export function createSupplier(body: SupplierInput & { name: string }) {
   return request<Supplier>('/suppliers', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateSupplier(id: string, body: SupplierInput) {
+  return request<Supplier>(`/suppliers/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+}
+export function deleteSupplier(id: string) {
+  return request<{ deleted: boolean }>(`/suppliers/${id}`, { method: 'DELETE' });
 }
 
 export interface UpdateInfo {

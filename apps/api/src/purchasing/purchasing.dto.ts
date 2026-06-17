@@ -20,6 +20,17 @@ export class CreateSupplierDto {
   @IsOptional() @IsString() notes?: string;
 }
 
+export class UpdateSupplierDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsEmail() contactEmail?: string;
+  @IsOptional() @IsString() contactPhone?: string;
+  @IsOptional() @IsString() website?: string;
+  @IsOptional() @IsString() catalogUrl?: string;
+  @IsOptional() @Type(() => Number) @IsInt() avgLeadTimeDays?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() reliability?: number;
+  @IsOptional() @IsString() notes?: string;
+}
+
 export class UpsertSupplierPartDto {
   @IsString() supplierId: string;
   @IsString() componentId: string;
