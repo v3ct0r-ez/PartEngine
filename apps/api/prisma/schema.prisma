@@ -160,6 +160,8 @@ model Category {
   description String?
   icon        String?
   isSystem    Boolean    @default(false) // seeded vs. admin-created
+  isGroup     Boolean    @default(false) // top-level group (no components attach to it)
+  codePrefix  String? // reference-designator prefix for auto-generated codes (R, C, U…)
   sortOrder   Int        @default(0)
 
   fields     CategoryField[]

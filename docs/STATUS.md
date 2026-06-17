@@ -11,7 +11,7 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Prisma data model (all entities) | ✅ | full schema; FTS/trgm via raw-SQL migration (documented) |
 | Engineering-unit parser & sorter | ✅ | `packages/core`, 10 tests; Ω/kΩ/MΩ, pF/nF/µF, EIA notation |
 | Natural-language search parser | ✅ | `packages/core`, 5 tests; "resistenza 10k 1% 0603"; aware of custom categories |
-| Data-driven category templates | ✅ | resistors, caps, inductors, MOSFET, buck, MCU built-in |
+| Data-driven category taxonomy | ✅ | 2-level groups→categories (10 groups, ~45 categories, English slugs) with per-category recognition fields + code prefix; variant types as ENUM (dielectric/diode type/motor type); seeded, fully editable (add/edit groups, categories, fields, prefix) |
 | Parameter validation + projection | ✅ | `packages/core`, drives forms + indexed sort |
 | NestJS app skeleton + modules | 🟡 | bootstrap, config, auth/RBAC/audit/components module stubs |
 | Auth (JWT + refresh) & RBAC guard | ✅ | Sprint 1: JWT+rotating refresh, argon2, RolesGuard, per-warehouse access (WarehouseAccessService), admin users/grant endpoints, /auth/me |

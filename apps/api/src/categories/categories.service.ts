@@ -38,13 +38,23 @@ export class CategoriesService {
     const exists = await this.prisma.category.findUnique({ where: { slug: dto.slug } });
     if (exists) throw new BadRequestException(`Category slug '${dto.slug}' already exists`);
     return this.prisma.category.create({
-      data: { slug: dto.slug, name: dto.name, icon: dto.icon, parentId: dto.parentId },
+      data: {
+        slug: dto.slug,
+        name: dto.name,
+        icon: dto.icon,
+        parentId: dto.parentId,
+        isGroup: dto.isGroup ?? false,
+        codePrefix: dto.codePrefix,
+      },
     });
   }
 
   async update(id: string, dto: UpdateCategoryDto) {
     await this.assertExists(id);
-    return this.prisma.category.update({ where: { id }, data: { name: dto.name, icon: dto.icon } });
+    return this.prisma.category.update({
+      where: { id },
+      data: { name: dto.name, icon: dto.icon, codePrefix: dto.codePrefix, parentId: dto.parentId },
+    });
   }
 
   async remove(id: string) {

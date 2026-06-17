@@ -252,6 +252,9 @@ export interface Category {
   slug: string;
   name: string;
   icon?: string | null;
+  parentId?: string | null;
+  isGroup?: boolean;
+  codePrefix?: string | null;
   fields: CategoryField[];
   _count?: { components: number };
 }
@@ -259,10 +262,10 @@ export interface Category {
 export function listCategories() {
   return request<Category[]>('/categories');
 }
-export function createCategory(body: { slug: string; name: string; icon?: string }) {
+export function createCategory(body: { slug: string; name: string; icon?: string; parentId?: string; isGroup?: boolean; codePrefix?: string }) {
   return request<Category>('/categories', { method: 'POST', body: JSON.stringify(body) });
 }
-export function updateCategory(id: string, body: { name?: string; icon?: string }) {
+export function updateCategory(id: string, body: { name?: string; icon?: string; codePrefix?: string; parentId?: string }) {
   return request<Category>(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
 }
 export function deleteCategory(id: string) {

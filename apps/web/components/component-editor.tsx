@@ -52,8 +52,10 @@ export function ComponentEditor({
   onSaved: () => void;
 }) {
   const editing = !!component;
+  const leaves = categories.filter((c) => !c.isGroup);
+  const groups = categories.filter((c) => c.isGroup);
   const [categoryId, setCategoryId] = useState(
-    component?.categoryId ?? categories[0]?.id ?? '',
+    component?.categoryId ?? leaves[0]?.id ?? '',
   );
   const [internalCode, setInternalCode] = useState(component?.internalCode ?? '');
   const [name, setName] = useState(component?.name ?? '');
@@ -123,7 +125,7 @@ export function ComponentEditor({
       setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprint || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
     }
     if (!codeTouched) {
-      const prefix = categoryCodePrefix(category?.slug, category?.name);
+      const prefix = category?.codePrefix || categoryCodePrefix(category?.slug, category?.name);
       setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprint || undefined }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,7 +183,16 @@ export function ComponentEditor({
           <Field label="Nome *"><input className={inp} value={name} onChange={(e) => { setNameTouched(true); setName(e.target.value); }} /></Field>
           <Field label="Categoria *">
             <select className={inp} value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setParams({}); }}>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {groups.map((g) => {
+                const opts = leaves.filter((l) => l.parentId === g.id);
+                if (opts.length === 0) return null;
+                return (
+                  <optgroup key={g.id} label={g.name}>
+                    {opts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </optgroup>
+                );
+              })}
+              {leaves.filter((l) => !l.parentId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
           <Field label="MPN"><input className={inp} value={mpn ?? ''} onChange={(e) => setMpn(e.target.value)} /></Field>

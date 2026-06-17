@@ -25,11 +25,15 @@ export class CreateCategoryDto {
   @IsString() name: string;
   @IsOptional() @IsString() icon?: string;
   @IsOptional() @IsString() parentId?: string;
+  @IsOptional() @IsBoolean() isGroup?: boolean;
+  @IsOptional() @IsString() codePrefix?: string;
 }
 
 export class UpdateCategoryDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() icon?: string;
+  @IsOptional() @IsString() codePrefix?: string;
+  @IsOptional() @IsString() parentId?: string;
 }
 
 export class FieldDto {

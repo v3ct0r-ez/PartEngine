@@ -31,7 +31,8 @@ export class ComponentsService {
     if (this.catKeywordsCache && Date.now() - this.catKeywordsCache.at < 60_000) {
       return this.catKeywordsCache.keywords;
     }
-    const cats = await this.prisma.category.findMany({ select: { slug: true, name: true } });
+    // Only leaf categories — group names shouldn't hijack the search.
+    const cats = await this.prisma.category.findMany({ where: { isGroup: false }, select: { slug: true, name: true } });
     const keywords = buildCategoryKeywords(cats);
     this.catKeywordsCache = { at: Date.now(), keywords };
     return keywords;

@@ -18,6 +18,15 @@ export function FilterSidebar() {
   const active: Category | undefined = categories.find((c) => c.slug === category);
   const quantityFields = (active?.fields ?? []).filter((f) => f.type === 'QUANTITY' && f.isFilterable !== false);
 
+  // Build group → leaf tree from the flat list.
+  const groups = categories.filter((c) => c.isGroup).sort((a, b) => a.name.localeCompare(b.name));
+  const leavesByParent = new Map<string, Category[]>();
+  for (const c of categories) {
+    if (c.isGroup) continue;
+    const key = c.parentId ?? '_';
+    leavesByParent.set(key, [...(leavesByParent.get(key) ?? []), c]);
+  }
+
   function selectCategory(slug?: string) {
     clearRanges(); // ranges are per-category (keyed by field) — reset on switch
     setCategory(slug);
@@ -27,30 +36,37 @@ export function FilterSidebar() {
     <div className="w-64 shrink-0 space-y-6 border-r border-border pr-4">
       <section>
         <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Categoria</h3>
-        <ul className="space-y-0.5 text-sm">
-          <li>
-            <button
-              onClick={() => selectCategory(undefined)}
-              className={`w-full rounded px-2 py-1 text-left hover:bg-muted ${!category ? 'bg-muted font-medium' : ''}`}
-            >
-              Tutte
-            </button>
-          </li>
-          {categories.map((c) => (
-            <li key={c.id}>
-              <button
-                onClick={() => selectCategory(c.slug)}
-                className={`flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-muted ${category === c.slug ? 'bg-muted font-medium' : ''}`}
-              >
-                <span>{c.name}</span>
-                <span className="text-xs text-muted-foreground">{c._count?.components ?? 0}</span>
-              </button>
-            </li>
-          ))}
-          {categories.length === 0 && (
-            <li className="px-2 py-1 text-xs text-muted-foreground">Nessuna categoria.</li>
-          )}
-        </ul>
+        <div className="space-y-2 text-sm">
+          <button
+            onClick={() => selectCategory(undefined)}
+            className={`w-full rounded px-2 py-1 text-left hover:bg-muted ${!category ? 'bg-muted font-medium' : ''}`}
+          >
+            Tutte
+          </button>
+          {groups.map((g) => {
+            const leaves = (leavesByParent.get(g.id) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+            if (leaves.length === 0) return null;
+            return (
+              <div key={g.id}>
+                <div className="px-2 pt-1 text-[11px] font-semibold uppercase text-muted-foreground">{g.name}</div>
+                <ul className="space-y-0.5">
+                  {leaves.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        onClick={() => selectCategory(c.slug)}
+                        className={`flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-muted ${category === c.slug ? 'bg-muted font-medium' : ''}`}
+                      >
+                        <span>{c.name}</span>
+                        <span className="text-xs text-muted-foreground">{c._count?.components ?? 0}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+          {categories.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">Nessuna categoria.</p>}
+        </div>
       </section>
 
       {active && quantityFields.length > 0 && (
