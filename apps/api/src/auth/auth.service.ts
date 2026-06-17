@@ -94,8 +94,18 @@ export class AuthService {
   }
 
   async listUsers() {
-    const users = await this.prisma.user.findMany({ orderBy: { email: 'asc' } });
-    return users.map((u) => this.publicUser(u));
+    const users = await this.prisma.user.findMany({
+      orderBy: { email: 'asc' },
+      include: { warehouseAccess: { include: { warehouse: { select: { code: true, name: true } } } } },
+    });
+    return users.map((u) => ({
+      ...this.publicUser(u),
+      access: u.warehouseAccess.map((a) => ({
+        warehouseId: a.warehouseId,
+        warehouse: a.warehouse.name,
+        canWrite: a.canWrite,
+      })),
+    }));
   }
 
   /** Grant or update per-warehouse access for a user. */

@@ -61,6 +61,35 @@ export function logout() {
   location.reload();
 }
 
+// ── Users & access (SUPER_ADMIN) ──────────────────────────────
+export type UserRole = 'SUPER_ADMIN' | 'WAREHOUSE_MANAGER' | 'TECHNICIAN' | 'PURCHASING' | 'VIEWER';
+export interface CurrentUser {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  access: { warehouseId: string; warehouse: string; canWrite: boolean }[];
+}
+export function getMe() {
+  return request<CurrentUser>('/auth/me');
+}
+export function listUsers() {
+  return request<AdminUser[]>('/auth/users');
+}
+export function createUser(body: { email: string; fullName: string; password: string; role: UserRole }) {
+  return request<AdminUser>('/auth/users', { method: 'POST', body: JSON.stringify(body) });
+}
+export function grantWarehouseAccess(body: { userId: string; warehouseId: string; canWrite: boolean }) {
+  return request<unknown>('/auth/warehouse-access', { method: 'POST', body: JSON.stringify(body) });
+}
+
 /** Drop the token and bounce to the login gate when the session is invalid. */
 function handleUnauthorized() {
   if (typeof window === 'undefined') return;
