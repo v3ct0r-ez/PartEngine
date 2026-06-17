@@ -5,3 +5,4 @@ export * from './validation.js';
 export * from './inventory.js';
 export * from './version.js';
 export * from './alerts.js';
+export * from './bom.js';

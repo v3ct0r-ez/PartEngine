@@ -55,10 +55,18 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - **AC met:** receiving a PO raises stock; crossing min qty raises a notification
   (verified by the +5 core alert tests; UI bell + suppliers page).
 
-## Sprint 6 — BOM, kits & assemblies
-- BOM CRUD + versioning + CSV import; availability check (available/partial/missing).
-- Kits/assemblies with automatic component consumption (transactional build).
-- **AC:** building a kit decrements stock atomically; BOM shows shortage list.
+## Sprint 6 — BOM, kits & assemblies ✅
+- BOM CRUD + **versioning** + **CSV import** (matches components by MPN/code) +
+  **availability check** per line (available/partial/missing) and overall.
+- Kits/assemblies with **atomic** component consumption: building N kits
+  decrements every line in one transaction (rolls back if any is short) and
+  writes OUTBOUND movements referencing the kit.
+- core (+4 tests, 40 total): lineStatus / bomOverallStatus / parseBomCsv (quoted
+  fields, `;`/`,` delimiters).
+- UI: `/boms` (create, CSV import, availability table, new version) and `/kits`
+  (create with component lines, build from a location).
+- **AC met:** building a kit decrements stock atomically; BOM shows the shortage
+  list (PARTIAL/MISSING per line + overall status).
 
 ## Sprint 7 — Attachments, datasheets & OCR
 - S3 presigned upload; datasheet PDF + images; OCR worker → `Attachment.ocrText` into FTS.

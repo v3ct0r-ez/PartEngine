@@ -28,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   ['Magazzino', '/inventory'],
                   ['Movimenti', '/movements'],
                   ['BOM', '/boms'],
+                  ['Kit', '/kits'],
                   ['Fornitori', '/suppliers'],
                   ['Report', '/reports'],
                 ].map(([label, href]) => (

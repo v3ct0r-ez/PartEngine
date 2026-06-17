@@ -27,7 +27,7 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Update verifier (`.exe`) | ✅ | standalone CLI → Windows .exe (PE32+ verified); logic/mock/check/gating commands; tools/update-verifier |
 | Desktop all-in-one (Electron) | 🟡 | apps/desktop launcher fully implemented (embedded Postgres → migrate → API health-gated → Next → window/tray, local/LAN, graceful shutdown) + electron-updater wired (check/download/install via GitHub Releases, IPC bridge, desktop-aware banner); installer built in CI on a Windows runner. See docs/DESKTOP.md |
 | Suppliers / purchasing | ✅ | Sprint 5: suppliers + supplier parts, PO create/submit/receive (receiving stocks via transactional movements, onOrder + avg/last price + status); UI suppliers page |
-| BOM / kits | ⬜ | schema ✅; Sprint 6 |
+| BOM / kits | ✅ | Sprint 6: BOM CRUD + versioning + CSV import + per-line availability; kits with atomic build (consumes stock, OUTBOUND movements); UI /boms + /kits; +4 core tests |
 | Attachments / datasheet OCR | ⬜ | schema ✅ + S3 in compose; Sprint 7 |
 | Barcode/QR, reports, dashboard | ⬜ | Sprint 8 |
 | Notifications/alert engine | ✅ | Sprint 5: pure rules (5 tests) + service (event-driven + periodic sweep, dedupe + auto-resolve); list/read endpoints; UI bell |

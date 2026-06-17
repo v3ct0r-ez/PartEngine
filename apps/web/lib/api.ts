@@ -328,6 +328,73 @@ export function deleteComponent(id: string) {
   return request<{ deleted: boolean }>(`/components/${id}`, { method: 'DELETE' });
 }
 
+// ── BOM ───────────────────────────────────────────────────────
+export type AvailabilityStatus = 'AVAILABLE' | 'PARTIAL' | 'MISSING';
+export interface BomSummary {
+  id: string;
+  code: string;
+  name: string;
+  version: string;
+  _count?: { lines: number };
+}
+export interface BomLineDetail {
+  id: string;
+  reference?: string | null;
+  rawMpn?: string | null;
+  required: number;
+  available: number;
+  matched: boolean;
+  status: AvailabilityStatus;
+  component?: { internalCode: string; name: string } | null;
+}
+export interface BomDetail extends BomSummary {
+  notes?: string | null;
+  status: AvailabilityStatus;
+  lines: BomLineDetail[];
+}
+
+export function listBoms() {
+  return request<BomSummary[]>('/boms');
+}
+export function getBom(id: string) {
+  return request<BomDetail>(`/boms/${id}`);
+}
+export function createBom(body: { code: string; name: string; version?: string; lines?: unknown[] }) {
+  return request<BomDetail>('/boms', { method: 'POST', body: JSON.stringify({ lines: [], ...body }) });
+}
+export function importBomCsv(id: string, csv: string, replace = true) {
+  return request<{ imported: number; matched: number; unmatched: number }>(`/boms/${id}/import-csv`, {
+    method: 'POST',
+    body: JSON.stringify({ csv, replace }),
+  });
+}
+export function createBomVersion(id: string, version: string) {
+  return request<BomDetail>(`/boms/${id}/version`, { method: 'POST', body: JSON.stringify({ version }) });
+}
+
+// ── Kits ──────────────────────────────────────────────────────
+export interface KitSummary {
+  id: string;
+  code: string;
+  name: string;
+  _count?: { lines: number };
+}
+export interface KitDetail extends KitSummary {
+  lines: { id: string; componentId: string; quantity: string; component?: { internalCode: string; name: string } }[];
+}
+export function listKits() {
+  return request<KitSummary[]>('/kits');
+}
+export function getKit(id: string) {
+  return request<KitDetail>(`/kits/${id}`);
+}
+export function createKit(body: { code: string; name: string; lines: { componentId: string; quantity: number }[] }) {
+  return request<KitDetail>('/kits', { method: 'POST', body: JSON.stringify(body) });
+}
+export function buildKit(id: string, body: { locationId: string; quantity: number }) {
+  return request<{ built: number }>(`/kits/${id}/build`, { method: 'POST', body: JSON.stringify(body) });
+}
+
 export async function searchComponents(params: {
   q?: string;
   categorySlug?: string;
