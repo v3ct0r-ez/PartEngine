@@ -463,12 +463,19 @@ export interface Manufacturer {
   id: string;
   name: string;
   website?: string | null;
+  _count?: { components: number };
 }
 export function listManufacturers() {
   return request<Manufacturer[]>('/manufacturers');
 }
 export function createManufacturer(body: { name: string; website?: string }) {
   return request<Manufacturer>('/manufacturers', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateManufacturer(id: string, body: { name?: string; website?: string }) {
+  return request<Manufacturer>(`/manufacturers/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+}
+export function deleteManufacturer(id: string) {
+  return request<{ deleted: boolean }>(`/manufacturers/${id}`, { method: 'DELETE' });
 }
 
 // ── Component CRUD ────────────────────────────────────────────

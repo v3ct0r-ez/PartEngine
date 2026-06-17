@@ -4,3 +4,8 @@ export class CreateManufacturerDto {
   @IsString() name: string;
   @IsOptional() @IsString() website?: string;
 }
+
+export class UpdateManufacturerDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() website?: string;
+}

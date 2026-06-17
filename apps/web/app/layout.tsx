@@ -29,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   ['Movimenti', '/movements'],
                   ['BOM', '/boms'],
                   ['Kit', '/kits'],
+                  ['Produttori', '/manufacturers'],
                   ['Fornitori', '/suppliers'],
                   ['Ordini', '/orders'],
                   ['Utenti', '/users'],
