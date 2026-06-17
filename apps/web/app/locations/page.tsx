@@ -12,18 +12,25 @@ import {
   updateWarehouse,
   type LocationKind,
   type LocationNode,
+  type WarehouseWithLocations,
 } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-const KIND_LABEL: Record<string, string> = {
+const KIND_LABEL: Record<LocationKind, string> = {
   zone: 'Zona',
   shelf: 'Scaffale',
   cabinet: 'Armadio',
   drawer: 'Cassetto',
   box: 'Contenitore',
 };
+const KINDS: LocationKind[] = ['zone', 'shelf', 'cabinet', 'drawer', 'box'];
 const inp = 'rounded border border-border bg-background px-2 py-1.5 text-sm';
+
+type LocModal =
+  | { mode: 'create'; parentId?: string; defaultKind: LocationKind }
+  | { mode: 'edit'; node: LocationNode };
+type WhModal = { mode: 'create' } | { mode: 'edit'; wh: WarehouseWithLocations };
 
 export default function LocationsPage() {
   const qc = useQueryClient();
@@ -34,7 +41,6 @@ export default function LocationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = warehouses.data?.find((w) => w.id === selectedId) ?? null;
 
-  // Auto-select the first warehouse once loaded.
   useEffect(() => {
     if (!selectedId && warehouses.data?.length) setSelectedId(warehouses.data[0].id);
   }, [warehouses.data, selectedId]);
@@ -48,35 +54,12 @@ export default function LocationsPage() {
   const refreshWarehouses = () => qc.invalidateQueries({ queryKey: ['warehouses'] });
   const refreshTree = () => qc.invalidateQueries({ queryKey: ['location-tree', selectedId] });
 
-  // create warehouse
-  const [whCode, setWhCode] = useState('');
-  const [whName, setWhName] = useState('');
-  const createWh = useMutation({
-    mutationFn: () => createWarehouse({ code: whCode, name: whName }),
-    onSuccess: (w) => { setWhCode(''); setWhName(''); refreshWarehouses(); setSelectedId(w.id); },
-    onError: (e) => alert((e as Error).message),
-  });
+  const [whModal, setWhModal] = useState<WhModal | null>(null);
+  const [locModal, setLocModal] = useState<LocModal | null>(null);
+
   const delWh = useMutation({
     mutationFn: (id: string) => deleteWarehouse(id),
     onSuccess: () => { setSelectedId(null); refreshWarehouses(); },
-    onError: (e) => alert((e as Error).message),
-  });
-  const editWh = useMutation({
-    mutationFn: (v: { id: string; code: string; name: string }) => updateWarehouse(v.id, { code: v.code, name: v.name }),
-    onSuccess: refreshWarehouses,
-    onError: (e) => alert((e as Error).message),
-  });
-
-  // location mutations
-  const addLoc = useMutation({
-    mutationFn: (v: { kind: LocationKind; code: string; parentId?: string }) =>
-      createLocation({ warehouseId: selectedId!, ...v }),
-    onSuccess: () => { refreshTree(); refreshWarehouses(); },
-    onError: (e) => alert((e as Error).message),
-  });
-  const editLoc = useMutation({
-    mutationFn: (v: { id: string; code: string; kind: LocationKind }) => updateLocation(v.id, { code: v.code, kind: v.kind }),
-    onSuccess: refreshTree,
     onError: (e) => alert((e as Error).message),
   });
   const delLoc = useMutation({
@@ -84,24 +67,6 @@ export default function LocationsPage() {
     onSuccess: () => { refreshTree(); refreshWarehouses(); },
     onError: (e) => alert((e as Error).message),
   });
-
-  function addRoot() {
-    const code = window.prompt('Codice nuova ubicazione (es. A-01):');
-    if (!code?.trim()) return;
-    addLoc.mutate({ kind: 'zone', code: code.trim() });
-  }
-  function addChild(parentId: string) {
-    const code = window.prompt('Codice sotto-ubicazione:');
-    if (!code?.trim()) return;
-    addLoc.mutate({ kind: 'shelf', code: code.trim(), parentId });
-  }
-  function renameWh(id: string, code: string, name: string) {
-    const newName = window.prompt('Nome magazzino:', name);
-    if (newName == null) return;
-    const newCode = window.prompt('Codice magazzino:', code);
-    if (newCode == null) return;
-    editWh.mutate({ id, code: newCode.trim() || code, name: newName.trim() || name });
-  }
 
   return (
     <div className="space-y-4">
@@ -113,7 +78,12 @@ export default function LocationsPage() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr]">
         {/* Warehouses column */}
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase text-muted-foreground">Magazzini</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground">Magazzini</h2>
+            {canWrite && (
+              <button onClick={() => setWhModal({ mode: 'create' })} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">+ Nuovo</button>
+            )}
+          </div>
           <div className="space-y-1">
             {warehouses.data?.map((w) => (
               <div
@@ -126,7 +96,7 @@ export default function LocationsPage() {
                 </button>
                 {canWrite && (
                   <div className="flex gap-1">
-                    <button onClick={() => renameWh(w.id, w.code, w.name)} title="Modifica" className="rounded px-1 text-xs hover:bg-muted">✎</button>
+                    <button onClick={() => setWhModal({ mode: 'edit', wh: w })} title="Modifica" className="rounded px-1 text-xs hover:bg-muted">✎</button>
                     <button onClick={() => { if (confirm(`Eliminare il magazzino "${w.name}"?`)) delWh.mutate(w.id); }} title="Elimina" className="rounded px-1 text-xs text-red-600 hover:bg-muted">🗑</button>
                   </div>
                 )}
@@ -134,19 +104,6 @@ export default function LocationsPage() {
             ))}
             {warehouses.data?.length === 0 && <p className="text-xs text-muted-foreground">Nessun magazzino.</p>}
           </div>
-
-          {canWrite && (
-            <form
-              onSubmit={(e) => { e.preventDefault(); if (whCode && whName) createWh.mutate(); }}
-              className="space-y-2 rounded-lg border border-border p-3"
-            >
-              <div className="text-xs font-semibold">Nuovo magazzino</div>
-              <input className={`${inp} w-full`} placeholder="Codice (es. WH1)" value={whCode} onChange={(e) => setWhCode(e.target.value)} />
-              <input className={`${inp} w-full`} placeholder="Nome" value={whName} onChange={(e) => setWhName(e.target.value)} />
-              <button type="submit" disabled={!whCode || !whName || createWh.isPending}
-                className="w-full rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">+ Crea</button>
-            </form>
-          )}
         </section>
 
         {/* Location tree */}
@@ -156,7 +113,7 @@ export default function LocationsPage() {
               Struttura {selected ? `· ${selected.name}` : ''}
             </h2>
             {canWrite && selected && (
-              <button onClick={addRoot} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">+ Ubicazione radice</button>
+              <button onClick={() => setLocModal({ mode: 'create', defaultKind: 'zone' })} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">+ Ubicazione radice</button>
             )}
           </div>
 
@@ -174,8 +131,8 @@ export default function LocationsPage() {
                   node={n}
                   depth={0}
                   canWrite={canWrite}
-                  onAddChild={addChild}
-                  onEdit={(id, code, kind) => editLoc.mutate({ id, code, kind })}
+                  onAddChild={(parentId) => setLocModal({ mode: 'create', parentId, defaultKind: 'shelf' })}
+                  onEdit={(node) => setLocModal({ mode: 'edit', node })}
                   onDelete={(id, code) => { if (confirm(`Eliminare l'ubicazione "${code}"?`)) delLoc.mutate(id); }}
                 />
               ))}
@@ -183,6 +140,22 @@ export default function LocationsPage() {
           )}
         </section>
       </div>
+
+      {whModal && (
+        <WarehouseModal
+          modal={whModal}
+          onClose={() => setWhModal(null)}
+          onSaved={(w) => { refreshWarehouses(); if (w) setSelectedId(w.id); setWhModal(null); }}
+        />
+      )}
+      {locModal && selectedId && (
+        <LocationModal
+          modal={locModal}
+          warehouseId={selectedId}
+          onClose={() => setLocModal(null)}
+          onSaved={() => { refreshTree(); refreshWarehouses(); setLocModal(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -199,15 +172,9 @@ function LocationRow({
   depth: number;
   canWrite: boolean;
   onAddChild: (parentId: string) => void;
-  onEdit: (id: string, code: string, kind: LocationKind) => void;
+  onEdit: (node: LocationNode) => void;
   onDelete: (id: string, code: string) => void;
 }) {
-  function rename() {
-    const code = window.prompt('Codice ubicazione:', node.code);
-    if (code == null) return;
-    onEdit(node.id, code.trim() || node.code, node.kind as LocationKind);
-  }
-
   return (
     <li>
       <div
@@ -216,13 +183,13 @@ function LocationRow({
       >
         <div className="flex items-center gap-2 text-sm">
           <span className="font-mono">{node.code}</span>
-          <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{KIND_LABEL[node.kind] ?? node.kind}</span>
+          <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{KIND_LABEL[node.kind as LocationKind] ?? node.kind}</span>
           {node.barcode && <span className="text-[11px] text-muted-foreground">⌗ {node.barcode}</span>}
         </div>
         {canWrite && (
           <div className="flex gap-1 text-xs">
             <button onClick={() => onAddChild(node.id)} title="Aggiungi sotto-ubicazione" className="rounded px-1 hover:bg-muted">＋</button>
-            <button onClick={rename} title="Modifica" className="rounded px-1 hover:bg-muted">✎</button>
+            <button onClick={() => onEdit(node)} title="Modifica" className="rounded px-1 hover:bg-muted">✎</button>
             <button onClick={() => onDelete(node.id, node.code)} title="Elimina" className="rounded px-1 text-red-600 hover:bg-muted">🗑</button>
           </div>
         )}
@@ -235,5 +202,123 @@ function LocationRow({
         </ul>
       )}
     </li>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm space-y-3 rounded-xl border border-border bg-background p-6 shadow-xl">
+        <h2 className="text-lg font-bold">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function WarehouseModal({
+  modal,
+  onClose,
+  onSaved,
+}: {
+  modal: WhModal;
+  onClose: () => void;
+  onSaved: (w?: WarehouseWithLocations) => void;
+}) {
+  const existing = modal.mode === 'edit' ? modal.wh : null;
+  const [code, setCode] = useState(existing?.code ?? '');
+  const [name, setName] = useState(existing?.name ?? '');
+  const [address, setAddress] = useState(existing?.address ?? '');
+
+  const save = useMutation({
+    mutationFn: () =>
+      existing
+        ? updateWarehouse(existing.id, { code, name, address: address || undefined })
+        : createWarehouse({ code, name, address: address || undefined }),
+    onSuccess: (w) => onSaved(w),
+    onError: (e) => alert((e as Error).message),
+  });
+
+  return (
+    <Modal title={existing ? 'Modifica magazzino' : 'Nuovo magazzino'} onClose={onClose}>
+      <form onSubmit={(e) => { e.preventDefault(); if (code && name) save.mutate(); }} className="space-y-3">
+        <input className={`${inp} w-full`} placeholder="Codice (es. WH1)" value={code} onChange={(e) => setCode(e.target.value)} />
+        <input className={`${inp} w-full`} placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={`${inp} w-full`} placeholder="Indirizzo (opzionale)" value={address ?? ''} onChange={(e) => setAddress(e.target.value)} />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Annulla</button>
+          <button type="submit" disabled={!code || !name || save.isPending} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+            {save.isPending ? '…' : 'Salva'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function LocationModal({
+  modal,
+  warehouseId,
+  onClose,
+  onSaved,
+}: {
+  modal: LocModal;
+  warehouseId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const existing = modal.mode === 'edit' ? modal.node : null;
+  const [code, setCode] = useState(existing?.code ?? '');
+  const [kind, setKind] = useState<LocationKind>(
+    existing ? (existing.kind as LocationKind) : modal.mode === 'create' ? modal.defaultKind : 'zone',
+  );
+  const [barcode, setBarcode] = useState(existing?.barcode ?? '');
+
+  const save = useMutation({
+    mutationFn: () =>
+      existing
+        ? updateLocation(existing.id, { code, kind, barcode: barcode || undefined })
+        : createLocation({
+            warehouseId,
+            code,
+            kind,
+            barcode: barcode || undefined,
+            parentId: modal.mode === 'create' ? modal.parentId : undefined,
+          }),
+    onSuccess: onSaved,
+    onError: (e) => alert((e as Error).message),
+  });
+
+  const title = existing
+    ? 'Modifica ubicazione'
+    : modal.mode === 'create' && modal.parentId
+      ? 'Nuova sotto-ubicazione'
+      : 'Nuova ubicazione';
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      <form onSubmit={(e) => { e.preventDefault(); if (code) save.mutate(); }} className="space-y-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Codice</span>
+          <input className={`${inp} w-full`} placeholder="es. A-01-3" value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Tipo</span>
+          <select className={`${inp} w-full`} value={kind} onChange={(e) => setKind(e.target.value as LocationKind)}>
+            {KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Barcode (opzionale)</span>
+          <input className={`${inp} w-full`} placeholder="codice a barre" value={barcode ?? ''} onChange={(e) => setBarcode(e.target.value)} />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Annulla</button>
+          <button type="submit" disabled={!code || save.isPending} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+            {save.isPending ? '…' : 'Salva'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
