@@ -43,6 +43,16 @@ export class InventoryController {
   }
 
   // ── Stock queries (read-only, any authenticated role) ────
+  @Get('warehouses')
+  listWarehouses() {
+    return this.inventory.listWarehouses();
+  }
+
+  @Get('movements')
+  recentMovements(@Query('limit') limit?: string) {
+    return this.inventory.recentMovements(limit ? Number(limit) : undefined);
+  }
+
   @Get('components/:id/stock')
   componentStock(@Param('id') id: string) {
     return this.inventory.componentStock(id);

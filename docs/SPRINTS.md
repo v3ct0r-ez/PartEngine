@@ -80,6 +80,16 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - **AC:** add/modify/remove a stocked component; create a category and define
   its parameters, then use it when creating a component.
 
+## Sprint 11 — Warehouse operations UI ✅
+- Operations console (`/inventory`): pick a component (search) + warehouse/location
+  selectors, then **carico/scarico/trasferimento/correzione**, **allocazione**
+  (prenota/rilascia), live availability per location, and per-component history.
+- Global **storico movimenti** (`/movements`) across all components.
+- API: `GET /inventory/warehouses` (with locations) and `GET /inventory/movements`
+  (global) added; movement/reserve/release logic reused from Sprint 4.
+- **AC met:** load/unload/transfer/adjust a component and allocate stock from the
+  UI without typing raw IDs; see the movement history.
+
 ## Sprint 9 — Hardening
 - Performance pass (1M-row seed, partitioning, query plans), rate limiting, backups,
   E2E (Playwright), accessibility (WCAG) audit.

@@ -184,6 +184,38 @@ export function getComponentMovements(id: string) {
   return request<Movement[]>(`/inventory/components/${id}/movements`);
 }
 
+export interface WarehouseWithLocations {
+  id: string;
+  code: string;
+  name: string;
+  locations: { id: string; code: string; kind: string }[];
+}
+export function listWarehouses() {
+  return request<WarehouseWithLocations[]>('/inventory/warehouses');
+}
+
+export interface MovementRow extends Movement {
+  componentId: string;
+  unitPrice?: string | null;
+  component?: { internalCode: string; name: string };
+}
+export function listRecentMovements(limit = 200) {
+  return request<MovementRow[]>(`/inventory/movements?limit=${limit}`);
+}
+
+export function reserveStock(body: { componentId: string; locationId: string; quantity: number }) {
+  return request<{ reserved: boolean }>(`/inventory/reserve`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+export function releaseStock(body: { componentId: string; locationId: string; quantity: number }) {
+  return request<{ released: boolean }>(`/inventory/release`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 export function createMovement(body: {
   type: MovementType;
   componentId: string;

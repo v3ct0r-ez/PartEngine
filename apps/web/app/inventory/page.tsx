@@ -4,19 +4,18 @@ import {
   createMovement,
   getComponentMovements,
   getComponentStock,
+  listWarehouses,
+  releaseStock,
+  reserveStock,
+  searchComponents,
+  type ComponentRow,
   type MovementType,
 } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-const HEALTH_STYLES: Record<string, string> = {
-  OK: 'bg-green-500/15 text-green-600',
-  LOW: 'bg-amber-500/15 text-amber-600',
-  CRITICAL: 'bg-orange-500/15 text-orange-600',
-  OUT_OF_STOCK: 'bg-red-500/15 text-red-600',
-};
-
-const TYPES: { value: MovementType; label: string; needs: ('from' | 'to')[] }[] = [
+const inp = 'rounded border border-border bg-background px-2 py-1.5 text-sm';
+const OPS: { value: MovementType; label: string; needs: ('from' | 'to')[] }[] = [
   { value: 'INBOUND', label: 'Carico', needs: ['to'] },
   { value: 'OUTBOUND', label: 'Scarico', needs: ['from'] },
   { value: 'TRANSFER', label: 'Trasferimento', needs: ['from', 'to'] },
@@ -24,181 +23,247 @@ const TYPES: { value: MovementType; label: string; needs: ('from' | 'to')[] }[] 
 ];
 
 export default function InventoryPage() {
-  const [componentId, setComponentId] = useState('');
+  const [component, setComponent] = useState<ComponentRow | null>(null);
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Magazzino — Movimenti</h1>
-      <input
-        value={componentId}
-        onChange={(e) => setComponentId(e.target.value.trim())}
-        placeholder="ID componente"
-        className="w-96 rounded-md border border-border bg-background px-3 py-2 text-sm"
-      />
-      {componentId && <InventoryDetail componentId={componentId} />}
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold">Magazzino — Operazioni</h1>
+      <ComponentPicker selected={component} onSelect={setComponent} />
+      {component && <Operations component={component} />}
     </div>
   );
 }
 
-function InventoryDetail({ componentId }: { componentId: string }) {
+function ComponentPicker({
+  selected,
+  onSelect,
+}: {
+  selected: ComponentRow | null;
+  onSelect: (c: ComponentRow | null) => void;
+}) {
+  const [q, setQ] = useState('');
+  const { data } = useQuery({
+    queryKey: ['comp-search', q],
+    queryFn: () => searchComponents({ q, limit: 8 }),
+    enabled: q.length >= 1,
+  });
+
+  if (selected) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+        <span className="font-mono text-xs">{selected.internalCode}</span>
+        <span className="font-medium">{selected.name}</span>
+        <button onClick={() => onSelect(null)} className="ml-auto text-sm text-primary hover:underline">
+          Cambia
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative max-w-xl">
+      <input
+        className={`${inp} w-full`}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Cerca un componente (codice, nome, MPN)…"
+      />
+      {data && data.items.length > 0 && q && (
+        <ul className="absolute z-10 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-border bg-background shadow-lg">
+          {data.items.map((c) => (
+            <li key={c.id}>
+              <button
+                onClick={() => { onSelect(c); setQ(''); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+              >
+                <span className="font-mono text-xs">{c.internalCode}</span>
+                <span>{c.name}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{c.category?.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Operations({ component }: { component: ComponentRow }) {
   const qc = useQueryClient();
-  const stock = useQuery({
-    queryKey: ['stock', componentId],
-    queryFn: () => getComponentStock(componentId),
-  });
-  const movements = useQuery({
-    queryKey: ['movements', componentId],
-    queryFn: () => getComponentMovements(componentId),
-  });
+  const componentId = component.id;
+  const { data: warehouses = [] } = useQuery({ queryKey: ['warehouses'], queryFn: listWarehouses });
+  const stock = useQuery({ queryKey: ['stock', componentId], queryFn: () => getComponentStock(componentId) });
+  const movements = useQuery({ queryKey: ['movements', componentId], queryFn: () => getComponentMovements(componentId) });
+
+  const [whId, setWhId] = useState('');
+  const wh = warehouses.find((w) => w.id === whId) ?? warehouses[0];
+  const locations = wh?.locations ?? [];
 
   const [type, setType] = useState<MovementType>('INBOUND');
-  const [quantity, setQuantity] = useState('');
-  const [fromLocationId, setFrom] = useState('');
-  const [toLocationId, setTo] = useState('');
+  const [qty, setQty] = useState('');
+  const [fromLoc, setFromLoc] = useState('');
+  const [toLoc, setToLoc] = useState('');
   const [reason, setReason] = useState('');
-  const needs = TYPES.find((t) => t.value === type)!.needs;
+  const needs = OPS.find((o) => o.value === type)!.needs;
 
-  const mutation = useMutation({
+  function refresh() {
+    qc.invalidateQueries({ queryKey: ['stock', componentId] });
+    qc.invalidateQueries({ queryKey: ['movements', componentId] });
+  }
+
+  const move = useMutation({
     mutationFn: () =>
       createMovement({
         type,
         componentId,
-        quantity: Number(quantity),
-        fromLocationId: needs.includes('from') ? fromLocationId : undefined,
-        toLocationId: needs.includes('to') ? toLocationId : undefined,
+        quantity: Number(qty),
+        fromLocationId: needs.includes('from') ? fromLoc : undefined,
+        toLocationId: needs.includes('to') ? toLoc : undefined,
         reason: reason || undefined,
       }),
-    onSuccess: () => {
-      setQuantity('');
-      qc.invalidateQueries({ queryKey: ['stock', componentId] });
-      qc.invalidateQueries({ queryKey: ['movements', componentId] });
-    },
+    onSuccess: () => { setQty(''); setReason(''); refresh(); },
   });
 
-  if (stock.isError) return <p className="text-sm text-red-500">Componente non trovato.</p>;
+  // Allocation (reserve / release)
+  const [allocLoc, setAllocLoc] = useState('');
+  const [allocQty, setAllocQty] = useState('');
+  const reserve = useMutation({
+    mutationFn: () => reserveStock({ componentId, locationId: allocLoc, quantity: Number(allocQty) }),
+    onSuccess: refresh,
+  });
+  const release = useMutation({
+    mutationFn: () => releaseStock({ componentId, locationId: allocLoc, quantity: Number(allocQty) }),
+    onSuccess: refresh,
+  });
+
+  const HEALTH: Record<string, string> = {
+    OK: 'text-green-600', LOW: 'text-amber-600', CRITICAL: 'text-orange-600', OUT_OF_STOCK: 'text-red-600',
+  };
+  const locLabel = (l: { code: string; kind: string }) => `${l.code} (${l.kind})`;
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <section className="space-y-3">
-        <h2 className="font-semibold">Disponibilità</h2>
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* Stock summary */}
+      <section className="rounded-lg border border-border p-4">
+        <h2 className="mb-2 font-semibold">Disponibilità</h2>
         {stock.data && (
-          <div className="rounded-lg border border-border p-4">
+          <>
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold">{stock.data.available}</span>
               <span className="text-sm text-muted-foreground">disponibili</span>
-              <span className={`rounded px-2 py-0.5 text-xs ${HEALTH_STYLES[stock.data.health]}`}>
-                {stock.data.health}
-              </span>
+              <span className={`text-xs font-semibold ${HEALTH[stock.data.health]}`}>{stock.data.health}</span>
             </div>
-            <div className="mt-2 text-sm text-muted-foreground">
-              Totale {stock.data.quantity} · Riservati {stock.data.reserved} · In ordine{' '}
-              {stock.data.onOrder} · Min {stock.data.minQty}
+            <div className="mt-1 text-sm text-muted-foreground">
+              Totale {stock.data.quantity} · Riservati {stock.data.reserved} · In ordine {stock.data.onOrder} · Min {stock.data.minQty}
             </div>
             <table className="mt-3 w-full text-sm">
               <thead className="text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="py-1">Ubicazione</th>
-                  <th>Qtà</th>
-                  <th>Riservati</th>
-                  <th>Disp.</th>
-                </tr>
+                <tr><th className="py-1">Ubicazione</th><th>Qtà</th><th>Risv.</th><th>Disp.</th></tr>
               </thead>
               <tbody>
                 {stock.data.byLocation.map((l) => (
                   <tr key={l.locationId} className="border-t border-border">
                     <td className="py-1 font-mono text-xs">{l.locationCode}</td>
-                    <td>{l.quantity}</td>
-                    <td>{l.reserved}</td>
-                    <td>{l.available}</td>
+                    <td>{l.quantity}</td><td>{l.reserved}</td><td>{l.available}</td>
                   </tr>
                 ))}
+                {stock.data.byLocation.length === 0 && <tr><td colSpan={4} className="py-2 text-muted-foreground">Nessuna giacenza.</td></tr>}
               </tbody>
             </table>
-          </div>
+          </>
         )}
       </section>
 
-      <section className="space-y-3">
+      {/* Movement form */}
+      <section className="space-y-3 rounded-lg border border-border p-4">
         <h2 className="font-semibold">Nuovo movimento</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutation.mutate();
-          }}
-          className="space-y-3 rounded-lg border border-border p-4"
-        >
-          <div className="flex gap-2">
-            {TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setType(t.value)}
-                className={`rounded px-3 py-1.5 text-sm ${type === t.value ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <input
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            type="number"
-            placeholder={type === 'ADJUSTMENT' ? 'Delta (±)' : 'Quantità'}
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-          {needs.includes('from') && (
-            <input
-              value={fromLocationId}
-              onChange={(e) => setFrom(e.target.value)}
-              placeholder="Ubicazione origine (ID)"
-              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-            />
-          )}
-          {needs.includes('to') && (
-            <input
-              value={toLocationId}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="Ubicazione destinazione (ID)"
-              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-            />
-          )}
-          {type === 'ADJUSTMENT' && (
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Motivo (obbligatorio)"
-              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-            />
-          )}
-          <button
-            type="submit"
-            disabled={mutation.isPending || !quantity}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {mutation.isPending ? 'Registrazione…' : 'Registra movimento'}
-          </button>
-          {mutation.isError && (
-            <p className="text-xs text-red-500">{(mutation.error as Error).message}</p>
-          )}
-        </form>
+        <div className="flex flex-wrap gap-2">
+          {OPS.map((o) => (
+            <button key={o.value} type="button" onClick={() => setType(o.value)}
+              className={`rounded px-3 py-1.5 text-sm ${type === o.value ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {warehouses.length > 1 && (
+          <select className={`${inp} w-full`} value={wh?.id ?? ''} onChange={(e) => setWhId(e.target.value)}>
+            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+        )}
+        <input className={`${inp} w-full`} type="number" value={qty} onChange={(e) => setQty(e.target.value)}
+          placeholder={type === 'ADJUSTMENT' ? 'Delta (±)' : 'Quantità'} />
+        {needs.includes('from') && (
+          <LocationSelect label="Da ubicazione" value={fromLoc} onChange={setFromLoc} locations={locations} fmt={locLabel} />
+        )}
+        {needs.includes('to') && (
+          <LocationSelect label="A ubicazione" value={toLoc} onChange={setToLoc} locations={locations} fmt={locLabel} />
+        )}
+        {type === 'ADJUSTMENT' && (
+          <input className={`${inp} w-full`} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motivo (obbligatorio)" />
+        )}
+        <button onClick={() => move.mutate()} disabled={move.isPending || !qty}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+          {move.isPending ? 'Registrazione…' : 'Registra movimento'}
+        </button>
+        {move.isError && <p className="text-xs text-red-500">{(move.error as Error).message}</p>}
 
-        <div>
-          <h3 className="mb-1 text-sm font-semibold">Storico movimenti</h3>
-          <ul className="max-h-60 space-y-1 overflow-y-auto text-sm">
-            {movements.data?.map((m) => (
-              <li key={m.id} className="flex justify-between border-b border-border py-1">
-                <span>{m.type}</span>
-                <span className="font-mono">{m.quantity}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(m.createdAt).toLocaleString()}
-                </span>
-              </li>
-            ))}
-            {movements.data?.length === 0 && (
-              <li className="text-muted-foreground">Nessun movimento.</li>
-            )}
-          </ul>
+        <div className="mt-4 border-t border-border pt-3">
+          <h3 className="mb-2 text-sm font-semibold">Allocazione (prenota / rilascia)</h3>
+          <div className="flex flex-wrap items-end gap-2">
+            <LocationSelect label="Ubicazione" value={allocLoc} onChange={setAllocLoc} locations={locations} fmt={locLabel} />
+            <input className={inp} type="number" value={allocQty} onChange={(e) => setAllocQty(e.target.value)} placeholder="Qtà" />
+            <button onClick={() => reserve.mutate()} disabled={!allocLoc || !allocQty || reserve.isPending}
+              className="rounded-md border border-border px-3 py-1.5 text-sm">Prenota</button>
+            <button onClick={() => release.mutate()} disabled={!allocLoc || !allocQty || release.isPending}
+              className="rounded-md border border-border px-3 py-1.5 text-sm">Rilascia</button>
+          </div>
+          {(reserve.isError || release.isError) && (
+            <p className="mt-1 text-xs text-red-500">{((reserve.error || release.error) as Error)?.message}</p>
+          )}
+        </div>
+      </section>
+
+      {/* History */}
+      <section className="lg:col-span-2">
+        <h2 className="mb-2 font-semibold">Storico movimenti</h2>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+              <tr><th className="px-3 py-2">Data</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Qtà</th><th className="px-3 py-2">Rif.</th><th className="px-3 py-2">Motivo</th></tr>
+            </thead>
+            <tbody>
+              {movements.data?.map((m) => (
+                <tr key={m.id} className="border-t border-border">
+                  <td className="px-3 py-2 text-xs">{new Date(m.createdAt).toLocaleString()}</td>
+                  <td className="px-3 py-2">{m.type}</td>
+                  <td className="px-3 py-2 font-mono">{m.quantity}</td>
+                  <td className="px-3 py-2">{m.reference ?? '—'}</td>
+                  <td className="px-3 py-2">{m.reason ?? '—'}</td>
+                </tr>
+              ))}
+              {movements.data?.length === 0 && <tr><td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">Nessun movimento.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
+  );
+}
+
+function LocationSelect({
+  label, value, onChange, locations, fmt,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  locations: { id: string; code: string; kind: string }[];
+  fmt: (l: { code: string; kind: string }) => string;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <select className={inp} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">—</option>
+        {locations.map((l) => <option key={l.id} value={l.id}>{fmt(l)}</option>)}
+      </select>
+    </label>
   );
 }

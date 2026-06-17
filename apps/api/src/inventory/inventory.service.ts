@@ -167,4 +167,21 @@ export class InventoryService {
       take: Math.min(limit, 500),
     });
   }
+
+  /** Warehouses with their (flat) locations — for the operations UI selectors. */
+  listWarehouses() {
+    return this.prisma.warehouse.findMany({
+      orderBy: { name: 'asc' },
+      include: { locations: { orderBy: { code: 'asc' } } },
+    });
+  }
+
+  /** Global recent movement history across all components. */
+  async recentMovements(limit = 100) {
+    return this.prisma.stockMovement.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(limit, 500),
+      include: { component: { select: { internalCode: true, name: true } } },
+    });
+  }
 }
