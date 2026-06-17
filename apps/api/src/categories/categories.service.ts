@@ -20,7 +20,9 @@ export class CategoriesService {
 
   list() {
     return this.prisma.category.findMany({
-      orderBy: { name: 'asc' },
+      // Complexity order (passive → semiconductors → ICs → …) lives in
+      // sortOrder, seeded from the taxonomy declaration; name breaks ties.
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { fields: { orderBy: { sortOrder: 'asc' } }, _count: { select: { components: true } } },
     });
   }

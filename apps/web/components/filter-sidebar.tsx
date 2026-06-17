@@ -19,8 +19,11 @@ export function FilterSidebar() {
   const active: Category | undefined = categories.find((c) => c.slug === category);
   const quantityFields = (active?.fields ?? []).filter((f) => f.type === 'QUANTITY' && f.isFilterable !== false);
 
-  // Build group → leaf tree from the flat list.
-  const groups = categories.filter((c) => c.isGroup).sort((a, b) => a.name.localeCompare(b.name));
+  // Build group → leaf tree from the flat list. Ordered by sortOrder so the
+  // taxonomy's complexity order (passive → semiconductors → …) is preserved.
+  const byOrder = (a: Category, b: Category) =>
+    (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name);
+  const groups = categories.filter((c) => c.isGroup).sort(byOrder);
   const leavesByParent = new Map<string, Category[]>();
   for (const c of categories) {
     if (c.isGroup) continue;
@@ -56,7 +59,7 @@ export function FilterSidebar() {
             Tutte
           </button>
           {groups.map((g) => {
-            const leaves = (leavesByParent.get(g.id) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+            const leaves = (leavesByParent.get(g.id) ?? []).sort(byOrder);
             if (leaves.length === 0) return null;
             const isOpen = openGroups.has(g.id) || activeGroupId === g.id;
             const total = leaves.reduce((sum, c) => sum + (c._count?.components ?? 0), 0);

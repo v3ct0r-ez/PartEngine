@@ -23,8 +23,10 @@ export default function CategoriesPage() {
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: listCategories });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = categories.find((c) => c.id === selectedId) ?? null;
-  const groups = categories.filter((c) => c.isGroup).sort((a, b) => a.name.localeCompare(b.name));
-  const leavesOf = (gid: string) => categories.filter((c) => !c.isGroup && c.parentId === gid).sort((a, b) => a.name.localeCompare(b.name));
+  const byOrder = (a: (typeof categories)[number], b: (typeof categories)[number]) =>
+    (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name);
+  const groups = categories.filter((c) => c.isGroup).sort(byOrder);
+  const leavesOf = (gid: string) => categories.filter((c) => !c.isGroup && c.parentId === gid).sort(byOrder);
   const refresh = () => qc.invalidateQueries({ queryKey: ['categories'] });
 
   // create

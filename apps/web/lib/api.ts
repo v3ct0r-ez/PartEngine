@@ -334,6 +334,7 @@ export interface Category {
   parentId?: string | null;
   isGroup?: boolean;
   codePrefix?: string | null;
+  sortOrder?: number;
   fields: CategoryField[];
   _count?: { components: number };
 }
