@@ -3,6 +3,7 @@
 import { ComponentEditor } from '@/components/component-editor';
 import { ComponentsTable } from '@/components/components-table';
 import { FilterSidebar } from '@/components/filter-sidebar';
+import { WarehouseOperations } from '@/components/warehouse-operations';
 import { listCategories, type Category, type ComponentRow } from '@/lib/api';
 import { useUiStore } from '@/lib/store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,8 +11,6 @@ import { useEffect, useState } from 'react';
 
 export default function ComponentsPage() {
   const { query, setQuery } = useUiStore();
-  // Local input state debounced into the store, so typing doesn't trigger a
-  // query refetch + global re-render on every keystroke.
   const [text, setText] = useState(query);
   useEffect(() => {
     const t = setTimeout(() => setQuery(text), 300);
@@ -21,6 +20,7 @@ export default function ComponentsPage() {
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: listCategories });
 
+  const [selected, setSelected] = useState<ComponentRow | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ComponentRow | null>(null);
 
@@ -35,22 +35,68 @@ export default function ComponentsPage() {
   function onSaved() {
     setEditorOpen(false);
     qc.invalidateQueries({ queryKey: ['components'] });
+    qc.invalidateQueries({ queryKey: ['stock'] });
   }
 
-  // Resolve the editing row to the editor's expected shape (categoryId from slug).
-  const editingComponent = editing
-    ? {
-        id: editing.id,
-        internalCode: editing.internalCode,
-        name: editing.name,
-        categoryId: categories.find((c: Category) => c.slug === editing.category?.slug)?.id,
-        manufacturerId: editing.manufacturerId,
-        mpn: editing.mpn,
-        footprint: editing.footprint,
-        parameters: editing.parameters,
-      }
-    : null;
+  const toEditing = (c: ComponentRow | null) =>
+    c
+      ? {
+          id: c.id,
+          internalCode: c.internalCode,
+          name: c.name,
+          categoryId: categories.find((cat: Category) => cat.slug === c.category?.slug)?.id,
+          manufacturerId: c.manufacturerId,
+          mpn: c.mpn,
+          footprint: c.footprint,
+          parameters: c.parameters,
+        }
+      : null;
 
+  // ── Detail (warehouse) view for a selected component ─────────
+  if (selected) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => setSelected(null)} className="text-sm text-primary hover:underline">
+          ← Torna all'elenco
+        </button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{selected.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-mono">{selected.internalCode}</span>
+              {selected.category ? ` · ${selected.category.name}` : ''}
+              {selected.mpn ? ` · MPN ${selected.mpn}` : ''}
+            </p>
+          </div>
+          <button
+            onClick={() => openEdit(selected)}
+            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
+          >
+            Modifica componente
+          </button>
+        </div>
+
+        <WarehouseOperations componentId={selected.id} />
+
+        {editorOpen && (
+          <ComponentEditor
+            categories={categories}
+            component={toEditing(editing)}
+            onClose={() => setEditorOpen(false)}
+            onSaved={() => {
+              onSaved();
+              // reflect edits in the header
+              if (editing && editing.id === selected.id) {
+                qc.invalidateQueries({ queryKey: ['components'] });
+              }
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ── List view ────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-4">
@@ -59,32 +105,25 @@ export default function ComponentsPage() {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder='Ricerca intelligente — es. "resistenza 10k 1% 0603"'
+            placeholder='Ricerca — es. "resistenza 10k 1% 0603"'
             className="w-96 rounded-md border border-border bg-background px-3 py-2 text-sm"
           />
-          <a href="/categories" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">
-            Categorie
-          </a>
-          <button
-            onClick={openNew}
-            disabled={categories.length === 0}
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
-            + Nuovo
-          </button>
+          <a href="/categories" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Categorie</a>
+          <button onClick={openNew} disabled={categories.length === 0}
+            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">+ Nuovo</button>
         </div>
       </header>
       <div className="flex gap-6">
         <FilterSidebar />
         <div className="flex-1">
-          <ComponentsTable onRowClick={openEdit} />
+          <ComponentsTable onRowClick={(c) => setSelected(c)} />
         </div>
       </div>
 
       {editorOpen && (
         <ComponentEditor
           categories={categories}
-          component={editingComponent}
+          component={toEditing(editing)}
           onClose={() => setEditorOpen(false)}
           onSaved={onSaved}
         />

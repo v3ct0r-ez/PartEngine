@@ -14,9 +14,17 @@ import {
   type Category,
   type CategoryField,
 } from '@/lib/api';
-import { validateParameters, type FieldTemplate } from '@partengine/core';
+import {
+  categoryCodePrefix,
+  formatEngineering,
+  generateComponentName,
+  generateInternalCode,
+  parseQuantity,
+  validateParameters,
+  type FieldTemplate,
+} from '@partengine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface EditingComponent {
   id: string;
@@ -56,6 +64,10 @@ export function ComponentEditor({
   const [params, setParams] = useState<Record<string, unknown>>(component?.parameters ?? {});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Once the user edits code/name manually we stop auto-generating them.
+  // When editing an existing component we never auto-overwrite.
+  const [codeTouched, setCodeTouched] = useState(editing);
+  const [nameTouched, setNameTouched] = useState(editing);
 
   const qc = useQueryClient();
   const { data: manufacturers = [] } = useQuery({
@@ -95,6 +107,27 @@ export function ComponentEditor({
     const list = validateParameters(templates, params);
     return Object.fromEntries(list.map((e) => [e.field, e.message]));
   }, [templates, params]);
+
+  // Auto-generate internal code + name from category/value/footprint/tolerance
+  // (a standard, editable suggestion). Stops once the user edits them manually.
+  const primaryField = templates.find((f) => f.type === 'QUANTITY' && f.unit !== '%');
+  useEffect(() => {
+    if (codeTouched && nameTouched) return;
+    let valueText: string | undefined;
+    if (primaryField && params[primaryField.key] != null && params[primaryField.key] !== '') {
+      const q = parseQuantity(String(params[primaryField.key]), primaryField.unit);
+      valueText = q ? formatEngineering(q.magnitude, primaryField.unit) : String(params[primaryField.key]);
+    }
+    const tol = params['tolerance'] != null && params['tolerance'] !== '' ? Number(params['tolerance']) : undefined;
+    if (!nameTouched) {
+      setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprint || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
+    }
+    if (!codeTouched) {
+      const prefix = categoryCodePrefix(category?.slug, category?.name);
+      setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprint || undefined }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId, footprint, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
 
   const canSave = internalCode && name && categoryId && Object.keys(fieldErrors).length === 0;
 
@@ -144,8 +177,8 @@ export function ComponentEditor({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Codice interno *"><input className={inp} value={internalCode} onChange={(e) => setInternalCode(e.target.value)} /></Field>
-          <Field label="Nome *"><input className={inp} value={name} onChange={(e) => setName(e.target.value)} /></Field>
+          <Field label="Codice interno *"><input className={inp} value={internalCode} onChange={(e) => { setCodeTouched(true); setInternalCode(e.target.value); }} /></Field>
+          <Field label="Nome *"><input className={inp} value={name} onChange={(e) => { setNameTouched(true); setName(e.target.value); }} /></Field>
           <Field label="Categoria *">
             <select className={inp} value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setParams({}); }}>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
