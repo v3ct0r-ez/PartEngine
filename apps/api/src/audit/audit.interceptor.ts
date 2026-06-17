@@ -36,8 +36,22 @@ export class AuditInterceptor implements NestInterceptor {
     );
   }
 
+  // Secrets must never land in the audit log. Drop the request-only `_reason`
+  // marker and redact any credential-bearing field (login/setup/createUser
+  // passwords, change/reset password, refresh/access tokens).
+  private static readonly SECRET_KEYS = new Set([
+    'password',
+    'currentPassword',
+    'newPassword',
+    'refreshToken',
+    'accessToken',
+  ]);
+
   private sanitize(body: Record<string, unknown> = {}) {
-    const { password, _reason, ...rest } = body;
+    const { _reason, ...rest } = body;
+    for (const key of Object.keys(rest)) {
+      if (AuditInterceptor.SECRET_KEYS.has(key)) rest[key] = '[REDACTED]';
+    }
     return rest;
   }
 }

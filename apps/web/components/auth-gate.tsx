@@ -1,6 +1,6 @@
 'use client';
 
-import { getAuthStatus, getToken, login, setupAdmin } from '@/lib/api';
+import { getAuthStatus, getMe, getToken, login, setupAdmin } from '@/lib/api';
 import { useEffect, useState } from 'react';
 
 type Phase = 'loading' | 'setup' | 'login' | 'authed';
@@ -14,8 +14,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState<Phase>('loading');
 
   useEffect(() => {
+    // Validate the stored token rather than trusting its mere presence: a stale
+    // token would otherwise show the app, then bounce on the first API 401.
+    // getMe() goes through the refresh-on-401 flow, so an expired access token
+    // is silently renewed when a valid refresh token exists.
     if (getToken()) {
-      setPhase('authed');
+      getMe()
+        .then(() => setPhase('authed'))
+        .catch(() => setPhase('login'));
       return;
     }
     getAuthStatus()

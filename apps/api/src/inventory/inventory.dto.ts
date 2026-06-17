@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export const MOVEMENT_TYPES = ['INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT'] as const;
 
@@ -21,7 +21,10 @@ export class CreateMovementDto {
 export class ReservationDto {
   @IsString() componentId: string;
   @IsString() locationId: string;
-  @Type(() => Number) @IsNumber() quantity: number;
+  // Must be positive: a negative reserve/release would let a caller clear or
+  // inflate other users' soft holds (the SQL availability guard is trivially
+  // satisfied by a negative delta).
+  @Type(() => Number) @IsNumber() @Min(1) quantity: number;
 }
 
 export class CreateLocationDto {

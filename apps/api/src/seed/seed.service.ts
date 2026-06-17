@@ -105,6 +105,6 @@ export class SeedService implements OnModuleInit {
       }
     });
 
-    this.logger.log('Seed complete. Login: admin@partengine.local / changeme123');
+    this.logger.log('Seed complete (catalog + demo). No admin user is seeded — create one at first launch.');
   }
 }

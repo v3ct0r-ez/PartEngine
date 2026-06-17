@@ -52,6 +52,51 @@ function storeTokens(data: { accessToken: string; refreshToken?: string }) {
   if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
 }
 
+function getRefreshToken(): string | null {
+  return typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+}
+
+// Single-flight refresh: concurrent 401s share one /auth/refresh call so the
+// rotating refresh token isn't consumed (and invalidated) multiple times.
+let refreshPromise: Promise<boolean> | null = null;
+async function attemptRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(`${BASE}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) return false;
+      storeTokens(await res.json());
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  const ok = await refreshPromise;
+  refreshPromise = null;
+  return ok;
+}
+
+/**
+ * Runs an authenticated fetch and, on a 401, transparently refreshes the access
+ * token once and retries. Only if the refresh itself fails do we hard-logout —
+ * so an expired access token no longer bounces the user to the login screen.
+ * `doFetch` must read the auth header lazily so the retry uses the new token.
+ */
+async function withAuthRetry(doFetch: () => Promise<Response>): Promise<Response> {
+  let res = await doFetch();
+  if (res.status === 401) {
+    if (await attemptRefresh()) res = await doFetch();
+    else handleUnauthorized();
+  }
+  return res;
+}
+
 export async function login(email: string, password: string) {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
@@ -144,6 +189,7 @@ export function setUserRole(userId: string, role: UserRole) {
 function handleUnauthorized() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
   location.reload();
 }
 
@@ -178,17 +224,21 @@ export interface Movement {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...init?.headers },
-    cache: 'no-store',
-  });
+  const res = await withAuthRetry(() =>
+    fetch(`${BASE}/api${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...authHeaders(), ...init?.headers },
+      cache: 'no-store',
+    }),
+  );
   if (!res.ok) {
-    if (res.status === 401) handleUnauthorized();
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `Request failed: ${res.status}`);
   }
-  return res.json();
+  // 204/empty body: a successful mutation with no payload — don't choke on JSON.parse.
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export interface Notification {
@@ -514,15 +564,14 @@ export function listAttachments(componentId: string) {
 export async function uploadAttachment(componentId: string, file: File) {
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch(`${BASE}/api/components/${componentId}/attachments`, {
-    method: 'POST',
-    headers: authHeaders(), // no Content-Type: the browser sets the multipart boundary
-    body: fd,
-  });
-  if (!res.ok) {
-    if (res.status === 401) handleUnauthorized();
-    throw new Error('Upload non riuscito');
-  }
+  const res = await withAuthRetry(() =>
+    fetch(`${BASE}/api/components/${componentId}/attachments`, {
+      method: 'POST',
+      headers: authHeaders(), // no Content-Type: the browser sets the multipart boundary
+      body: fd,
+    }),
+  );
+  if (!res.ok) throw new Error('Upload non riuscito');
   return res.json();
 }
 export function deleteAttachment(id: string) {
@@ -535,11 +584,10 @@ export function suggestAttachmentFields(id: string) {
 }
 /** Fetch (with auth) and open an attachment in a new tab. */
 export async function openAttachment(id: string) {
-  const res = await fetch(`${BASE}/api/attachments/${id}/download`, { headers: authHeaders() });
-  if (!res.ok) {
-    if (res.status === 401) handleUnauthorized();
-    throw new Error('Download non riuscito');
-  }
+  const res = await withAuthRetry(() =>
+    fetch(`${BASE}/api/attachments/${id}/download`, { headers: authHeaders() }),
+  );
+  if (!res.ok) throw new Error('Download non riuscito');
   const url = URL.createObjectURL(await res.blob());
   window.open(url, '_blank');
 }
@@ -561,11 +609,10 @@ export function getDashboard() {
 }
 /** Fetch a CSV report with auth and trigger a browser download. */
 export async function downloadReport(name: 'inventory' | 'value' | 'movements', filename: string) {
-  const res = await fetch(`${BASE}/api/reports/${name}.csv`, { headers: authHeaders() });
-  if (!res.ok) {
-    if (res.status === 401) handleUnauthorized();
-    throw new Error('Download non riuscito');
-  }
+  const res = await withAuthRetry(() =>
+    fetch(`${BASE}/api/reports/${name}.csv`, { headers: authHeaders() }),
+  );
+  if (!res.ok) throw new Error('Download non riuscito');
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement('a');
   a.href = url;
@@ -663,13 +710,12 @@ export async function searchComponents(params: {
     if (r.to) search.set(`ranges[${i}][to]`, r.to);
   });
 
-  const res = await fetch(`${BASE}/api/components/search?${search}`, {
-    headers: { ...authHeaders() },
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    if (res.status === 401) handleUnauthorized();
-    throw new Error(`Search failed: ${res.status}`);
-  }
+  const res = await withAuthRetry(() =>
+    fetch(`${BASE}/api/components/search?${search}`, {
+      headers: { ...authHeaders() },
+      cache: 'no-store',
+    }),
+  );
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   return res.json();
 }

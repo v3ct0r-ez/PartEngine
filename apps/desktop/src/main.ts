@@ -104,6 +104,22 @@ async function bootstrap() {
   log('PartEngine is ready.');
 }
 
+// Validate a renderer-supplied settings patch into a safe UserSettings subset.
+function sanitizeSettings(patch: unknown): UserSettings {
+  const out: UserSettings = {};
+  if (typeof patch !== 'object' || patch === null) return out;
+  const p = patch as Record<string, unknown>;
+  for (const key of ['dataDir', 'storageDir', 'backupDir'] as const) {
+    const v = p[key];
+    if (typeof v === 'string' && v.trim() && path.isAbsolute(v)) out[key] = v;
+  }
+  if (p.backupKeep !== undefined) {
+    const n = Math.floor(Number(p.backupKeep));
+    if (Number.isFinite(n) && n >= 0) out.backupKeep = Math.min(n, 1000);
+  }
+  return out;
+}
+
 // Settings bridge (consumed by the web /settings page via the preload).
 function registerIpc() {
   ipcMain.handle('settings:get', () => ({
@@ -117,15 +133,29 @@ function registerIpc() {
     backupEnabled: backup?.enabled ?? false,
     backups: backup?.list().map((b) => ({ name: b.name, at: b.at.toISOString() })) ?? [],
   }));
-  ipcMain.handle('settings:save', (_e, patch: UserSettings) => {
-    writeUserSettings({ ...readUserSettings(), ...patch });
+  ipcMain.handle('settings:save', (_e, patch: unknown) => {
+    // The renderer is web content; never trust the patch shape. Whitelist the
+    // four known keys, require absolute directory paths, and clamp backupKeep —
+    // a bad dataDir/backupDir would otherwise brick startup (it's used as the
+    // Postgres data dir and the cold-backup source) or corrupt config.json.
+    const clean = sanitizeSettings(patch);
+    writeUserSettings({ ...readUserSettings(), ...clean });
     return { ok: true };
   });
   ipcMain.handle('settings:pickFolder', async () => {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] });
     return r.canceled ? null : r.filePaths[0];
   });
-  ipcMain.handle('settings:openPath', (_e, p: string) => shell.openPath(p));
+  ipcMain.handle('settings:openPath', (_e, p: unknown) => {
+    // Only allow opening the directories we actually expose to the renderer,
+    // not an arbitrary renderer-supplied path.
+    const allowed = [cfg.dataDir, cfg.storageDir, cfg.backupDir, path.dirname(settingsFilePath())];
+    if (typeof p !== 'string' || !allowed.some((a) => a && path.resolve(p) === path.resolve(a))) {
+      return { ok: false };
+    }
+    void shell.openPath(p);
+    return { ok: true };
+  });
 }
 
 function createLoadingWindow() {
@@ -224,12 +254,24 @@ async function gracefulShutdown() {
   shuttingDown = true;
   log('Shutting down…');
   services?.stop();
-  await db?.stop().catch(() => undefined);
-  // Cold backup to the NAS folder (server is now stopped → consistent copy).
-  try {
-    backup?.backupColdSync();
-  } catch {
-    /* backup must never block shutdown */
+  // Only run the cold backup if Postgres actually stopped — copying a live
+  // cluster yields an inconsistent (corrupt) backup, the very thing the
+  // cold-copy design avoids.
+  let stopped = true;
+  if (db) {
+    try {
+      await db.stop();
+    } catch (err) {
+      stopped = false;
+      log(`DB stop failed; skipping cold backup: ${(err as Error).message}`, 'error');
+    }
+  }
+  if (stopped) {
+    try {
+      backup?.backupColdSync();
+    } catch {
+      /* backup must never block shutdown */
+    }
   }
 }
 
