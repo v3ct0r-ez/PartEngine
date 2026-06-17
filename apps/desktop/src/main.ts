@@ -1,7 +1,15 @@
-import { app, BrowserWindow, dialog, Menu, shell, Tray } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, Tray } from 'electron';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { loadConfig, type DesktopConfig } from './config';
+import { BackupService } from './backup';
+import {
+  loadConfig,
+  readUserSettings,
+  settingsFilePath,
+  writeUserSettings,
+  type DesktopConfig,
+  type UserSettings,
+} from './config';
 import { DatabaseManager } from './database';
 import { log } from './log';
 import { ServiceManager } from './services';
@@ -35,6 +43,7 @@ let cfg: DesktopConfig;
 let db: DatabaseManager | undefined;
 let services: ServiceManager | undefined;
 let updater: UpdaterManager | undefined;
+let backup: BackupService | undefined;
 
 let mainWindow: BrowserWindow | undefined;
 let loadingWindow: BrowserWindow | undefined;
@@ -82,6 +91,8 @@ async function bootstrap() {
   db = new DatabaseManager(cfg, progress);
   services = new ServiceManager(cfg, progress);
   updater = new UpdaterManager(() => mainWindow);
+  backup = new BackupService(cfg);
+  registerIpc();
 
   await db.start(); // embedded Postgres + migrations
   await services.start(); // API (health-gated) then Next.js
@@ -91,6 +102,30 @@ async function bootstrap() {
   createTray();
   updater.init(cfg.isPackaged); // electron-updater (GitHub Releases, NSIS)
   log('PartEngine is ready.');
+}
+
+// Settings bridge (consumed by the web /settings page via the preload).
+function registerIpc() {
+  ipcMain.handle('settings:get', () => ({
+    settings: readUserSettings(),
+    paths: {
+      dataDir: cfg.dataDir,
+      storageDir: cfg.storageDir,
+      backupDir: cfg.backupDir,
+      configFile: settingsFilePath(),
+    },
+    backupEnabled: backup?.enabled ?? false,
+    backups: backup?.list().map((b) => ({ name: b.name, at: b.at.toISOString() })) ?? [],
+  }));
+  ipcMain.handle('settings:save', (_e, patch: UserSettings) => {
+    writeUserSettings({ ...readUserSettings(), ...patch });
+    return { ok: true };
+  });
+  ipcMain.handle('settings:pickFolder', async () => {
+    const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  ipcMain.handle('settings:openPath', (_e, p: string) => shell.openPath(p));
 }
 
 function createLoadingWindow() {
@@ -190,6 +225,12 @@ async function gracefulShutdown() {
   log('Shutting down…');
   services?.stop();
   await db?.stop().catch(() => undefined);
+  // Cold backup to the NAS folder (server is now stopped → consistent copy).
+  try {
+    backup?.backupColdSync();
+  } catch {
+    /* backup must never block shutdown */
+  }
 }
 
 app.on('before-quit', (e) => {

@@ -148,6 +148,25 @@ defaults to WIN1252 ("character … has no equivalent in encoding WIN1252"). Thi
 applies to the **first** initialisation only; a cluster created by an older build
 stays WIN1252, so delete `%APPDATA%\PartEngine\pgdata` once to re-initialise.
 
+## Data location, NAS & backups
+
+There is no single "warehouse file": data lives in the embedded **PostgreSQL
+cluster directory** (`%APPDATA%/PartEngine/pgdata`), plus **attachments**
+(`…/attachments`). The **Settings** page (desktop only) lets the user choose, via
+a native folder picker:
+
+- **Database folder** — keep on a **local** disk. Hosting a live Postgres cluster
+  on a network share (NAS/SMB/NFS) risks corruption (no reliable locking/fsync).
+- **Attachments folder** — safe on a NAS (plain files).
+- **Backup folder** — set it to a NAS path to get an automatic **cold backup on
+  shutdown** (the server is stopped, so the copied cluster is consistent; the last
+  `backupKeep` are retained). `pg_dump` isn't shipped with embedded-postgres, so a
+  cold directory copy is used instead.
+
+Settings persist to `%APPDATA%/PartEngine/config.json` and apply on restart.
+Consumer NAS note: WD My Cloud **Home** can't run PostgreSQL/Docker, so use it as
+the **backup** (and optionally attachments) target — not as the live DB host.
+
 ## Security notes (desktop specifics)
 
 - `contextIsolation: true`, `nodeIntegration: false`; the renderer gets only the tiny

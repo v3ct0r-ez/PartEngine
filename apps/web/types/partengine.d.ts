@@ -10,6 +10,13 @@ export interface DesktopUpdaterState {
   error: string | null;
 }
 
+export interface DesktopSettings {
+  settings: { dataDir?: string; storageDir?: string; backupDir?: string; backupKeep?: number };
+  paths: { dataDir: string; storageDir: string; backupDir: string; configFile: string };
+  backupEnabled: boolean;
+  backups: { name: string; at: string }[];
+}
+
 export interface PartEngineBridge {
   isDesktop: true;
   platform: string;
@@ -20,6 +27,12 @@ export interface PartEngineBridge {
     download: () => Promise<DesktopUpdaterState>;
     install: () => Promise<void>;
     onEvent: (cb: (state: DesktopUpdaterState) => void) => () => void;
+  };
+  settings: {
+    get: () => Promise<DesktopSettings>;
+    save: (patch: { dataDir?: string; storageDir?: string; backupDir?: string; backupKeep?: number }) => Promise<{ ok: boolean }>;
+    pickFolder: () => Promise<string | null>;
+    openPath: (p: string) => Promise<string>;
   };
 }
 

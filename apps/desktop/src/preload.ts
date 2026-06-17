@@ -24,4 +24,10 @@ contextBridge.exposeInMainWorld('partengine', {
       return () => ipcRenderer.removeListener('updater:event', listener);
     },
   },
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    save: (patch: unknown) => ipcRenderer.invoke('settings:save', patch),
+    pickFolder: () => ipcRenderer.invoke('settings:pickFolder'),
+    openPath: (p: string) => ipcRenderer.invoke('settings:openPath', p),
+  },
 });

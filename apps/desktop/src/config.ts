@@ -35,6 +35,32 @@ export interface DesktopConfig {
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
   storageDir: string;
+  /** Folder for automatic cold backups (e.g. a NAS path). Empty = disabled. */
+  backupDir: string;
+  backupKeep: number;
+}
+
+/** User-editable settings persisted to %APPDATA%/PartEngine/config.json. */
+export interface UserSettings {
+  dataDir?: string;
+  storageDir?: string;
+  backupDir?: string;
+  backupKeep?: number;
+}
+
+export function settingsFilePath(): string {
+  return path.join(app.getPath('userData'), 'config.json');
+}
+export function readUserSettings(): UserSettings {
+  try {
+    return JSON.parse(fs.readFileSync(settingsFilePath(), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+export function writeUserSettings(s: UserSettings): void {
+  fs.mkdirSync(path.dirname(settingsFilePath()), { recursive: true });
+  fs.writeFileSync(settingsFilePath(), JSON.stringify(s, null, 2));
 }
 
 /** Load (or generate once) per-install JWT secrets, persisted in app data so
@@ -69,7 +95,13 @@ export function loadConfig(): DesktopConfig {
   const pgPassword = 'partengine-local';
   const pgDatabase = 'partengine';
 
-  const dataDir = path.join(app.getPath('userData'), 'pgdata');
+  const userData = app.getPath('userData');
+  const settings = readUserSettings();
+  // User-selectable locations (e.g. NAS), falling back to the app-data folder.
+  const dataDir = settings.dataDir || path.join(userData, 'pgdata');
+  const storageDir = settings.storageDir || path.join(userData, 'attachments');
+  const backupDir = settings.backupDir || '';
+  const backupKeep = settings.backupKeep ?? 10;
   const secrets = loadOrCreateSecrets();
 
   return {
@@ -97,6 +129,8 @@ export function loadConfig(): DesktopConfig {
     databaseUrl: `postgresql://${pgUser}:${pgPassword}@127.0.0.1:${pgPort}/${pgDatabase}?schema=public`,
     jwtAccessSecret: secrets.access,
     jwtRefreshSecret: secrets.refresh,
-    storageDir: path.join(app.getPath('userData'), 'attachments'),
+    storageDir,
+    backupDir,
+    backupKeep,
   };
 }
