@@ -340,12 +340,100 @@ export interface ComponentInput {
   manufacturerId?: string;
   tags?: string[];
   parameters?: Record<string, unknown>;
+  minQty?: number;
+  maxQty?: number;
+  idealQty?: number;
+  avgPrice?: number;
+  lastPrice?: number;
+  currency?: string;
+}
+
+export interface ComponentDetail extends ComponentRow {
+  parameters: Record<string, unknown>;
+  categoryId?: string;
+  minQty?: string | number | null;
+  maxQty?: string | number | null;
+  idealQty?: string | number | null;
+  avgPrice?: string | number | null;
+  lastPrice?: string | number | null;
+  currency?: string | null;
 }
 
 export function getComponent(id: string) {
-  return request<ComponentRow & { parameters: Record<string, unknown>; categoryId?: string }>(
-    `/components/${id}`,
-  );
+  return request<ComponentDetail>(`/components/${id}`);
+}
+
+// ── Supplier prices (per component) ───────────────────────────
+export interface SupplierPart {
+  id: string;
+  supplierId: string;
+  supplier?: { name: string };
+  supplierSku?: string | null;
+  unitPrice?: string | number | null;
+  currency?: string | null;
+  moq?: number | null;
+  leadTimeDays?: number | null;
+  isPreferred?: boolean;
+}
+export function listSupplierParts(componentId: string) {
+  return request<SupplierPart[]>(`/components/${componentId}/supplier-parts`);
+}
+export function upsertSupplierPart(body: {
+  supplierId: string;
+  componentId: string;
+  supplierSku?: string;
+  unitPrice?: number;
+  moq?: number;
+  leadTimeDays?: number;
+}) {
+  return request<SupplierPart>('/supplier-parts', { method: 'POST', body: JSON.stringify(body) });
+}
+
+// ── Purchase orders ───────────────────────────────────────────
+export interface PoSummary {
+  id: string;
+  code: string;
+  status: string;
+  supplier?: { name: string };
+  expectedAt?: string | null;
+  _count?: { lines: number };
+}
+export interface PoLine {
+  id: string;
+  componentId: string;
+  quantity: string;
+  received: string;
+  unitPrice?: string | null;
+  component?: { internalCode: string; name: string } | null;
+}
+export interface PoDetail extends PoSummary {
+  lines: PoLine[];
+}
+export function listPurchaseOrders() {
+  return request<PoSummary[]>('/purchase-orders');
+}
+export function getPurchaseOrder(id: string) {
+  return request<PoDetail>(`/purchase-orders/${id}`);
+}
+export function createPurchaseOrder(body: {
+  code: string;
+  supplierId: string;
+  expectedAt?: string;
+  lines: { componentId: string; quantity: number; unitPrice?: number }[];
+}) {
+  return request<PoDetail>('/purchase-orders', { method: 'POST', body: JSON.stringify(body) });
+}
+export function submitPurchaseOrder(id: string, receivingLocationId: string) {
+  return request<PoDetail>(`/purchase-orders/${id}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({ receivingLocationId }),
+  });
+}
+export function receivePurchaseOrder(id: string, locationId: string, lines: { lineId: string; quantity: number }[]) {
+  return request<PoDetail>(`/purchase-orders/${id}/receive`, {
+    method: 'POST',
+    body: JSON.stringify({ locationId, lines }),
+  });
 }
 export function createComponent(body: ComponentInput) {
   return request<{ id: string }>('/components', { method: 'POST', body: JSON.stringify(body) });

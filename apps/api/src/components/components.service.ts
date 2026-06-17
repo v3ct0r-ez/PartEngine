@@ -81,6 +81,12 @@ export class ComponentsService {
           mpn: dto.mpn,
           footprint: dto.footprint,
           package: dto.package,
+          minQty: dto.minQty,
+          maxQty: dto.maxQty,
+          idealQty: dto.idealQty,
+          avgPrice: dto.avgPrice,
+          lastPrice: dto.lastPrice,
+          currency: dto.currency ?? undefined,
           parameters: params as Prisma.InputJsonValue,
           parameterValues: {
             create: projected
@@ -137,6 +143,12 @@ export class ComponentsService {
         mpn: dto.mpn,
         footprint: dto.footprint,
         package: dto.package,
+        minQty: dto.minQty,
+        maxQty: dto.maxQty,
+        idealQty: dto.idealQty,
+        avgPrice: dto.avgPrice,
+        lastPrice: dto.lastPrice,
+        currency: dto.currency,
         ...(dto.internalCode ? { internalCode: dto.internalCode } : {}),
         ...(dto.categoryId ? { category: { connect: { id: dto.categoryId } } } : {}),
         ...(dto.manufacturerId

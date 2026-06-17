@@ -2,6 +2,7 @@
 
 import { ComponentEditor } from '@/components/component-editor';
 import { ComponentsTable } from '@/components/components-table';
+import { EconomicPanel } from '@/components/economic-panel';
 import { FilterSidebar } from '@/components/filter-sidebar';
 import { LabelButton } from '@/components/label-button';
 import { WarehouseOperations } from '@/components/warehouse-operations';
@@ -89,6 +90,7 @@ export default function ComponentsPage() {
           </div>
         </div>
 
+        <EconomicPanel componentId={selected.id} />
         <WarehouseOperations componentId={selected.id} />
 
         {editorOpen && (

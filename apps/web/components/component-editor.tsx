@@ -14,6 +14,7 @@ import {
   type Category,
   type CategoryField,
 } from '@/lib/api';
+import { getComponent } from '@/lib/api';
 import {
   categoryCodePrefix,
   formatEngineering,
@@ -64,8 +65,28 @@ export function ComponentEditor({
   const [manufacturerId, setManufacturerId] = useState(component?.manufacturerId ?? '');
   const [tags, setTags] = useState((component?.tags ?? []).join(', '));
   const [params, setParams] = useState<Record<string, unknown>>(component?.parameters ?? {});
+  // Economic / stock thresholds.
+  const [minQty, setMinQty] = useState('');
+  const [idealQty, setIdealQty] = useState('');
+  const [maxQty, setMaxQty] = useState('');
+  const [lastPrice, setLastPrice] = useState('');
+  const [avgPrice, setAvgPrice] = useState('');
+  const [currency, setCurrency] = useState('EUR');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // When editing, load economic fields from the full component record.
+  useQuery({
+    queryKey: ['component-eco', component?.id],
+    enabled: editing,
+    queryFn: async () => {
+      const c = await getComponent(component!.id);
+      const s = (v: unknown) => (v == null ? '' : String(v));
+      setMinQty(s(c.minQty)); setIdealQty(s(c.idealQty)); setMaxQty(s(c.maxQty));
+      setLastPrice(s(c.lastPrice)); setAvgPrice(s(c.avgPrice)); setCurrency(c.currency || 'EUR');
+      return c;
+    },
+  });
   // Once the user edits code/name manually we stop auto-generating them.
   // When editing an existing component we never auto-overwrite.
   const [codeTouched, setCodeTouched] = useState(editing);
@@ -145,6 +166,12 @@ export function ComponentEditor({
       manufacturerId: manufacturerId || undefined,
       tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       parameters: params,
+      minQty: minQty !== '' ? Number(minQty) : undefined,
+      idealQty: idealQty !== '' ? Number(idealQty) : undefined,
+      maxQty: maxQty !== '' ? Number(maxQty) : undefined,
+      lastPrice: lastPrice !== '' ? Number(lastPrice) : undefined,
+      avgPrice: avgPrice !== '' ? Number(avgPrice) : undefined,
+      currency: currency || undefined,
     };
     try {
       if (editing) await updateComponent(component!.id, body);
@@ -221,6 +248,16 @@ export function ComponentEditor({
             </div>
           </>
         )}
+
+        <h3 className="mb-2 mt-5 text-xs font-semibold uppercase text-muted-foreground">Economia & scorte</h3>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Scorta minima"><input className={inp} type="number" value={minQty} onChange={(e) => setMinQty(e.target.value)} /></Field>
+          <Field label="Scorta ideale"><input className={inp} type="number" value={idealQty} onChange={(e) => setIdealQty(e.target.value)} /></Field>
+          <Field label="Scorta massima"><input className={inp} type="number" value={maxQty} onChange={(e) => setMaxQty(e.target.value)} /></Field>
+          <Field label="Ultimo prezzo"><input className={inp} type="number" step="0.0001" value={lastPrice} onChange={(e) => setLastPrice(e.target.value)} /></Field>
+          <Field label="Prezzo medio"><input className={inp} type="number" step="0.0001" value={avgPrice} onChange={(e) => setAvgPrice(e.target.value)} /></Field>
+          <Field label="Valuta"><input className={inp} value={currency} onChange={(e) => setCurrency(e.target.value)} /></Field>
+        </div>
 
         {editing && component && (
           <AttachmentsPanel

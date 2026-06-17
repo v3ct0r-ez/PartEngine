@@ -26,7 +26,8 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Auto-update system | ✅ | notify + one-click apply via GitHub Releases; semver compare (6 tests), gated/audited apply, backup-first updater script, admin banner; see docs/UPDATES.md |
 | Update verifier (`.exe`) | ✅ | standalone CLI → Windows .exe (PE32+ verified); logic/mock/check/gating commands; tools/update-verifier |
 | Desktop all-in-one (Electron) | 🟡 | apps/desktop launcher fully implemented (embedded Postgres → migrate → API health-gated → Next → window/tray, local/LAN, graceful shutdown) + electron-updater wired (check/download/install via GitHub Releases, IPC bridge, desktop-aware banner); installer built in CI on a Windows runner. See docs/DESKTOP.md |
-| Suppliers / purchasing | ✅ | Sprint 5: suppliers + supplier parts, PO create/submit/receive (receiving stocks via transactional movements, onOrder + avg/last price + status); UI suppliers page |
+| Suppliers / purchasing | ✅ | Sprint 5 + economic UI: suppliers page, **Ordini** page (create→submit→receive, updates stock + avg/last price), per-supplier prices on the component card |
+| Economic data | ✅ | component prices (avg/last/currency) + stock thresholds (min/ideal/max) editable; on-hand value; dashboard warehouse value; CSV value report |
 | BOM / kits | ✅ | Sprint 6: BOM CRUD + versioning + CSV import + per-line availability; kits with atomic build (consumes stock, OUTBOUND movements); UI /boms + /kits; +4 core tests |
 | Attachments / datasheet OCR | ✅ | Sprint 7: upload/list/download/delete (local FS storage), PDF/txt text extraction (pdf-parse) → searchable ocrText, field suggestion from datasheet; UI panel in editor. Image-OCR (tesseract) remains a server worker |
 | Barcode/QR, reports, dashboard | ✅ | Sprint 8: QR labels + print, USB-scan to open, CSV reports (inventory/value/movements), dashboard KPIs + category chart. Webcam scan & xlsx/PDF = future |

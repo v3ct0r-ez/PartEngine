@@ -21,6 +21,15 @@ export class SuppliersService {
     });
   }
 
+  /** Per-supplier sourcing/prices for a component. */
+  partsForComponent(componentId: string) {
+    return this.prisma.supplierPart.findMany({
+      where: { componentId },
+      include: { supplier: { select: { name: true } } },
+      orderBy: { unitPrice: 'asc' },
+    });
+  }
+
   /** Create or update the per-supplier sourcing record for a component. */
   upsertPart(dto: UpsertSupplierPartDto) {
     return this.prisma.supplierPart.upsert({

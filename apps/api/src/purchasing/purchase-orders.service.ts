@@ -35,11 +35,30 @@ export class PurchaseOrdersService {
     });
   }
 
-  findOne(id: string) {
-    return this.prisma.purchaseOrder.findUnique({
+  findAll() {
+    return this.prisma.purchaseOrder.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { supplier: { select: { name: true } }, _count: { select: { lines: true } } },
+    });
+  }
+
+  async findOne(id: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({
       where: { id },
       include: { lines: true, supplier: true },
     });
+    if (!po) return null;
+    // PurchaseOrderLine has no Prisma relation to Component — enrich names here.
+    const ids = po.lines.map((l) => l.componentId).filter((x): x is string => !!x);
+    const comps = await this.prisma.component.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, internalCode: true, name: true },
+    });
+    const byId = new Map(comps.map((c) => [c.id, c]));
+    return {
+      ...po,
+      lines: po.lines.map((l) => ({ ...l, component: l.componentId ? byId.get(l.componentId) ?? null : null })),
+    };
   }
 
   /** Mark a draft as ordered and record the expected incoming stock (onOrder). */

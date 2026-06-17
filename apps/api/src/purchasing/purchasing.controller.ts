@@ -45,7 +45,17 @@ export class PurchasingController {
     return this.suppliers.upsertPart(dto);
   }
 
+  @Get('components/:id/supplier-parts')
+  partsForComponent(@Param('id') id: string) {
+    return this.suppliers.partsForComponent(id);
+  }
+
   // ── Purchase orders ──────────────────────────────────────
+  @Get('purchase-orders')
+  listOrders() {
+    return this.orders.findAll();
+  }
+
   @Get('purchase-orders/:id')
   getOrder(@Param('id') id: string) {
     return this.orders.findOne(id);

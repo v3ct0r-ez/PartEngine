@@ -3,13 +3,24 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
 
-export class CreateComponentDto {
+/** Economic + stock-threshold fields shared by create/update. */
+class EconomicFields {
+  @IsOptional() @Type(() => Number) @IsNumber() minQty?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() maxQty?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() idealQty?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() avgPrice?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() lastPrice?: number;
+  @IsOptional() @IsString() currency?: string;
+}
+
+export class CreateComponentDto extends EconomicFields {
   @IsString() internalCode: string;
   @IsString() name: string;
   @IsString() categoryId: string;
@@ -29,7 +40,7 @@ export class CreateComponentDto {
   @IsOptional() @IsString() _reason?: string;
 }
 
-export class UpdateComponentDto {
+export class UpdateComponentDto extends EconomicFields {
   @IsOptional() @IsString() internalCode?: string;
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() categoryId?: string;
