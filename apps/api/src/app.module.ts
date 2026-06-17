@@ -7,6 +7,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
+import { AttachmentsModule } from './attachments/attachments.module';
 import { BomModule } from './bom/bom.module';
 import { CategoriesModule } from './categories/categories.module';
 import { KitsModule } from './kits/kits.module';
@@ -31,6 +32,7 @@ import { UpdateModule } from './update/update.module';
     ]),
     PrismaModule,
     AuditModule,
+    AttachmentsModule,
     AuthModule,
     BomModule,
     CategoriesModule,

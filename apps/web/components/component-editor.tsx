@@ -3,15 +3,20 @@
 import {
   createComponent,
   createManufacturer,
+  deleteAttachment,
   deleteComponent,
+  listAttachments,
   listManufacturers,
+  openAttachment,
+  suggestAttachmentFields,
   updateComponent,
+  uploadAttachment,
   type Category,
   type CategoryField,
 } from '@/lib/api';
 import { validateParameters, type FieldTemplate } from '@partengine/core';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useRef, useState } from 'react';
 
 interface EditingComponent {
   id: string;
@@ -173,6 +178,21 @@ export function ComponentEditor({
           </>
         )}
 
+        {editing && component && (
+          <AttachmentsPanel
+            componentId={component.id}
+            onSuggest={(s) => {
+              setParams((p) => {
+                const next = { ...p };
+                for (const [k, v] of Object.entries(s.suggestions)) next[k] = String(v);
+                if (s.tolerance != null && 'tolerance' in next) next.tolerance = String(s.tolerance);
+                return next;
+              });
+              if (s.footprint) setFootprint(s.footprint);
+            }}
+          />
+        )}
+
         {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
 
         <div className="mt-6 flex items-center justify-between">
@@ -220,5 +240,79 @@ function FieldInput({ field, value, onChange }: { field: FieldTemplate; value: u
       value={String(value ?? '')}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+}
+
+function AttachmentsPanel({
+  componentId,
+  onSuggest,
+}: {
+  componentId: string;
+  onSuggest: (s: { suggestions: Record<string, number>; footprint?: string; tolerance?: number }) => void;
+}) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { data: files = [] } = useQuery({
+    queryKey: ['attachments', componentId],
+    queryFn: () => listAttachments(componentId),
+  });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['attachments', componentId] });
+
+  const upload = useMutation({
+    mutationFn: (file: File) => uploadAttachment(componentId, file),
+    onSuccess: refresh,
+  });
+  const del = useMutation({ mutationFn: deleteAttachment, onSuccess: refresh });
+  const suggest = useMutation({
+    mutationFn: suggestAttachmentFields,
+    onSuccess: (s) => onSuggest(s),
+  });
+
+  return (
+    <div className="mt-5 border-t border-border pt-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase text-muted-foreground">Allegati / datasheet</h3>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="rounded-md border border-border px-3 py-1 text-xs"
+        >
+          + Carica file
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) upload.mutate(f);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {upload.isPending && <p className="text-xs text-muted-foreground">Caricamento…</p>}
+      <ul className="space-y-1 text-sm">
+        {files.map((a) => (
+          <li key={a.id} className="flex items-center gap-2">
+            <button type="button" onClick={() => openAttachment(a.id)} className="text-primary hover:underline">
+              {a.fileName}
+            </button>
+            <span className="text-xs text-muted-foreground">{(a.sizeBytes / 1024).toFixed(0)} KB · {a.kind}</span>
+            {a.kind === 'DATASHEET' && (
+              <button type="button" onClick={() => suggest.mutate(a.id)} className="text-xs text-primary hover:underline">
+                suggerisci parametri
+              </button>
+            )}
+            <button type="button" onClick={() => del.mutate(a.id)} className="ml-auto text-xs text-red-600 hover:underline">
+              elimina
+            </button>
+          </li>
+        ))}
+        {files.length === 0 && <li className="text-xs text-muted-foreground">Nessun allegato.</li>}
+      </ul>
+      {suggest.isSuccess && Object.keys(suggest.data.suggestions).length === 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">Nessun parametro riconosciuto nel testo.</p>
+      )}
+    </div>
   );
 }

@@ -328,6 +328,51 @@ export function deleteComponent(id: string) {
   return request<{ deleted: boolean }>(`/components/${id}`, { method: 'DELETE' });
 }
 
+// ── Attachments / datasheets ──────────────────────────────────
+export interface Attachment {
+  id: string;
+  kind: 'DATASHEET' | 'IMAGE' | 'LABEL' | 'OTHER';
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+export function listAttachments(componentId: string) {
+  return request<Attachment[]>(`/components/${componentId}/attachments`);
+}
+export async function uploadAttachment(componentId: string, file: File) {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE}/api/components/${componentId}/attachments`, {
+    method: 'POST',
+    headers: authHeaders(), // no Content-Type: the browser sets the multipart boundary
+    body: fd,
+  });
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
+    throw new Error('Upload non riuscito');
+  }
+  return res.json();
+}
+export function deleteAttachment(id: string) {
+  return request<{ deleted: boolean }>(`/attachments/${id}`, { method: 'DELETE' });
+}
+export function suggestAttachmentFields(id: string) {
+  return request<{ suggestions: Record<string, number>; footprint?: string; tolerance?: number }>(
+    `/attachments/${id}/suggest-fields`,
+  );
+}
+/** Fetch (with auth) and open an attachment in a new tab. */
+export async function openAttachment(id: string) {
+  const res = await fetch(`${BASE}/api/attachments/${id}/download`, { headers: authHeaders() });
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
+    throw new Error('Download non riuscito');
+  }
+  const url = URL.createObjectURL(await res.blob());
+  window.open(url, '_blank');
+}
+
 // ── BOM ───────────────────────────────────────────────────────
 export type AvailabilityStatus = 'AVAILABLE' | 'PARTIAL' | 'MISSING';
 export interface BomSummary {

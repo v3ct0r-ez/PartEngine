@@ -28,6 +28,7 @@ export class ServiceManager {
       DATABASE_URL: this.cfg.databaseUrl,
       JWT_ACCESS_SECRET: this.cfg.jwtAccessSecret,
       JWT_REFRESH_SECRET: this.cfg.jwtRefreshSecret,
+      STORAGE_DIR: this.cfg.storageDir,
       APP_VERSION: process.env.APP_VERSION ?? '0.1.0',
     };
 

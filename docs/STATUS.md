@@ -28,7 +28,7 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Desktop all-in-one (Electron) | 🟡 | apps/desktop launcher fully implemented (embedded Postgres → migrate → API health-gated → Next → window/tray, local/LAN, graceful shutdown) + electron-updater wired (check/download/install via GitHub Releases, IPC bridge, desktop-aware banner); installer built in CI on a Windows runner. See docs/DESKTOP.md |
 | Suppliers / purchasing | ✅ | Sprint 5: suppliers + supplier parts, PO create/submit/receive (receiving stocks via transactional movements, onOrder + avg/last price + status); UI suppliers page |
 | BOM / kits | ✅ | Sprint 6: BOM CRUD + versioning + CSV import + per-line availability; kits with atomic build (consumes stock, OUTBOUND movements); UI /boms + /kits; +4 core tests |
-| Attachments / datasheet OCR | ⬜ | schema ✅ + S3 in compose; Sprint 7 |
+| Attachments / datasheet OCR | ✅ | Sprint 7: upload/list/download/delete (local FS storage), PDF/txt text extraction (pdf-parse) → searchable ocrText, field suggestion from datasheet; UI panel in editor. Image-OCR (tesseract) remains a server worker |
 | Barcode/QR, reports, dashboard | ⬜ | Sprint 8 |
 | Notifications/alert engine | ✅ | Sprint 5: pure rules (5 tests) + service (event-driven + periodic sweep, dedupe + auto-resolve); list/read endpoints; UI bell |
 | E2E (Playwright), 80% coverage | 🟡 | unit tests green; E2E config to add in Sprint 9 |

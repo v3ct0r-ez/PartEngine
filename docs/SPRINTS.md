@@ -68,10 +68,19 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - **AC met:** building a kit decrements stock atomically; BOM shows the shortage
   list (PARTIAL/MISSING per line + overall status).
 
-## Sprint 7 — Attachments, datasheets & OCR
-- S3 presigned upload; datasheet PDF + images; OCR worker → `Attachment.ocrText` into FTS.
-- Field suggestion from extracted metadata.
-- **AC:** uploaded datasheet text is searchable.
+## Sprint 7 — Attachments, datasheets & OCR ✅
+- Upload/list/download/delete attachments via a pluggable StorageService
+  (local FS — works in the all-in-one desktop, no MinIO needed; S3 adapter is the
+  server alternative).
+- Datasheet text extraction: **PDF text layer via pdf-parse** (pure JS, no native
+  deps) + `.txt`; stored in `Attachment.ocrText` and made **searchable** (component
+  search also matches attachment ocrText). Manual `ocr-text` endpoint lets a
+  server-side tesseract/BullMQ worker fill text for scanned/image PDFs.
+- **Field suggestion** from the datasheet text (reuses the unit-aware NL parser)
+  → fills category parameters + footprint in the editor.
+- UI: attachments panel in the component editor (upload, open, delete, "suggerisci
+  parametri").
+- **AC met:** uploaded datasheet text is searchable; suggestions populate fields.
 
 ## Sprint 8 — Barcode/QR, reports & dashboard
 - Label generation + print sheets; webcam + USB scanner input.

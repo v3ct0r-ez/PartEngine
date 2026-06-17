@@ -215,6 +215,8 @@ export class ComponentsService {
         { mpn: { contains: text, mode: 'insensitive' } },
         { internalCode: { contains: text, mode: 'insensitive' } },
         { tags: { has: text } },
+        // Datasheet/attachment extracted text is searchable too.
+        { attachments: { some: { ocrText: { contains: text, mode: 'insensitive' } } } },
       ];
     }
 

@@ -34,6 +34,7 @@ export interface DesktopConfig {
   databaseUrl: string;
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
+  storageDir: string;
 }
 
 /** Load (or generate once) per-install JWT secrets, persisted in app data so
@@ -96,5 +97,6 @@ export function loadConfig(): DesktopConfig {
     databaseUrl: `postgresql://${pgUser}:${pgPassword}@127.0.0.1:${pgPort}/${pgDatabase}?schema=public`,
     jwtAccessSecret: secrets.access,
     jwtRefreshSecret: secrets.refresh,
+    storageDir: path.join(app.getPath('userData'), 'attachments'),
   };
 }
