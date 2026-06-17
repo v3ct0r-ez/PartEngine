@@ -172,8 +172,29 @@ export class InventoryService {
   listWarehouses() {
     return this.prisma.warehouse.findMany({
       orderBy: { name: 'asc' },
-      include: { locations: { orderBy: { code: 'asc' } } },
+      include: {
+        locations: { orderBy: { code: 'asc' } },
+        _count: { select: { locations: true } },
+      },
     });
+  }
+
+  createWarehouse(dto: { code: string; name: string; address?: string }) {
+    return this.prisma.warehouse.create({ data: dto });
+  }
+
+  updateWarehouse(id: string, dto: { code?: string; name?: string; address?: string }) {
+    return this.prisma.warehouse.update({ where: { id }, data: dto });
+  }
+
+  /** Delete a warehouse only when it has no locations (prevents orphaning stock). */
+  async deleteWarehouse(id: string) {
+    const locations = await this.prisma.location.count({ where: { warehouseId: id } });
+    if (locations > 0) {
+      throw new ConflictException('Rimuovi prima tutte le ubicazioni di questo magazzino');
+    }
+    await this.prisma.warehouse.delete({ where: { id } });
+    return { deleted: true };
   }
 
   /** Global recent movement history across all components. */

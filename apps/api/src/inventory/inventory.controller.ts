@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
 import { WarehouseAccessService, type Actor } from '../auth/warehouse-access.service';
 import {
   CreateLocationDto,
   CreateMovementDto,
+  CreateWarehouseDto,
   ReservationDto,
+  UpdateLocationDto,
+  UpdateWarehouseDto,
 } from './inventory.dto';
 import { InventoryService } from './inventory.service';
 import { LocationsService } from './locations.service';
@@ -48,6 +51,27 @@ export class InventoryController {
     return this.inventory.listWarehouses();
   }
 
+  // ── Warehouse management (WAREHOUSE_MANAGER / SUPER_ADMIN) ─
+  @Roles('WAREHOUSE_MANAGER')
+  @Post('warehouses')
+  createWarehouse(@Body() dto: CreateWarehouseDto) {
+    return this.inventory.createWarehouse(dto);
+  }
+
+  @Roles('WAREHOUSE_MANAGER')
+  @Patch('warehouses/:id')
+  async updateWarehouse(@Param('id') id: string, @Body() dto: UpdateWarehouseDto, @Req() req: { user?: Actor }) {
+    await this.access.assertCanWrite(req.user, id);
+    return this.inventory.updateWarehouse(id, dto);
+  }
+
+  @Roles('WAREHOUSE_MANAGER')
+  @Delete('warehouses/:id')
+  async deleteWarehouse(@Param('id') id: string, @Req() req: { user?: Actor }) {
+    await this.access.assertCanWrite(req.user, id);
+    return this.inventory.deleteWarehouse(id);
+  }
+
   @Get('movements')
   recentMovements(@Query('limit') limit?: string) {
     return this.inventory.recentMovements(limit ? Number(limit) : undefined);
@@ -74,5 +98,19 @@ export class InventoryController {
   @Get('warehouses/:warehouseId/locations')
   locationTree(@Param('warehouseId') warehouseId: string) {
     return this.locations.tree(warehouseId);
+  }
+
+  @Roles('WAREHOUSE_MANAGER')
+  @Patch('locations/:id')
+  async updateLocation(@Param('id') id: string, @Body() dto: UpdateLocationDto, @Req() req: { user?: Actor }) {
+    await this.access.assertCanWrite(req.user, await this.access.warehouseOfLocation(id));
+    return this.locations.update(id, dto);
+  }
+
+  @Roles('WAREHOUSE_MANAGER')
+  @Delete('locations/:id')
+  async deleteLocation(@Param('id') id: string, @Req() req: { user?: Actor }) {
+    await this.access.assertCanWrite(req.user, await this.access.warehouseOfLocation(id));
+    return this.locations.remove(id);
   }
 }

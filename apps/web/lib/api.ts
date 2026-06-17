@@ -313,14 +313,55 @@ export function getComponentMovements(id: string) {
   return request<Movement[]>(`/inventory/components/${id}/movements`);
 }
 
+export const LOCATION_KINDS = ['zone', 'shelf', 'cabinet', 'drawer', 'box'] as const;
+export type LocationKind = (typeof LOCATION_KINDS)[number];
+
 export interface WarehouseWithLocations {
   id: string;
   code: string;
   name: string;
+  address?: string | null;
   locations: { id: string; code: string; kind: string }[];
+  _count?: { locations: number };
 }
 export function listWarehouses() {
   return request<WarehouseWithLocations[]>('/inventory/warehouses');
+}
+
+export function createWarehouse(body: { code: string; name: string; address?: string }) {
+  return request<WarehouseWithLocations>('/inventory/warehouses', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateWarehouse(id: string, body: { code?: string; name?: string; address?: string }) {
+  return request<WarehouseWithLocations>(`/inventory/warehouses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+}
+export function deleteWarehouse(id: string) {
+  return request<{ deleted: boolean }>(`/inventory/warehouses/${id}`, { method: 'DELETE' });
+}
+
+export interface LocationNode {
+  id: string;
+  code: string;
+  kind: string;
+  barcode: string | null;
+  children: LocationNode[];
+}
+export function getLocationTree(warehouseId: string) {
+  return request<LocationNode[]>(`/inventory/warehouses/${warehouseId}/locations`);
+}
+export function createLocation(body: {
+  warehouseId: string;
+  kind: LocationKind;
+  code: string;
+  parentId?: string;
+  barcode?: string;
+}) {
+  return request<LocationNode>('/inventory/locations', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateLocation(id: string, body: { code?: string; kind?: LocationKind; barcode?: string }) {
+  return request<LocationNode>(`/inventory/locations/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+}
+export function deleteLocation(id: string) {
+  return request<{ deleted: boolean }>(`/inventory/locations/${id}`, { method: 'DELETE' });
 }
 
 export interface MovementRow extends Movement {

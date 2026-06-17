@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { CreateLocationDto } from './inventory.dto';
+import type { CreateLocationDto, UpdateLocationDto } from './inventory.dto';
 
 export interface LocationNode {
   id: string;
@@ -31,6 +31,36 @@ export class LocationsService {
         barcode: dto.barcode,
       },
     });
+  }
+
+  async update(id: string, dto: UpdateLocationDto) {
+    const loc = await this.prisma.location.findUnique({ where: { id } });
+    if (!loc) throw new NotFoundException('Ubicazione non trovata');
+    return this.prisma.location.update({
+      where: { id },
+      data: { code: dto.code, kind: dto.kind, barcode: dto.barcode },
+    });
+  }
+
+  /** Delete a location only when it has no children and no stock on it. */
+  async remove(id: string) {
+    const loc = await this.prisma.location.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { children: true } },
+        stockLevels: { select: { quantity: true, reserved: true } },
+      },
+    });
+    if (!loc) throw new NotFoundException('Ubicazione non trovata');
+    if (loc._count.children > 0) {
+      throw new ConflictException('Rimuovi prima le sotto-ubicazioni');
+    }
+    const hasStock = loc.stockLevels.some((s) => Number(s.quantity) !== 0 || Number(s.reserved) !== 0);
+    if (hasStock) {
+      throw new ConflictException('Ubicazione non vuota: sposta o azzera la giacenza prima di eliminarla');
+    }
+    await this.prisma.location.delete({ where: { id } });
+    return { deleted: true };
   }
 
   /** Build the nested location tree (warehouse → zone → … → box) in one query. */

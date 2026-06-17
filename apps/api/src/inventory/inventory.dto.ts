@@ -4,6 +4,8 @@ import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export const MOVEMENT_TYPES = ['INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT'] as const;
 
+export const LOCATION_KINDS = ['zone', 'shelf', 'cabinet', 'drawer', 'box'] as const;
+
 export class CreateMovementDto {
   @IsIn(MOVEMENT_TYPES) type: (typeof MOVEMENT_TYPES)[number];
   @IsString() componentId: string;
@@ -29,8 +31,26 @@ export class ReservationDto {
 
 export class CreateLocationDto {
   @IsString() warehouseId: string;
-  @IsIn(['zone', 'shelf', 'cabinet', 'drawer', 'box']) kind: string;
+  @IsIn(LOCATION_KINDS) kind: string;
   @IsString() code: string;
   @IsOptional() @IsString() parentId?: string;
   @IsOptional() @IsString() barcode?: string;
+}
+
+export class UpdateLocationDto {
+  @IsOptional() @IsString() code?: string;
+  @IsOptional() @IsIn(LOCATION_KINDS) kind?: string;
+  @IsOptional() @IsString() barcode?: string;
+}
+
+export class CreateWarehouseDto {
+  @IsString() code: string;
+  @IsString() name: string;
+  @IsOptional() @IsString() address?: string;
+}
+
+export class UpdateWarehouseDto {
+  @IsOptional() @IsString() code?: string;
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() address?: string;
 }
