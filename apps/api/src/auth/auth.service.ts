@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Role } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -127,6 +132,58 @@ export class AuthService {
         canWrite: a.canWrite,
       })),
     }));
+  }
+
+  /** Change the logged-in user's own password (verifies the current one). */
+  async changePassword(userId: string, current: string, next: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    if (!(await argon2.verify(user.passwordHash, current))) {
+      throw new UnauthorizedException('Password attuale errata');
+    }
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await argon2.hash(next) } });
+    await this.revokeTokens(userId);
+    return { success: true };
+  }
+
+  /** Admin reset of another user's password. */
+  async adminResetPassword(userId: string, next: string) {
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await argon2.hash(next) } });
+    await this.revokeTokens(userId);
+    return { success: true };
+  }
+
+  /** Enable/disable a user. Can't disable yourself or the last active admin. */
+  async setActive(userId: string, isActive: boolean, actingUserId: string) {
+    if (!isActive) {
+      if (userId === actingUserId) throw new BadRequestException('Non puoi disattivare il tuo account');
+      await this.assertNotLastAdmin(userId);
+    }
+    await this.prisma.user.update({ where: { id: userId }, data: { isActive } });
+    if (!isActive) await this.revokeTokens(userId);
+    return { success: true };
+  }
+
+  /** Change a user's role. Demoting the last active admin is blocked. */
+  async setRole(userId: string, role: Role) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN') await this.assertNotLastAdmin(userId);
+    await this.prisma.user.update({ where: { id: userId }, data: { role } });
+    return { success: true };
+  }
+
+  private async assertNotLastAdmin(excludeUserId: string) {
+    const others = await this.prisma.user.count({
+      where: { role: 'SUPER_ADMIN', isActive: true, id: { not: excludeUserId } },
+    });
+    if (others === 0) throw new BadRequestException('Deve restare almeno un amministratore attivo');
+  }
+
+  private revokeTokens(userId: string) {
+    return this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   /** Grant or update per-warehouse access for a user. */

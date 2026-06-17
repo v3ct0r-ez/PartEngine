@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AccountMenu } from '@/components/account-menu';
 import { AuthGate } from '@/components/auth-gate';
-import { LogoutButton } from '@/components/logout-button';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { UpdateBanner } from '@/components/update-banner';
 import { Providers } from './providers';
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <UpdateBanner />
               <div className="flex items-center justify-end gap-1 border-b border-border px-6 py-2">
                 <NotificationsBell />
-                <LogoutButton />
+                <AccountMenu />
               </div>
               <main className="p-6">{children}</main>
             </div>

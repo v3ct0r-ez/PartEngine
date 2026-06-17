@@ -1,11 +1,14 @@
 'use client';
 
 import {
+  adminResetPassword,
   createUser,
   getMe,
   grantWarehouseAccess,
   listUsers,
   listWarehouses,
+  setUserActive,
+  setUserRole,
   type UserRole,
 } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -42,6 +45,29 @@ export default function UsersPage() {
     onSuccess: refresh,
   });
 
+  // per-row admin actions
+  const toggleActive = useMutation({
+    mutationFn: (v: { id: string; isActive: boolean }) => setUserActive(v.id, v.isActive),
+    onSuccess: refresh,
+    onError: (e) => alert((e as Error).message),
+  });
+  const changeRole = useMutation({
+    mutationFn: (v: { id: string; role: UserRole }) => setUserRole(v.id, v.role),
+    onSuccess: refresh,
+    onError: (e) => alert((e as Error).message),
+  });
+  const resetPw = useMutation({
+    mutationFn: (v: { id: string; password: string }) => adminResetPassword(v.id, v.password),
+    onSuccess: () => alert('Password reimpostata.'),
+    onError: (e) => alert((e as Error).message),
+  });
+  const doReset = (id: string, email: string) => {
+    const pw = window.prompt(`Nuova password per ${email} (min 8 caratteri):`);
+    if (pw == null) return;
+    if (pw.length < 8) { alert('Minimo 8 caratteri'); return; }
+    resetPw.mutate({ id, password: pw });
+  };
+
   if (me.isLoading) return null;
   if (!isAdmin) {
     return (
@@ -70,14 +96,19 @@ export default function UsersPage() {
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-            <tr><th className="px-3 py-2">Email</th><th className="px-3 py-2">Nome</th><th className="px-3 py-2">Ruolo</th><th className="px-3 py-2">Accessi magazzino</th><th className="px-3 py-2">Ultimo accesso</th></tr>
+            <tr><th className="px-3 py-2">Email</th><th className="px-3 py-2">Nome</th><th className="px-3 py-2">Ruolo</th><th className="px-3 py-2">Accessi magazzino</th><th className="px-3 py-2">Ultimo accesso</th><th className="px-3 py-2">Stato</th><th className="px-3 py-2">Azioni</th></tr>
           </thead>
           <tbody>
             {users.data?.map((u) => (
-              <tr key={u.id} className="border-t border-border">
+              <tr key={u.id} className={`border-t border-border ${u.isActive ? '' : 'opacity-60'}`}>
                 <td className="px-3 py-2">{u.email}</td>
                 <td className="px-3 py-2">{u.fullName}</td>
-                <td className="px-3 py-2"><span className="rounded bg-muted px-2 py-0.5 text-xs">{u.role}</span></td>
+                <td className="px-3 py-2">
+                  <select className={inp} value={u.role} disabled={u.id === me.data?.id}
+                    onChange={(e) => changeRole.mutate({ id: u.id, role: e.target.value as UserRole })}>
+                    {ROLES.map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                </td>
                 <td className="px-3 py-2 text-xs">
                   {u.role === 'SUPER_ADMIN' || u.role === 'WAREHOUSE_MANAGER'
                     ? 'Tutti (globale)'
@@ -86,6 +117,24 @@ export default function UsersPage() {
                       : '—'}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'mai'}</td>
+                <td className="px-3 py-2">
+                  <span className={`rounded px-2 py-0.5 text-xs ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {u.isActive ? 'Attivo' : 'Disattivo'}
+                  </span>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex gap-2 text-xs">
+                    <button onClick={() => toggleActive.mutate({ id: u.id, isActive: !u.isActive })}
+                      disabled={u.id === me.data?.id}
+                      className="rounded border border-border px-2 py-1 hover:bg-muted disabled:opacity-40">
+                      {u.isActive ? 'Disattiva' : 'Attiva'}
+                    </button>
+                    <button onClick={() => doReset(u.id, u.email)}
+                      className="rounded border border-border px-2 py-1 hover:bg-muted">
+                      Reimposta password
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Role } from '@prisma/client';
 import { IsBoolean, IsEmail, IsIn, IsString, MinLength } from 'class-validator';
@@ -33,6 +33,20 @@ class GrantAccessDto {
   @IsString() userId: string;
   @IsString() warehouseId: string;
   @IsBoolean() canWrite: boolean;
+}
+
+class ChangePasswordDto {
+  @IsString() currentPassword: string;
+  @IsString() @MinLength(8) newPassword: string;
+}
+class ResetPasswordDto {
+  @IsString() @MinLength(8) newPassword: string;
+}
+class ActiveDto {
+  @IsBoolean() isActive: boolean;
+}
+class RoleDto {
+  @IsIn(ROLES) role: Role;
 }
 
 @ApiTags('auth')
@@ -76,6 +90,30 @@ export class AuthController {
   @Get('me')
   me(@Req() req: { user?: unknown }) {
     return req.user;
+  }
+
+  /** Any user can change their own password. */
+  @Post('change-password')
+  changePassword(@Body() dto: ChangePasswordDto, @Req() req: { user: { id: string } }) {
+    return this.auth.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Post('users/:id/password')
+  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.auth.adminResetPassword(id, dto.newPassword);
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Post('users/:id/active')
+  setActive(@Param('id') id: string, @Body() dto: ActiveDto, @Req() req: { user: { id: string } }) {
+    return this.auth.setActive(id, dto.isActive, req.user.id);
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Post('users/:id/role')
+  setRole(@Param('id') id: string, @Body() dto: RoleDto) {
+    return this.auth.setRole(id, dto.role);
   }
 
   // ── Admin: users & per-warehouse access ──────────────────

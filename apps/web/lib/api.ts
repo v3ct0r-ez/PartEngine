@@ -115,6 +115,30 @@ export function createUser(body: { email: string; fullName: string; password: st
 export function grantWarehouseAccess(body: { userId: string; warehouseId: string; canWrite: boolean }) {
   return request<unknown>('/auth/warehouse-access', { method: 'POST', body: JSON.stringify(body) });
 }
+export function changeMyPassword(currentPassword: string, newPassword: string) {
+  return request<{ success: boolean }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+export function adminResetPassword(userId: string, newPassword: string) {
+  return request<{ success: boolean }>(`/auth/users/${userId}/password`, {
+    method: 'POST',
+    body: JSON.stringify({ newPassword }),
+  });
+}
+export function setUserActive(userId: string, isActive: boolean) {
+  return request<{ success: boolean }>(`/auth/users/${userId}/active`, {
+    method: 'POST',
+    body: JSON.stringify({ isActive }),
+  });
+}
+export function setUserRole(userId: string, role: UserRole) {
+  return request<{ success: boolean }>(`/auth/users/${userId}/role`, {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  });
+}
 
 /** Drop the token and bounce to the login gate when the session is invalid. */
 function handleUnauthorized() {
