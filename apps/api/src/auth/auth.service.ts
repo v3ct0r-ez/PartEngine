@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Role } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -73,6 +73,27 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
     return { success: true };
+  }
+
+  // ── First-run setup (no users yet) ───────────────────────
+  async needsSetup(): Promise<boolean> {
+    return (await this.prisma.user.count()) === 0;
+  }
+
+  /** Create the first administrator. Allowed ONLY when no user exists. */
+  async setup(input: { email: string; fullName: string; password: string }) {
+    if ((await this.prisma.user.count()) > 0) {
+      throw new ForbiddenException('Setup already completed');
+    }
+    const user = await this.prisma.user.create({
+      data: {
+        email: input.email,
+        fullName: input.fullName,
+        role: 'SUPER_ADMIN',
+        passwordHash: await argon2.hash(input.password),
+      },
+    });
+    return this.issueTokens(user.id, user.email, user.role);
   }
 
   // ── User & access administration (SUPER_ADMIN) ───────────

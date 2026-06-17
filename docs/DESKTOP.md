@@ -148,6 +148,17 @@ defaults to WIN1252 ("character … has no equivalent in encoding WIN1252"). Thi
 applies to the **first** initialisation only; a cluster created by an older build
 stays WIN1252, so delete `%APPDATA%\PartEngine\pgdata` once to re-initialise.
 
+## First run / initial account
+
+No default password is shipped. On first launch the database has the seeded
+**catalog** (taxonomy + demo parts) but **no users**, so the app shows a
+**"Create administrator"** screen (`GET /auth/status` → `needsSetup`). The user
+sets their own email + password → a `SUPER_ADMIN` is created via the public
+`POST /auth/setup` (allowed only while zero users exist) and they're logged in.
+Afterwards it's a normal login; further users are created from **Utenti**
+(admin only). Existing installs that already had the old seeded admin keep
+working and skip setup.
+
 ## Data location, NAS & backups
 
 There is no single "warehouse file": data lives in the embedded **PostgreSQL

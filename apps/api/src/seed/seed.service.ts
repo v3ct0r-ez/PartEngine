@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { projectParameters, TAXONOMY } from '@partengine/core';
-import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -18,7 +17,10 @@ export class SeedService implements OnModuleInit {
   async onModuleInit() {
     if (process.env.AUTO_SEED === 'false') return;
     try {
-      if ((await this.prisma.user.count()) > 0) return;
+      // Seed the catalog when empty. The admin account is NOT seeded — it's
+      // created by the user at first launch (see /auth/setup), so no default
+      // password is ever shipped.
+      if ((await this.prisma.category.count()) > 0) return;
       await this.seed();
     } catch (err) {
       this.logger.warn(`Seed skipped: ${(err as Error).message}`);
@@ -26,14 +28,9 @@ export class SeedService implements OnModuleInit {
   }
 
   private async seed() {
-    this.logger.log('Empty database — seeding taxonomy + admin…');
-    const passwordHash = await argon2.hash('changeme123');
+    this.logger.log('Empty catalog — seeding taxonomy + demo…');
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.user.create({
-        data: { email: 'admin@partengine.local', fullName: 'Super Admin', role: 'SUPER_ADMIN', passwordHash },
-      });
-
       // 2-level taxonomy: groups, then leaf categories with fields.
       for (const [gi, group] of TAXONOMY.entries()) {
         const g = await tx.category.create({

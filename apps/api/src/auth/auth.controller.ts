@@ -16,6 +16,12 @@ class RefreshDto {
   @IsString() refreshToken: string;
 }
 
+class SetupDto {
+  @IsEmail() email: string;
+  @IsString() fullName: string;
+  @IsString() @MinLength(8) password: string;
+}
+
 class CreateUserDto {
   @IsEmail() email: string;
   @IsString() fullName: string;
@@ -33,6 +39,20 @@ class GrantAccessDto {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
+
+  /** First-run state: does the app still need an initial admin? */
+  @Public()
+  @Get('status')
+  async status() {
+    return { needsSetup: await this.auth.needsSetup() };
+  }
+
+  /** Create the first administrator (only when no user exists). */
+  @Public()
+  @Post('setup')
+  setup(@Body() dto: SetupDto) {
+    return this.auth.setup(dto);
+  }
 
   @Public()
   @Post('login')

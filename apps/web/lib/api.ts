@@ -41,6 +41,17 @@ export function getToken(): string | null {
   return typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 }
 
+export async function getAuthStatus(): Promise<{ needsSetup: boolean }> {
+  const res = await fetch(`${BASE}/api/auth/status`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Impossibile contattare il server');
+  return res.json();
+}
+
+function storeTokens(data: { accessToken: string; refreshToken?: string }) {
+  localStorage.setItem('accessToken', data.accessToken);
+  if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+}
+
 export async function login(email: string, password: string) {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
@@ -49,8 +60,23 @@ export async function login(email: string, password: string) {
   });
   if (!res.ok) throw new Error('Credenziali non valide');
   const data = await res.json();
-  localStorage.setItem('accessToken', data.accessToken);
-  if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+  storeTokens(data);
+  return data;
+}
+
+/** First-run: create the initial administrator and log in. */
+export async function setupAdmin(email: string, fullName: string, password: string) {
+  const res = await fetch(`${BASE}/api/auth/setup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, fullName, password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? 'Creazione account non riuscita');
+  }
+  const data = await res.json();
+  storeTokens(data);
   return data;
 }
 

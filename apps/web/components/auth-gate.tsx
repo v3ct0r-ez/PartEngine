@@ -1,24 +1,94 @@
 'use client';
 
-import { getToken, login } from '@/lib/api';
+import { getAuthStatus, getToken, login, setupAdmin } from '@/lib/api';
 import { useEffect, useState } from 'react';
 
+type Phase = 'loading' | 'setup' | 'login' | 'authed';
+
 /**
- * Authentication gate. If there's no stored token it shows the login form;
- * otherwise it renders the app. The API requires a JWT on every protected
- * route, so without this the app can't read/write anything (401 Unauthorized).
+ * Auth gate with first-run setup. If the app has no users yet (fresh install),
+ * it shows a "create administrator" form instead of login — so no default
+ * password is ever shipped. Otherwise: login, then the app.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const [authed, setAuthed] = useState<boolean | null>(null);
-  useEffect(() => setAuthed(!!getToken()), []);
+  const [phase, setPhase] = useState<Phase>('loading');
 
-  if (authed === null) return null; // brief: deciding
-  if (!authed) return <LoginForm onSuccess={() => setAuthed(true)} />;
-  return <>{children}</>;
+  useEffect(() => {
+    if (getToken()) {
+      setPhase('authed');
+      return;
+    }
+    getAuthStatus()
+      .then((s) => setPhase(s.needsSetup ? 'setup' : 'login'))
+      .catch(() => setPhase('login'));
+  }, []);
+
+  if (phase === 'loading') return null;
+  if (phase === 'authed') return <>{children}</>;
+  if (phase === 'setup') return <SetupForm onDone={() => setPhase('authed')} />;
+  return <LoginForm onSuccess={() => setPhase('authed')} />;
+}
+
+function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-background p-8 shadow-sm">
+        <div className="text-center">
+          <div className="text-2xl font-bold">PartEngine</div>
+          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const fld = 'w-full rounded-md border border-border bg-background px-3 py-2 text-sm';
+
+function SetupForm({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password !== confirm) return setError('Le password non coincidono');
+    if (password.length < 8) return setError('La password deve avere almeno 8 caratteri');
+    setBusy(true);
+    setError(null);
+    try {
+      await setupAdmin(email, fullName, password);
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Shell title="Setup" subtitle="Primo avvio: crea l'account amministratore">
+      <form onSubmit={submit} className="space-y-3">
+        <input className={fld} placeholder="Nome completo" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        <input className={fld} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
+        <input className={fld} type="password" placeholder="Password (min 8)" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+        <input className={fld} type="password" placeholder="Conferma password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        <button type="submit" disabled={busy || !email || !fullName || !password}
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+          {busy ? 'Creazione…' : "Crea amministratore e accedi"}
+        </button>
+        <p className="text-center text-xs text-muted-foreground">Questo account avrà ruolo SUPER_ADMIN.</p>
+      </form>
+    </Shell>
+  );
 }
 
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const [email, setEmail] = useState('admin@partengine.local');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,47 +108,16 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <form
-        onSubmit={submit}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-background p-8 shadow-sm"
-      >
-        <div className="text-center">
-          <div className="text-2xl font-bold">PartEngine</div>
-          <p className="mt-1 text-sm text-muted-foreground">Accedi per continuare</p>
-        </div>
-        <label className="block">
-          <span className="mb-1 block text-xs text-muted-foreground">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            autoComplete="username"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs text-muted-foreground">Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            autoComplete="current-password"
-          />
-        </label>
+    <Shell title="Accesso" subtitle="Accedi per continuare">
+      <form onSubmit={submit} className="space-y-3">
+        <input className={fld} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
+        <input className={fld} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         {error && <p className="text-sm text-red-500">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy || !email || !password}
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
+        <button type="submit" disabled={busy || !email || !password}
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
           {busy ? 'Accesso…' : 'Accedi'}
         </button>
-        <p className="text-center text-xs text-muted-foreground">
-          Primo avvio: admin@partengine.local / changeme123
-        </p>
       </form>
-    </div>
+    </Shell>
   );
 }
