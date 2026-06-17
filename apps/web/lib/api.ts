@@ -373,6 +373,36 @@ export async function openAttachment(id: string) {
   window.open(url, '_blank');
 }
 
+// ── Reports & dashboard ───────────────────────────────────────
+export interface Dashboard {
+  totalComponents: number;
+  totalCategories: number;
+  totalSuppliers: number;
+  stockValue: number;
+  currency: string;
+  lowStock: number;
+  outOfStock: number;
+  movements30d: number;
+  byCategory: { category: string; count: number }[];
+}
+export function getDashboard() {
+  return request<Dashboard>('/reports/dashboard');
+}
+/** Fetch a CSV report with auth and trigger a browser download. */
+export async function downloadReport(name: 'inventory' | 'value' | 'movements', filename: string) {
+  const res = await fetch(`${BASE}/api/reports/${name}.csv`, { headers: authHeaders() });
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
+    throw new Error('Download non riuscito');
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── BOM ───────────────────────────────────────────────────────
 export type AvailabilityStatus = 'AVAILABLE' | 'PARTIAL' | 'MISSING';
 export interface BomSummary {

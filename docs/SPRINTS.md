@@ -82,11 +82,15 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
   parametri").
 - **AC met:** uploaded datasheet text is searchable; suggestions populate fields.
 
-## Sprint 8 — Barcode/QR, reports & dashboard
-- Label generation + print sheets; webcam + USB scanner input.
-- Reports (inventory, value, movements, consumption) → PDF/Excel/CSV.
-- Dashboard KPIs + charts.
-- **AC:** scan a QR → component opens; export inventory to Excel.
+## Sprint 8 — Barcode/QR, reports & dashboard ✅
+- QR **labels**: per-component QR (encodes the internal code) + print window
+  (50×30mm). **Scanning**: USB/keyboard-wedge scan box on the Components hub →
+  opens the matching component. (Webcam scanning = future.)
+- **Reports**: API CSV exports (inventory, value, movements) — Excel-openable;
+  downloaded with auth. (Native .xlsx/PDF = future; CSV + browser print cover it.)
+- **Dashboard**: KPIs (components, stock value, low/out-of-stock, suppliers,
+  30-day movements) + category-distribution bar chart, on the home page.
+- **AC met:** scan a QR → the component opens; export the inventory (CSV → Excel).
 
 ## Sprint 10 — Component CRUD & category management ✅
 - Components: full create / edit / delete from the UI (modal editor, dynamic

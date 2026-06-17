@@ -18,6 +18,7 @@ import { ManufacturersModule } from './manufacturers/manufacturers.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PurchasingModule } from './purchasing/purchasing.module';
+import { ReportsModule } from './reports/reports.module';
 import { SeedModule } from './seed/seed.module';
 import { UpdateModule } from './update/update.module';
 
@@ -42,6 +43,7 @@ import { UpdateModule } from './update/update.module';
     ManufacturersModule,
     NotificationsModule,
     PurchasingModule,
+    ReportsModule,
     SeedModule,
     UpdateModule,
   ],

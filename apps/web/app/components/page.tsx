@@ -3,8 +3,9 @@
 import { ComponentEditor } from '@/components/component-editor';
 import { ComponentsTable } from '@/components/components-table';
 import { FilterSidebar } from '@/components/filter-sidebar';
+import { LabelButton } from '@/components/label-button';
 import { WarehouseOperations } from '@/components/warehouse-operations';
-import { listCategories, type Category, type ComponentRow } from '@/lib/api';
+import { listCategories, searchComponents, type Category, type ComponentRow } from '@/lib/api';
 import { useUiStore } from '@/lib/store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -38,6 +39,15 @@ export default function ComponentsPage() {
     qc.invalidateQueries({ queryKey: ['stock'] });
   }
 
+  // USB/keyboard-wedge QR scanner: types the code then Enter → open the match.
+  async function onScan(code: string) {
+    const c = code.trim();
+    if (!c) return;
+    const res = await searchComponents({ q: c, limit: 5 });
+    const hit = res.items.find((x) => x.internalCode.toLowerCase() === c.toLowerCase()) ?? res.items[0];
+    if (hit) setSelected(hit);
+  }
+
   const toEditing = (c: ComponentRow | null) =>
     c
       ? {
@@ -68,12 +78,15 @@ export default function ComponentsPage() {
               {selected.mpn ? ` · MPN ${selected.mpn}` : ''}
             </p>
           </div>
-          <button
-            onClick={() => openEdit(selected)}
-            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
-          >
-            Modifica componente
-          </button>
+          <div className="flex gap-2">
+            <LabelButton internalCode={selected.internalCode} name={selected.name} />
+            <button
+              onClick={() => openEdit(selected)}
+              className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
+            >
+              Modifica componente
+            </button>
+          </div>
         </div>
 
         <WarehouseOperations componentId={selected.id} />
@@ -106,7 +119,18 @@ export default function ComponentsPage() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder='Ricerca — es. "resistenza 10k 1% 0603"'
-            className="w-96 rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className="w-80 rounded-md border border-border bg-background px-3 py-2 text-sm"
+          />
+          <input
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                void onScan((e.target as HTMLInputElement).value);
+                (e.target as HTMLInputElement).value = '';
+              }
+            }}
+            placeholder="⌖ Scansiona QR…"
+            className="w-40 rounded-md border border-border bg-background px-3 py-2 text-sm"
+            title="Scanner USB: inquadra il QR del componente"
           />
           <a href="/categories" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Categorie</a>
           <button onClick={openNew} disabled={categories.length === 0}
