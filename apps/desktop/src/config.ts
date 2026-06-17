@@ -1,4 +1,6 @@
 import { app } from 'electron';
+import { randomBytes } from 'node:crypto';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
@@ -30,6 +32,30 @@ export interface DesktopConfig {
   webEntry: string;
   prismaDir: string;
   databaseUrl: string;
+  jwtAccessSecret: string;
+  jwtRefreshSecret: string;
+}
+
+/** Load (or generate once) per-install JWT secrets, persisted in app data so
+ * tokens stay valid across restarts. Without a secret the API can't sign JWTs
+ * ('secretOrPrivateKey must have a value') and login fails. */
+function loadOrCreateSecrets(): { access: string; refresh: string } {
+  const file = path.join(app.getPath('userData'), 'secrets.json');
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    const secrets = {
+      access: randomBytes(48).toString('hex'),
+      refresh: randomBytes(48).toString('hex'),
+    };
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(secrets), { mode: 0o600 });
+    } catch {
+      /* fall back to ephemeral secrets if the file can't be written */
+    }
+    return secrets;
+  }
 }
 
 export function loadConfig(): DesktopConfig {
@@ -43,6 +69,7 @@ export function loadConfig(): DesktopConfig {
   const pgDatabase = 'partengine';
 
   const dataDir = path.join(app.getPath('userData'), 'pgdata');
+  const secrets = loadOrCreateSecrets();
 
   return {
     isPackaged,
@@ -67,5 +94,7 @@ export function loadConfig(): DesktopConfig {
       ? path.join(resourcesRoot, 'app.api', 'prisma')
       : path.join(resourcesRoot, 'apps', 'api', 'prisma'),
     databaseUrl: `postgresql://${pgUser}:${pgPassword}@127.0.0.1:${pgPort}/${pgDatabase}?schema=public`,
+    jwtAccessSecret: secrets.access,
+    jwtRefreshSecret: secrets.refresh,
   };
 }

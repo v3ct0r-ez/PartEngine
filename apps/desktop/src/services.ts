@@ -26,6 +26,8 @@ export class ServiceManager {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       DATABASE_URL: this.cfg.databaseUrl,
+      JWT_ACCESS_SECRET: this.cfg.jwtAccessSecret,
+      JWT_REFRESH_SECRET: this.cfg.jwtRefreshSecret,
       APP_VERSION: process.env.APP_VERSION ?? '0.1.0',
     };
 

@@ -33,7 +33,10 @@ export class AuthService {
   private async issueTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
     const accessToken = await this.jwt.signAsync(payload, {
-      secret: process.env.JWT_ACCESS_SECRET,
+      // Fallback matches JwtStrategy so signing & verifying stay consistent even
+      // if JWT_ACCESS_SECRET isn't set (otherwise jsonwebtoken throws
+      // 'secretOrPrivateKey must have a value' and login fails with a 500).
+      secret: process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret',
       expiresIn: process.env.JWT_ACCESS_TTL ?? '15m',
     });
 
