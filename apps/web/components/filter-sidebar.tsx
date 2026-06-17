@@ -3,6 +3,7 @@
 import { listCategories, type Category } from '@/lib/api';
 import { useUiStore } from '@/lib/store';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 /**
  * Advanced filter sidebar — fully API-driven. The category list and the
@@ -27,6 +28,17 @@ export function FilterSidebar() {
     leavesByParent.set(key, [...(leavesByParent.get(key) ?? []), c]);
   }
 
+  // Collapsed by default so the sidebar stays short; a group auto-expands when
+  // it contains the active category, and the user can toggle any header.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const activeGroupId = active && !active.isGroup ? active.parentId : undefined;
+  const toggleGroup = (id: string) =>
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
   function selectCategory(slug?: string) {
     clearRanges(); // ranges are per-category (keyed by field) — reset on switch
     setCategory(slug);
@@ -46,22 +58,33 @@ export function FilterSidebar() {
           {groups.map((g) => {
             const leaves = (leavesByParent.get(g.id) ?? []).sort((a, b) => a.name.localeCompare(b.name));
             if (leaves.length === 0) return null;
+            const isOpen = openGroups.has(g.id) || activeGroupId === g.id;
+            const total = leaves.reduce((sum, c) => sum + (c._count?.components ?? 0), 0);
             return (
               <div key={g.id}>
-                <div className="px-2 pt-1 text-[11px] font-semibold uppercase text-muted-foreground">{g.name}</div>
-                <ul className="space-y-0.5">
-                  {leaves.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        onClick={() => selectCategory(c.slug)}
-                        className={`flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-muted ${category === c.slug ? 'bg-muted font-medium' : ''}`}
-                      >
-                        <span>{c.name}</span>
-                        <span className="text-xs text-muted-foreground">{c._count?.components ?? 0}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <button
+                  onClick={() => toggleGroup(g.id)}
+                  className="flex w-full items-center gap-1 rounded px-2 pt-1 text-left text-[11px] font-semibold uppercase text-muted-foreground hover:bg-muted"
+                >
+                  <span className={`inline-block transition-transform ${isOpen ? 'rotate-90' : ''}`}>▸</span>
+                  <span className="flex-1">{g.name}</span>
+                  <span className="font-normal lowercase">{total}</span>
+                </button>
+                {isOpen && (
+                  <ul className="space-y-0.5">
+                    {leaves.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          onClick={() => selectCategory(c.slug)}
+                          className={`flex w-full items-center justify-between rounded px-2 py-1 pl-5 text-left hover:bg-muted ${category === c.slug ? 'bg-muted font-medium' : ''}`}
+                        >
+                          <span>{c.name}</span>
+                          <span className="text-xs text-muted-foreground">{c._count?.components ?? 0}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             );
           })}
