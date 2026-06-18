@@ -14,31 +14,94 @@ export interface LocationNode {
 export class LocationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Coding convention:
+  //   • Main location  →  "A-01"      (one+ letters, dash, two digits)
+  //   • Slot inside it →  "A-01-1"    (parent code + "-" + slot number)
+  static readonly MAIN_CODE = /^[A-Z]+-\d{2}$/;
+
   async create(dto: CreateLocationDto) {
-    // A parent must live in the same warehouse, keeping the tree consistent.
     if (dto.parentId) {
+      // Slot: must hang off a *main* location in the same warehouse; the code is
+      // derived as `${parentCode}-${slot}` so the last number is the slot index.
       const parent = await this.prisma.location.findUnique({ where: { id: dto.parentId } });
       if (!parent || parent.warehouseId !== dto.warehouseId) {
-        throw new BadRequestException('Parent location must be in the same warehouse');
+        throw new BadRequestException("L'ubicazione padre deve appartenere allo stesso magazzino");
       }
+      if (parent.parentId) {
+        throw new BadRequestException('Gli slot si creano solo dentro un’ubicazione principale (es. A-01)');
+      }
+      const slot = dto.slot ?? (await this.nextSlot(parent.id));
+      return this.prisma.location.create({
+        data: {
+          warehouseId: dto.warehouseId,
+          parentId: parent.id,
+          kind: dto.kind,
+          code: `${parent.code}-${slot}`,
+          barcode: dto.barcode,
+        },
+      });
     }
+
+    // Main location: enforce the "A-01" format.
+    const code = this.normalizeMainCode(dto.code);
     return this.prisma.location.create({
-      data: {
-        warehouseId: dto.warehouseId,
-        parentId: dto.parentId,
-        kind: dto.kind,
-        code: dto.code,
-        barcode: dto.barcode,
-      },
+      data: { warehouseId: dto.warehouseId, kind: dto.kind, code, barcode: dto.barcode },
     });
+  }
+
+  private normalizeMainCode(raw?: string): string {
+    const code = (raw ?? '').trim().toUpperCase();
+    if (!LocationsService.MAIN_CODE.test(code)) {
+      throw new BadRequestException(
+        'Ubicazione principale: usa il formato Lettera-NN (una lettera e due cifre), es. A-01',
+      );
+    }
+    return code;
+  }
+
+  /** Next free slot number inside a main location (max trailing number + 1). */
+  private async nextSlot(parentId: string): Promise<number> {
+    const children = await this.prisma.location.findMany({
+      where: { parentId },
+      select: { code: true },
+    });
+    let max = 0;
+    for (const c of children) {
+      const m = c.code.match(/-(\d+)$/);
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return max + 1;
   }
 
   async update(id: string, dto: UpdateLocationDto) {
     const loc = await this.prisma.location.findUnique({ where: { id } });
     if (!loc) throw new NotFoundException('Ubicazione non trovata');
+
+    // Slots can't be renamed freely — their code is derived from the parent.
+    if (loc.parentId) {
+      return this.prisma.location.update({
+        where: { id },
+        data: { kind: dto.kind, barcode: dto.barcode },
+      });
+    }
+
+    // Main location: validate the new code and cascade-rename its slots
+    // (A-01-* → NEW-*) so the convention stays consistent.
+    if (dto.code !== undefined && dto.code.trim().toUpperCase() !== loc.code) {
+      const newCode = this.normalizeMainCode(dto.code);
+      return this.prisma.$transaction(async (tx) => {
+        const slots = await tx.location.findMany({ where: { parentId: id }, select: { id: true, code: true } });
+        for (const s of slots) {
+          const suffix = s.code.slice(loc.code.length); // keeps the "-1" part
+          await tx.location.update({ where: { id: s.id }, data: { code: `${newCode}${suffix}` } });
+        }
+        return tx.location.update({ where: { id }, data: { code: newCode, kind: dto.kind, barcode: dto.barcode } });
+      });
+    }
+
     return this.prisma.location.update({
       where: { id },
-      data: { code: dto.code, kind: dto.kind, barcode: dto.barcode },
+      data: { kind: dto.kind, barcode: dto.barcode },
     });
   }
 

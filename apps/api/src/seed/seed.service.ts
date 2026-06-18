@@ -64,8 +64,12 @@ export class SeedService implements OnModuleInit {
 
       // Demo warehouse + a few resistors so the app isn't empty.
       const warehouse = await tx.warehouse.create({ data: { code: 'WH1', name: 'Lab principale' } });
+      // Coding convention: main location "A-01" (a drawer) with slots "A-01-1"…
+      const mainLocation = await tx.location.create({
+        data: { warehouseId: warehouse.id, code: 'A-01', kind: 'drawer' },
+      });
       const location = await tx.location.create({
-        data: { warehouseId: warehouse.id, code: 'A-01-1', kind: 'drawer' },
+        data: { warehouseId: warehouse.id, parentId: mainLocation.id, code: 'A-01-1', kind: 'box' },
       });
       const resistors = await tx.category.findUniqueOrThrow({ where: { slug: 'resistors' } });
       const resistorFields = TAXONOMY.flatMap((g) => g.categories).find((c) => c.slug === 'resistors')!.fields;

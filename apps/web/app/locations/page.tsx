@@ -24,12 +24,14 @@ const KIND_LABEL: Record<LocationKind, string> = {
   drawer: 'Cassetto',
   box: 'Contenitore',
 };
-const KINDS: LocationKind[] = ['zone', 'shelf', 'cabinet', 'drawer', 'box'];
+// Kinds offered for a main location (a slot is always a "box").
+const MAIN_KINDS: LocationKind[] = ['drawer', 'cabinet', 'shelf', 'zone'];
 const inp = 'rounded border border-border bg-background px-2 py-1.5 text-sm';
 
 type LocModal =
-  | { mode: 'create'; parentId?: string; defaultKind: LocationKind }
-  | { mode: 'edit'; node: LocationNode };
+  | { mode: 'create-main' }
+  | { mode: 'create-slot'; parentId: string; parentCode: string }
+  | { mode: 'edit'; node: LocationNode; isSlot: boolean };
 type WhModal = { mode: 'create' } | { mode: 'edit'; wh: WarehouseWithLocations };
 
 export default function LocationsPage() {
@@ -74,6 +76,10 @@ export default function LocationsPage() {
         <h1 className="text-2xl font-bold">Ubicazioni</h1>
         {!canWrite && <span className="text-xs text-muted-foreground">Sola lettura (serve ruolo Responsabile Magazzino)</span>}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Ubicazione principale nel formato <span className="font-mono">A-01</span> (lettera + due cifre); al suo interno gli slot
+        <span className="font-mono"> A-01-1</span>, <span className="font-mono">A-01-2</span>… dove l’ultima cifra è lo slot.
+      </p>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr]">
         {/* Warehouses column */}
@@ -113,7 +119,7 @@ export default function LocationsPage() {
               Struttura {selected ? `· ${selected.name}` : ''}
             </h2>
             {canWrite && selected && (
-              <button onClick={() => setLocModal({ mode: 'create', defaultKind: 'zone' })} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">+ Ubicazione radice</button>
+              <button onClick={() => setLocModal({ mode: 'create-main' })} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">+ Ubicazione principale</button>
             )}
           </div>
 
@@ -122,7 +128,7 @@ export default function LocationsPage() {
           ) : tree.isLoading ? (
             <p className="text-sm text-muted-foreground">Caricamento…</p>
           ) : tree.data?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nessuna ubicazione. Aggiungine una.</p>
+            <p className="text-sm text-muted-foreground">Nessuna ubicazione. Aggiungine una principale (es. A-01).</p>
           ) : (
             <ul className="space-y-1">
               {tree.data?.map((n) => (
@@ -131,8 +137,8 @@ export default function LocationsPage() {
                   node={n}
                   depth={0}
                   canWrite={canWrite}
-                  onAddChild={(parentId) => setLocModal({ mode: 'create', parentId, defaultKind: 'shelf' })}
-                  onEdit={(node) => setLocModal({ mode: 'edit', node })}
+                  onAddSlot={(parentId, parentCode) => setLocModal({ mode: 'create-slot', parentId, parentCode })}
+                  onEdit={(node, isSlot) => setLocModal({ mode: 'edit', node, isSlot })}
                   onDelete={(id, code) => { if (confirm(`Eliminare l'ubicazione "${code}"?`)) delLoc.mutate(id); }}
                 />
               ))}
@@ -164,17 +170,18 @@ function LocationRow({
   node,
   depth,
   canWrite,
-  onAddChild,
+  onAddSlot,
   onEdit,
   onDelete,
 }: {
   node: LocationNode;
   depth: number;
   canWrite: boolean;
-  onAddChild: (parentId: string) => void;
-  onEdit: (node: LocationNode) => void;
+  onAddSlot: (parentId: string, parentCode: string) => void;
+  onEdit: (node: LocationNode, isSlot: boolean) => void;
   onDelete: (id: string, code: string) => void;
 }) {
+  const isSlot = depth > 0;
   return (
     <li>
       <div
@@ -183,13 +190,13 @@ function LocationRow({
       >
         <div className="flex items-center gap-2 text-sm">
           <span className="font-mono">{node.code}</span>
-          <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{KIND_LABEL[node.kind as LocationKind] ?? node.kind}</span>
+          <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{isSlot ? 'Slot' : KIND_LABEL[node.kind as LocationKind] ?? node.kind}</span>
           {node.barcode && <span className="text-[11px] text-muted-foreground">⌗ {node.barcode}</span>}
         </div>
         {canWrite && (
           <div className="flex gap-1 text-xs">
-            <button onClick={() => onAddChild(node.id)} title="Aggiungi sotto-ubicazione" className="rounded px-1 hover:bg-muted">＋</button>
-            <button onClick={() => onEdit(node)} title="Modifica" className="rounded px-1 hover:bg-muted">✎</button>
+            {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} title="Aggiungi slot" className="rounded px-1 hover:bg-muted">＋ slot</button>}
+            <button onClick={() => onEdit(node, isSlot)} title="Modifica" className="rounded px-1 hover:bg-muted">✎</button>
             <button onClick={() => onDelete(node.id, node.code)} title="Elimina" className="rounded px-1 text-red-600 hover:bg-muted">🗑</button>
           </div>
         )}
@@ -197,7 +204,7 @@ function LocationRow({
       {node.children.length > 0 && (
         <ul className="mt-1 space-y-1">
           {node.children.map((c) => (
-            <LocationRow key={c.id} node={c} depth={depth + 1} canWrite={canWrite} onAddChild={onAddChild} onEdit={onEdit} onDelete={onDelete} />
+            <LocationRow key={c.id} node={c} depth={depth + 1} canWrite={canWrite} onAddSlot={onAddSlot} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </ul>
       )}
@@ -267,54 +274,82 @@ function LocationModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const isSlot = modal.mode === 'create-slot' || (modal.mode === 'edit' && modal.isSlot);
   const existing = modal.mode === 'edit' ? modal.node : null;
-  const [code, setCode] = useState(existing?.code ?? '');
-  const [kind, setKind] = useState<LocationKind>(
-    existing ? (existing.kind as LocationKind) : modal.mode === 'create' ? modal.defaultKind : 'zone',
-  );
+
+  const [code, setCode] = useState(existing && !isSlot ? existing.code : '');
+  const [kind, setKind] = useState<LocationKind>(existing ? (existing.kind as LocationKind) : isSlot ? 'box' : 'drawer');
+  const [slot, setSlot] = useState('');
   const [barcode, setBarcode] = useState(existing?.barcode ?? '');
 
   const save = useMutation({
-    mutationFn: () =>
-      existing
-        ? updateLocation(existing.id, { code, kind, barcode: barcode || undefined })
-        : createLocation({
-            warehouseId,
-            code,
-            kind,
-            barcode: barcode || undefined,
-            parentId: modal.mode === 'create' ? modal.parentId : undefined,
-          }),
+    mutationFn: () => {
+      if (modal.mode === 'edit') {
+        return updateLocation(modal.node.id, isSlot ? { kind, barcode: barcode || undefined } : { code, kind, barcode: barcode || undefined });
+      }
+      if (modal.mode === 'create-slot') {
+        return createLocation({
+          warehouseId,
+          parentId: modal.parentId,
+          kind: 'box',
+          slot: slot ? Number(slot) : undefined,
+          barcode: barcode || undefined,
+        });
+      }
+      // create-main
+      return createLocation({ warehouseId, kind, code, barcode: barcode || undefined });
+    },
     onSuccess: onSaved,
     onError: (e) => alert((e as Error).message),
   });
 
-  const title = existing
-    ? 'Modifica ubicazione'
-    : modal.mode === 'create' && modal.parentId
-      ? 'Nuova sotto-ubicazione'
-      : 'Nuova ubicazione';
+  const title =
+    modal.mode === 'create-slot'
+      ? `Nuovo slot in ${modal.parentCode}`
+      : modal.mode === 'edit'
+        ? isSlot ? 'Modifica slot' : 'Modifica ubicazione'
+        : 'Nuova ubicazione principale';
+
+  const canSave = modal.mode === 'create-slot' || isSlot ? true : !!code;
 
   return (
     <Modal title={title} onClose={onClose}>
-      <form onSubmit={(e) => { e.preventDefault(); if (code) save.mutate(); }} className="space-y-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Codice</span>
-          <input className={`${inp} w-full`} placeholder="es. A-01-3" value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Tipo</span>
-          <select className={`${inp} w-full`} value={kind} onChange={(e) => setKind(e.target.value as LocationKind)}>
-            {KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
-          </select>
-        </label>
+      <form onSubmit={(e) => { e.preventDefault(); if (canSave) save.mutate(); }} className="space-y-3">
+        {modal.mode === 'create-slot' ? (
+          <>
+            <p className="text-xs text-muted-foreground">
+              Il codice sarà <span className="font-mono">{modal.parentCode}-{slot || 'N'}</span>. Lascia vuoto per il prossimo slot disponibile.
+            </p>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Numero slot (opzionale)</span>
+              <input className={`${inp} w-full`} type="number" min={1} placeholder="auto" value={slot} onChange={(e) => setSlot(e.target.value)} autoFocus />
+            </label>
+          </>
+        ) : isSlot ? (
+          <p className="text-xs text-muted-foreground">
+            Codice slot: <span className="font-mono">{existing?.code}</span> (non modificabile).
+          </p>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Codice (formato A-01)</span>
+              <input className={`${inp} w-full font-mono`} placeholder="A-01" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} autoFocus />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Tipo</span>
+              <select className={`${inp} w-full`} value={kind} onChange={(e) => setKind(e.target.value as LocationKind)}>
+                {MAIN_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+              </select>
+            </label>
+          </>
+        )}
         <label className="flex flex-col gap-1">
           <span className="text-xs text-muted-foreground">Barcode (opzionale)</span>
           <input className={`${inp} w-full`} placeholder="codice a barre" value={barcode ?? ''} onChange={(e) => setBarcode(e.target.value)} />
         </label>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Annulla</button>
-          <button type="submit" disabled={!code || save.isPending} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+          <button type="submit" disabled={!canSave || save.isPending} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
             {save.isPending ? '…' : 'Salva'}
           </button>
         </div>

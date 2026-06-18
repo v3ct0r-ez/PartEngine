@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export const MOVEMENT_TYPES = ['INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT'] as const;
 
@@ -32,8 +32,13 @@ export class ReservationDto {
 export class CreateLocationDto {
   @IsString() warehouseId: string;
   @IsIn(LOCATION_KINDS) kind: string;
-  @IsString() code: string;
+  // Required for a main location (format "A-01"). For a slot it's derived from
+  // the parent code + slot number, so it's optional there.
+  @IsOptional() @IsString() code?: string;
+  // Set when creating a slot inside a main location.
   @IsOptional() @IsString() parentId?: string;
+  // Optional explicit slot number for a child; auto-assigned (next free) if omitted.
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) slot?: number;
   @IsOptional() @IsString() barcode?: string;
 }
 

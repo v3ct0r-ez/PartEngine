@@ -367,8 +367,9 @@ export function getLocationTree(warehouseId: string) {
 export function createLocation(body: {
   warehouseId: string;
   kind: LocationKind;
-  code: string;
-  parentId?: string;
+  code?: string; // required for a main location ("A-01"); derived for a slot
+  parentId?: string; // set to create a slot inside a main location
+  slot?: number; // explicit slot number; auto-assigned if omitted
   barcode?: string;
 }) {
   return request<LocationNode>('/inventory/locations', { method: 'POST', body: JSON.stringify(body) });
