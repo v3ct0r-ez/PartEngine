@@ -160,8 +160,9 @@ function registerIpc() {
 
 function createLoadingWindow() {
   loadingWindow = new BrowserWindow({
-    width: 480,
-    height: 380,
+    width: 600,
+    height: 560,
+    useContentSize: true,
     frame: false,
     resizable: false,
     show: true,
