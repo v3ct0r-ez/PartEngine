@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AccountMenu } from '@/components/account-menu';
 import { AuthGate } from '@/components/auth-gate';
+import { DialogHost } from '@/components/ui-dialogs';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { UpdateBanner } from '@/components/update-banner';
 import { Providers } from './providers';
@@ -51,10 +53,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <NotificationsBell />
                 <AccountMenu />
               </div>
-              <main className="p-6">{children}</main>
+              <main className="p-6">
+                <ErrorBoundary>{children}</ErrorBoundary>
+              </main>
             </div>
           </div>
           </AuthGate>
+          <DialogHost />
         </Providers>
       </body>
     </html>

@@ -11,6 +11,7 @@ import {
   setUserRole,
   type UserRole,
 } from '@/lib/api';
+import { promptDialog, toast } from '@/components/ui-dialogs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -49,22 +50,22 @@ export default function UsersPage() {
   const toggleActive = useMutation({
     mutationFn: (v: { id: string; isActive: boolean }) => setUserActive(v.id, v.isActive),
     onSuccess: refresh,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const changeRole = useMutation({
     mutationFn: (v: { id: string; role: UserRole }) => setUserRole(v.id, v.role),
     onSuccess: refresh,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const resetPw = useMutation({
     mutationFn: (v: { id: string; password: string }) => adminResetPassword(v.id, v.password),
-    onSuccess: () => alert('Password reimpostata.'),
-    onError: (e) => alert((e as Error).message),
+    onSuccess: () => toast('Password reimpostata.'),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
-  const doReset = (id: string, email: string) => {
-    const pw = window.prompt(`Nuova password per ${email} (min 8 caratteri):`);
+  const doReset = async (id: string, email: string) => {
+    const pw = await promptDialog(`Nuova password per ${email} (min 8 caratteri):`);
     if (pw == null) return;
-    if (pw.length < 8) { alert('Minimo 8 caratteri'); return; }
+    if (pw.length < 8) { toast('Minimo 8 caratteri', 'error'); return; }
     resetPw.mutate({ id, password: pw });
   };
 

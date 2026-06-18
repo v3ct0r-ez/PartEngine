@@ -14,6 +14,7 @@ import {
   type LocationNode,
   type WarehouseWithLocations,
 } from '@/lib/api';
+import { confirmDialog, toast } from '@/components/ui-dialogs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -62,12 +63,12 @@ export default function LocationsPage() {
   const delWh = useMutation({
     mutationFn: (id: string) => deleteWarehouse(id),
     onSuccess: () => { setSelectedId(null); refreshWarehouses(); },
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const delLoc = useMutation({
     mutationFn: (id: string) => deleteLocation(id),
     onSuccess: () => { refreshTree(); refreshWarehouses(); },
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   return (
@@ -103,7 +104,7 @@ export default function LocationsPage() {
                 {canWrite && (
                   <div className="flex gap-1">
                     <button onClick={() => setWhModal({ mode: 'edit', wh: w })} title="Modifica" className="rounded px-1 text-xs hover:bg-muted">✎</button>
-                    <button onClick={() => { if (confirm(`Eliminare il magazzino "${w.name}"?`)) delWh.mutate(w.id); }} title="Elimina" className="rounded px-1 text-xs text-red-600 hover:bg-muted">🗑</button>
+                    <button onClick={async () => { if (await confirmDialog(`Eliminare il magazzino "${w.name}"?`)) delWh.mutate(w.id); }} title="Elimina" className="rounded px-1 text-xs text-red-600 hover:bg-muted">🗑</button>
                   </div>
                 )}
               </div>
@@ -139,7 +140,7 @@ export default function LocationsPage() {
                   canWrite={canWrite}
                   onAddSlot={(parentId, parentCode) => setLocModal({ mode: 'create-slot', parentId, parentCode })}
                   onEdit={(node, isSlot) => setLocModal({ mode: 'edit', node, isSlot })}
-                  onDelete={(id, code) => { if (confirm(`Eliminare l'ubicazione "${code}"?`)) delLoc.mutate(id); }}
+                  onDelete={async (id, code) => { if (await confirmDialog(`Eliminare l'ubicazione "${code}"?`)) delLoc.mutate(id); }}
                 />
               ))}
             </ul>
@@ -243,7 +244,7 @@ function WarehouseModal({
         ? updateWarehouse(existing.id, { code, name, address: address || undefined })
         : createWarehouse({ code, name, address: address || undefined }),
     onSuccess: (w) => onSaved(w),
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   return (
@@ -300,7 +301,7 @@ function LocationModal({
       return createLocation({ warehouseId, kind, code, barcode: barcode || undefined });
     },
     onSuccess: onSaved,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   const title =

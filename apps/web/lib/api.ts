@@ -223,6 +223,19 @@ export interface Movement {
   createdAt: string;
 }
 
+/** Build a human-readable message from an API error body. Surfaces per-field
+ *  validation details (e.g. "Valore: valore fuori intervallo") and class-
+ *  validator arrays instead of a bare "Validation failed". */
+function formatApiError(body: unknown, status: number): string {
+  const b = body as { message?: unknown; errors?: Array<{ field?: string; message?: string }> };
+  if (Array.isArray(b?.errors) && b.errors.length) {
+    return b.errors.map((e) => (e.field ? `${e.field}: ${e.message}` : e.message)).join('; ');
+  }
+  if (Array.isArray(b?.message)) return (b.message as string[]).join('; ');
+  if (typeof b?.message === 'string') return b.message;
+  return `Richiesta non riuscita (${status})`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await withAuthRetry(() =>
     fetch(`${BASE}/api${path}`, {
@@ -233,7 +246,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   );
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Request failed: ${res.status}`);
+    throw new Error(formatApiError(body, res.status));
   }
   // 204/empty body: a successful mutation with no payload — don't choke on JSON.parse.
   if (res.status === 204) return undefined as T;

@@ -8,6 +8,7 @@ import {
   updateManufacturer,
   type Manufacturer,
 } from '@/lib/api';
+import { confirmDialog, toast } from '@/components/ui-dialogs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -29,12 +30,12 @@ export default function ManufacturersPage() {
   const create = useMutation({
     mutationFn: () => createManufacturer({ name, website: website || undefined }),
     onSuccess: () => { setName(''); setWebsite(''); refresh(); },
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteManufacturer(id),
     onSuccess: refresh,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   return (
@@ -76,7 +77,7 @@ export default function ManufacturersPage() {
                       <button onClick={() => setEditing(m)} className="rounded border border-border px-2 py-1 hover:bg-muted">Modifica</button>
                       {canDelete && (
                         <button
-                          onClick={() => { if (confirm(`Eliminare il produttore "${m.name}"?`)) del.mutate(m.id); }}
+                          onClick={async () => { if (await confirmDialog(`Eliminare il produttore "${m.name}"?`)) del.mutate(m.id); }}
                           disabled={(m._count?.components ?? 0) > 0}
                           title={(m._count?.components ?? 0) > 0 ? 'Riassegna prima i componenti' : 'Elimina'}
                           className="rounded border border-border px-2 py-1 text-red-600 hover:bg-muted disabled:opacity-40"
@@ -105,7 +106,7 @@ function EditModal({ manufacturer, onClose, onSaved }: { manufacturer: Manufactu
   const save = useMutation({
     mutationFn: () => updateManufacturer(manufacturer.id, { name, website: website || undefined }),
     onSuccess: onSaved,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   return (

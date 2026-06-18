@@ -24,6 +24,7 @@ import {
   validateParameters,
   type FieldTemplate,
 } from '@partengine/core';
+import { confirmDialog, promptDialog } from '@/components/ui-dialogs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -99,7 +100,7 @@ export function ComponentEditor({
   });
 
   async function addManufacturer() {
-    const name = window.prompt('Nome del nuovo produttore:')?.trim();
+    const name = (await promptDialog('Nome del nuovo produttore:'))?.trim();
     if (!name) return;
     try {
       const m = await createManufacturer({ name });
@@ -136,18 +137,22 @@ export function ComponentEditor({
   const primaryField = templates.find((f) => f.type === 'QUANTITY' && f.unit !== '%');
   useEffect(() => {
     if (codeTouched && nameTouched) return;
-    let valueText: string | undefined;
-    if (primaryField && params[primaryField.key] != null && params[primaryField.key] !== '') {
-      const q = parseQuantity(String(params[primaryField.key]), primaryField.unit);
-      valueText = q ? formatEngineering(q.magnitude, primaryField.unit) : String(params[primaryField.key]);
-    }
-    const tol = params['tolerance'] != null && params['tolerance'] !== '' ? Number(params['tolerance']) : undefined;
-    if (!nameTouched) {
-      setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprint || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
-    }
-    if (!codeTouched) {
-      const prefix = category?.codePrefix || categoryCodePrefix(category?.slug, category?.name);
-      setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprint || undefined }));
+    try {
+      let valueText: string | undefined;
+      if (primaryField && params[primaryField.key] != null && params[primaryField.key] !== '') {
+        const q = parseQuantity(String(params[primaryField.key]), primaryField.unit);
+        valueText = q && Number.isFinite(q.magnitude) ? formatEngineering(q.magnitude, primaryField.unit) : String(params[primaryField.key]);
+      }
+      const tol = params['tolerance'] != null && params['tolerance'] !== '' ? Number(params['tolerance']) : undefined;
+      if (!nameTouched) {
+        setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprint || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
+      }
+      if (!codeTouched) {
+        const prefix = category?.codePrefix || categoryCodePrefix(category?.slug, category?.name);
+        setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprint || undefined }));
+      }
+    } catch {
+      // Auto-suggestion is best-effort — never let a parse edge case crash the editor.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, footprint, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
@@ -185,7 +190,7 @@ export function ComponentEditor({
   }
 
   async function remove() {
-    if (!editing || !confirm('Eliminare questo componente?')) return;
+    if (!editing || !(await confirmDialog('Eliminare questo componente?'))) return;
     setBusy(true);
     try {
       await deleteComponent(component!.id);

@@ -8,6 +8,7 @@ import {
   listBoms,
   type AvailabilityStatus,
 } from '@/lib/api';
+import { promptDialog } from '@/components/ui-dialogs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -91,9 +92,13 @@ function BomDetailView({ id, onChanged }: { id: string; onChanged: () => void })
     onSuccess: () => { setCsv(''); refresh(); },
   });
   const versionMut = useMutation({
-    mutationFn: () => createBomVersion(id, prompt('Nuova versione (es. 1.1):') || ''),
+    mutationFn: (version: string) => createBomVersion(id, version),
     onSuccess: () => onChanged(),
   });
+  async function newVersion() {
+    const v = (await promptDialog('Nuova versione (es. 1.1):'))?.trim();
+    if (v) versionMut.mutate(v);
+  }
 
   if (!bom) return null;
 
@@ -104,7 +109,7 @@ function BomDetailView({ id, onChanged }: { id: string; onChanged: () => void })
           <span className="font-mono text-sm">{bom.code}</span> v{bom.version} — {bom.name}
           <span className={`ml-3 rounded px-2 py-0.5 text-xs ${STATUS_STYLE[bom.status]}`}>{STATUS_LABEL[bom.status]}</span>
         </h2>
-        <button onClick={() => versionMut.mutate()} className="rounded-md border border-border px-3 py-1.5 text-xs">Nuova versione</button>
+        <button onClick={newVersion} className="rounded-md border border-border px-3 py-1.5 text-xs">Nuova versione</button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">

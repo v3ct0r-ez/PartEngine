@@ -15,6 +15,16 @@ export interface ValidationError {
   message: string;
 }
 
+// The ComponentParameterValue.numeric column is Decimal(40,12): up to 28 integer
+// digits. Reject values at/over this (and any non-finite value) so an absurd
+// input becomes a clear field error instead of a Postgres numeric-overflow 500.
+export const MAX_PARAM_MAGNITUDE = 1e27;
+
+/** True when n is a finite number within the storable Decimal range. */
+export function isStorableNumber(n: number): boolean {
+  return Number.isFinite(n) && Math.abs(n) < MAX_PARAM_MAGNITUDE;
+}
+
 export function validateParameters(
   fields: readonly FieldTemplate[],
   params: Record<string, unknown>,
@@ -38,6 +48,10 @@ export function validateParameters(
           errors.push({ field: field.key, message: `${field.label}: valore non valido` });
           break;
         }
+        if (!isStorableNumber(q.magnitude)) {
+          errors.push({ field: field.key, message: `${field.label}: valore fuori intervallo` });
+          break;
+        }
         const { min, max } = field.validation ?? {};
         if (min != null && q.magnitude < min)
           errors.push({ field: field.key, message: `${field.label}: minimo ${min}` });
@@ -47,8 +61,11 @@ export function validateParameters(
       }
       case 'NUMBER': {
         const n = Number(value);
-        if (Number.isNaN(n))
+        if (Number.isNaN(n)) {
           errors.push({ field: field.key, message: `${field.label}: deve essere numerico` });
+        } else if (!isStorableNumber(n)) {
+          errors.push({ field: field.key, message: `${field.label}: valore fuori intervallo` });
+        }
         break;
       }
       case 'ENUM': {
@@ -95,7 +112,10 @@ export function projectParameters(
 
     if (field.type === 'QUANTITY' || field.type === 'NUMBER') {
       const q = field.type === 'QUANTITY' ? parseQuantity(String(value), field.unit) : null;
-      const numeric = field.type === 'QUANTITY' ? (q ? q.magnitude : null) : Number(value);
+      const raw = field.type === 'QUANTITY' ? (q ? q.magnitude : null) : Number(value);
+      // Never project a non-finite / out-of-range value: it would overflow the
+      // Decimal column and crash the insert. validateParameters already flags it.
+      const numeric = raw != null && isStorableNumber(raw) ? raw : null;
       rows.push({ fieldKey: field.key, numeric, text: null, boolean: null });
     } else if (field.type === 'BOOLEAN') {
       rows.push({ fieldKey: field.key, numeric: null, text: null, boolean: Boolean(value) });

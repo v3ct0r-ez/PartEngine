@@ -8,6 +8,7 @@ import {
   updateSupplier,
   type Supplier,
 } from '@/lib/api';
+import { confirmDialog, toast } from '@/components/ui-dialogs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -31,12 +32,12 @@ export default function SuppliersPage() {
     mutationFn: () =>
       createSupplier({ name, contactEmail: email || undefined, avgLeadTimeDays: lead ? Number(lead) : undefined }),
     onSuccess: () => { setName(''); setEmail(''); setLead(''); refresh(); },
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteSupplier(id),
     onSuccess: refresh,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   const inUse = (s: Supplier) => (s._count?.orders ?? 0) > 0 || (s._count?.supplierParts ?? 0) > 0;
@@ -94,7 +95,7 @@ export default function SuppliersPage() {
                       <button onClick={() => setEditing(s)} className="rounded border border-border px-2 py-1 hover:bg-muted">Modifica</button>
                       {canDelete && (
                         <button
-                          onClick={() => { if (confirm(`Eliminare il fornitore "${s.name}"?`)) del.mutate(s.id); }}
+                          onClick={async () => { if (await confirmDialog(`Eliminare il fornitore "${s.name}"?`)) del.mutate(s.id); }}
                           disabled={inUse(s)}
                           title={inUse(s) ? 'Fornitore usato in ordini o listini' : 'Elimina'}
                           className="rounded border border-border px-2 py-1 text-red-600 hover:bg-muted disabled:opacity-40"
@@ -140,7 +141,7 @@ function EditModal({ supplier, onClose, onSaved }: { supplier: Supplier; onClose
         notes: notes || undefined,
       }),
     onSuccess: onSaved,
-    onError: (e) => alert((e as Error).message),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
 
   return (
