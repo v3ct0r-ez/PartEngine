@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AccountMenu } from '@/components/account-menu';
 import { AuthGate } from '@/components/auth-gate';
+import { DesktopTitleBar } from '@/components/desktop-titlebar';
 import { DialogHost } from '@/components/ui-dialogs';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { NotificationsBell } from '@/components/notifications-bell';
@@ -17,11 +18,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">
+      <body className="antialiased">
         <Providers>
           <ThemeApplier />
+          <div className="flex h-screen flex-col overflow-hidden">
+            <DesktopTitleBar />
+            <div className="min-h-0 flex-1 overflow-auto">
           <AuthGate>
-          <div className="flex min-h-screen">
+          <div className="flex min-h-full">
             <aside className="hidden w-60 shrink-0 border-r border-border bg-muted/30 p-4 md:block">
               <div className="mb-6 text-lg font-bold">PartEngine</div>
               <nav className="space-y-1 text-sm">
@@ -60,6 +64,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
           </AuthGate>
+            </div>
+          </div>
           <DialogHost />
         </Providers>
       </body>

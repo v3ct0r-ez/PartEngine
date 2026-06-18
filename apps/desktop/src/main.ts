@@ -122,6 +122,16 @@ function sanitizeSettings(patch: unknown): UserSettings {
 
 // Settings bridge (consumed by the web /settings page via the preload).
 function registerIpc() {
+  // Window controls for the frameless main window (custom title bar).
+  ipcMain.handle('win:minimize', () => mainWindow?.minimize());
+  ipcMain.handle('win:maximize', () => {
+    if (!mainWindow) return false;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+    return mainWindow.isMaximized();
+  });
+  ipcMain.handle('win:close', () => mainWindow?.close());
+
   ipcMain.handle('settings:get', () => ({
     settings: readUserSettings(),
     paths: {
@@ -186,6 +196,11 @@ function createMainWindow() {
     height: 900,
     show: false,
     title: 'PartEngine',
+    // Frameless: the OS title bar is removed and replaced by an in-app,
+    // theme-aware title bar (see DesktopTitleBar in the web UI) that provides
+    // the drag region and minimize/maximize/close controls via IPC.
+    frame: false,
+    backgroundColor: '#0f172a',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

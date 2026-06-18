@@ -30,4 +30,9 @@ contextBridge.exposeInMainWorld('partengine', {
     pickFolder: () => ipcRenderer.invoke('settings:pickFolder'),
     openPath: (p: string) => ipcRenderer.invoke('settings:openPath', p),
   },
+  window: {
+    minimize: () => ipcRenderer.invoke('win:minimize'),
+    maximize: () => ipcRenderer.invoke('win:maximize'),
+    close: () => ipcRenderer.invoke('win:close'),
+  },
 });
