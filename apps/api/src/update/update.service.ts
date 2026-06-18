@@ -29,7 +29,7 @@ export class UpdateService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(UpdateService.name);
   private timer?: NodeJS.Timeout;
 
-  private readonly currentVersion = process.env.APP_VERSION ?? '0.1.0';
+  private readonly currentVersion = process.env.APP_VERSION ?? '0.0.1';
   private readonly repo = process.env.UPDATE_GITHUB_REPO ?? 'v3ct0r-ez/PartEngine';
   // Overridable so a test harness (tools/update-verifier) can point the checker
   // at a local mock release server for true end-to-end verification.

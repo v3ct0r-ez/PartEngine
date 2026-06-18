@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AccountMenu } from '@/components/account-menu';
+import { AppVersion } from '@/components/app-version';
 import { AuthGate } from '@/components/auth-gate';
 import { DesktopTitleBar } from '@/components/desktop-titlebar';
 import { DialogHost } from '@/components/ui-dialogs';
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="min-h-0 flex-1 overflow-auto">
           <AuthGate>
           <div className="flex min-h-full">
-            <aside className="hidden w-60 shrink-0 border-r border-border bg-muted/30 p-4 md:block">
+            <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-muted/30 p-4 md:flex">
               <div className="mb-6 text-lg font-bold">PartEngine</div>
               <nav className="space-y-1 text-sm">
                 {[
@@ -51,6 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </a>
                 ))}
               </nav>
+              <div className="mt-auto pt-4">
+                <AppVersion />
+              </div>
             </aside>
             <div className="flex-1">
               <UpdateBanner />

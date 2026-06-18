@@ -22,7 +22,7 @@ export class HealthController {
     return {
       status: db ? 'ok' : 'degraded',
       db,
-      version: process.env.APP_VERSION ?? '0.1.0',
+      version: process.env.APP_VERSION ?? '0.0.1',
       uptime: Math.round(process.uptime()),
     };
   }

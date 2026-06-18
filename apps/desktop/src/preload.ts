@@ -11,7 +11,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('partengine', {
   isDesktop: true,
   platform: process.platform,
-  version: process.env.APP_VERSION ?? '0.1.0',
+  version: process.env.APP_VERSION ?? '0.0.1',
   updater: {
     status: () => ipcRenderer.invoke('updater:status'),
     check: () => ipcRenderer.invoke('updater:check'),

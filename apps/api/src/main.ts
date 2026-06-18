@@ -17,7 +17,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('PartEngine API')
     .setDescription('Enterprise WMS for electronic components')
-    .setVersion('0.1.0')
+    .setVersion('0.0.1')
     .addBearerAuth()
     .build();
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));

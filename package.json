@@ -1,6 +1,6 @@
 {
   "name": "partengine",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "description": "PartEngine — Enterprise Warehouse Management System for electronic components",
   "packageManager": "pnpm@10.0.0",

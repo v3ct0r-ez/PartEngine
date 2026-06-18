@@ -34,7 +34,7 @@ export interface UpdaterState {
 export class UpdaterManager {
   private state: UpdaterState = {
     phase: 'idle',
-    currentVersion: autoUpdater.currentVersion?.version ?? '0.1.0',
+    currentVersion: autoUpdater.currentVersion?.version ?? '0.0.1',
     latestVersion: null,
     releaseNotes: null,
     percent: 0,
