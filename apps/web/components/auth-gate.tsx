@@ -40,6 +40,8 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
     <div className="flex min-h-full items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-background p-8 shadow-sm">
         <div className="text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="PartEngine" width={64} height={64} className="mx-auto mb-2" />
           <div className="text-2xl font-bold">PartEngine</div>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
         </div>

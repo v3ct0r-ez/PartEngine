@@ -6,6 +6,7 @@ import { AuthGate } from '@/components/auth-gate';
 import { DesktopTitleBar } from '@/components/desktop-titlebar';
 import { DialogHost } from '@/components/ui-dialogs';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { Logo } from '@/components/logo';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { ThemeApplier } from '@/components/theme';
 import { UpdateBanner } from '@/components/update-banner';
@@ -14,6 +15,7 @@ import { Providers } from './providers';
 export const metadata: Metadata = {
   title: 'PartEngine — Gestione magazzino componenti',
   description: 'Enterprise WMS for electronic components',
+  icons: { icon: '/favicon.ico' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGate>
           <div className="flex min-h-full">
             <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-muted/30 p-4 md:flex">
-              <div className="mb-6 text-lg font-bold">PartEngine</div>
+              <Logo size={30} className="mb-6" />
               <nav className="space-y-1 text-sm">
                 {[
                   ['Dashboard', '/'],
