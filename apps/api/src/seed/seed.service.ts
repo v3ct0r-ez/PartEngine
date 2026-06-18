@@ -1,12 +1,14 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { projectParameters, TAXONOMY } from '@partengine/core';
+import { TAXONOMY } from '@partengine/core';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * First-run seeder. When the database is empty it creates an admin user, the
- * built-in 2-level taxonomy (groups → categories with their recognition fields
- * + code prefixes) and a little demo stock. Idempotent (skips if a user exists).
- * Disable with AUTO_SEED=false.
+ * First-run seeder. When the catalog is empty it creates the built-in 2-level
+ * taxonomy (groups → categories with their recognition fields + code prefixes).
+ * No demo components, warehouse or admin user are seeded — the install starts
+ * clean and the user creates their own warehouse/locations and the first admin
+ * at launch. Idempotent (skips if any category exists). Disable with
+ * AUTO_SEED=false.
  */
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -28,7 +30,7 @@ export class SeedService implements OnModuleInit {
   }
 
   private async seed() {
-    this.logger.log('Empty catalog — seeding taxonomy + demo…');
+    this.logger.log('Empty catalog — seeding taxonomy…');
 
     await this.prisma.$transaction(async (tx) => {
       // 2-level taxonomy: groups, then leaf categories with fields.
@@ -61,54 +63,9 @@ export class SeedService implements OnModuleInit {
           });
         }
       }
-
-      // Demo warehouse + a few resistors so the app isn't empty.
-      const warehouse = await tx.warehouse.create({ data: { code: 'WH1', name: 'Lab principale' } });
-      // Coding convention: main location "A-01" (a drawer) with slots "A-01-1"…
-      const mainLocation = await tx.location.create({
-        data: { warehouseId: warehouse.id, code: 'A-01', kind: 'drawer' },
-      });
-      const location = await tx.location.create({
-        data: { warehouseId: warehouse.id, parentId: mainLocation.id, code: 'A-01-1', kind: 'box' },
-      });
-      const resistors = await tx.category.findUniqueOrThrow({ where: { slug: 'resistors' } });
-      const resistorFields = TAXONOMY.flatMap((g) => g.categories).find((c) => c.slug === 'resistors')!.fields;
-      const fieldRows = await tx.categoryField.findMany({ where: { categoryId: resistors.id } });
-      const byKey = new Map(fieldRows.map((f) => [f.key, f]));
-
-      const demo = [
-        { code: 'R-100R-0603', name: '100Ω 1% 0603', params: { resistance: '100', tolerance: '1', footprint: '0603' } },
-        { code: 'R-1K-0603', name: '1kΩ 1% 0603', params: { resistance: '1k', tolerance: '1', footprint: '0603' } },
-        { code: 'R-10K-0603', name: '10kΩ 1% 0603', params: { resistance: '10k', tolerance: '1', footprint: '0603' } },
-        { code: 'R-1M-0603', name: '1MΩ 1% 0603', params: { resistance: '1M', tolerance: '1', footprint: '0603' } },
-      ];
-      for (const d of demo) {
-        const projected = projectParameters(resistorFields, d.params);
-        const component = await tx.component.create({
-          data: {
-            internalCode: d.code,
-            name: d.name,
-            categoryId: resistors.id,
-            footprint: '0603',
-            tags: ['demo', 'resistor'],
-            parameters: d.params,
-            parameterValues: {
-              create: projected
-                .filter((p) => byKey.has(p.fieldKey))
-                .map((p) => ({
-                  fieldId: byKey.get(p.fieldKey)!.id,
-                  fieldKey: p.fieldKey,
-                  numeric: p.numeric ?? undefined,
-                  text: p.text ?? undefined,
-                  boolean: p.boolean ?? undefined,
-                })),
-            },
-          },
-        });
-        await tx.stockLevel.create({ data: { componentId: component.id, locationId: location.id, quantity: 500 } });
-      }
     });
 
-    this.logger.log('Seed complete (catalog + demo). No admin user is seeded — create one at first launch.');
+    this.logger.log('Seed complete (taxonomy only). Create a warehouse, locations and the first admin at launch.');
   }
 }
+
