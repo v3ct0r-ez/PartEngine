@@ -56,8 +56,8 @@ export class SuppliersService {
   }
 
   /** Create or update the per-supplier sourcing record for a component. */
-  upsertPart(dto: UpsertSupplierPartDto) {
-    return this.prisma.supplierPart.upsert({
+  async upsertPart(dto: UpsertSupplierPartDto) {
+    const part = await this.prisma.supplierPart.upsert({
       where: {
         supplierId_componentId_supplierSku: {
           supplierId: dto.supplierId,
@@ -70,6 +70,32 @@ export class SuppliersService {
         unitPrice: dto.unitPrice,
         moq: dto.moq,
         leadTimeDays: dto.leadTimeDays,
+      },
+    });
+    // Unify pricing: the component's valuation price is derived from its
+    // supplier prices, so adding/updating a supplier price immediately updates
+    // the component's economy tab and the dashboard value — same effect as
+    // editing the price on the component itself.
+    await this.syncComponentPrice(dto.componentId);
+    return part;
+  }
+
+  /** Recompute a component's lastPrice (most recent supplier price) and avgPrice
+   *  (mean across suppliers) from its supplier parts. */
+  private async syncComponentPrice(componentId: string) {
+    const parts = await this.prisma.supplierPart.findMany({
+      where: { componentId, unitPrice: { not: null } },
+      select: { unitPrice: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (parts.length === 0) return;
+    const prices = parts.map((p) => Number(p.unitPrice));
+    const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+    await this.prisma.component.update({
+      where: { id: componentId },
+      data: {
+        lastPrice: Number(parts[0].unitPrice),
+        avgPrice: Math.round(avg * 1e6) / 1e6,
       },
     });
   }

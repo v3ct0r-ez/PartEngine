@@ -34,7 +34,14 @@ export function EconomicPanel({ componentId }: { componentId: string }) {
         moq: moq ? Number(moq) : undefined,
         leadTimeDays: lead ? Number(lead) : undefined,
       }),
-    onSuccess: () => { setPrice(''); setMoq(''); setLead(''); qc.invalidateQueries({ queryKey: ['supplier-parts', componentId] }); },
+    onSuccess: () => {
+      setPrice(''); setMoq(''); setLead('');
+      // The component's valuation price is derived from supplier prices, so
+      // refresh the economy figures and the dashboard total as well.
+      qc.invalidateQueries({ queryKey: ['supplier-parts', componentId] });
+      qc.invalidateQueries({ queryKey: ['component-eco', componentId] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 
   const c = comp.data;
@@ -58,6 +65,9 @@ export function EconomicPanel({ componentId }: { componentId: string }) {
           <Kpi label="Valore giacenza" value={fmt(value)} hint={`${onHand} pz`} />
           <Kpi label="Scorte (min / ideale / max)" value={`${n(c?.minQty) ?? 0} / ${n(c?.idealQty) ?? '—'} / ${n(c?.maxQty) ?? '—'}`} />
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Prezzo medio e ultimo prezzo derivano dai prezzi fornitore qui accanto; il valore giacenza si aggiorna di conseguenza.
+        </p>
       </section>
 
       <section className="rounded-lg border border-border p-4">
