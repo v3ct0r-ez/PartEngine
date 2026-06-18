@@ -15,7 +15,7 @@ export class BomService {
         version: dto.version ?? '1.0',
         notes: dto.notes,
         lines: {
-          create: dto.lines.map((l) => ({
+          create: (dto.lines ?? []).map((l) => ({
             componentId: l.componentId,
             rawMpn: l.rawMpn,
             reference: l.reference,
@@ -91,6 +91,34 @@ export class BomService {
 
     const matched = lines.filter((l) => l.componentId).length;
     return { imported: lines.length, matched, unmatched: lines.length - matched };
+  }
+
+  /** Add a single component line by hand (component picked from the warehouse). */
+  async addLine(id: string, input: { componentId: string; reference?: string; quantity: number }) {
+    const bom = await this.prisma.bom.findUnique({ where: { id } });
+    if (!bom) throw new NotFoundException('BOM not found');
+    const component = await this.prisma.component.findFirst({
+      where: { id: input.componentId, deletedAt: null },
+      select: { id: true, mpn: true },
+    });
+    if (!component) throw new NotFoundException('Componente non trovato');
+    return this.prisma.bomLine.create({
+      data: {
+        bomId: id,
+        componentId: component.id,
+        rawMpn: component.mpn,
+        reference: input.reference,
+        quantity: input.quantity,
+      },
+    });
+  }
+
+  /** Remove a single line from a BOM. */
+  async removeLine(id: string, lineId: string) {
+    const line = await this.prisma.bomLine.findFirst({ where: { id: lineId, bomId: id } });
+    if (!line) throw new NotFoundException('Riga non trovata');
+    await this.prisma.bomLine.delete({ where: { id: lineId } });
+    return { deleted: true };
   }
 
   /** Create a new version of a BOM, copying its lines. */

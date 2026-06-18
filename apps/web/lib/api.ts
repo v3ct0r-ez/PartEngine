@@ -742,6 +742,12 @@ export function importBomCsv(id: string, csv: string, replace = true) {
 export function createBomVersion(id: string, version: string) {
   return request<BomDetail>(`/boms/${id}/version`, { method: 'POST', body: JSON.stringify({ version }) });
 }
+export function addBomLine(id: string, body: { componentId: string; reference?: string; quantity: number }) {
+  return request<unknown>(`/boms/${id}/lines`, { method: 'POST', body: JSON.stringify(body) });
+}
+export function deleteBomLine(id: string, lineId: string) {
+  return request<{ deleted: boolean }>(`/boms/${id}/lines/${lineId}`, { method: 'DELETE' });
+}
 
 // ── Kits ──────────────────────────────────────────────────────
 export interface KitSummary {

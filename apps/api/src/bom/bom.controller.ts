@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 import { Roles } from '../auth/roles.decorator';
 import { BomService } from './bom.service';
-import { CreateBomDto, ImportCsvDto } from './bom.dto';
+import { AddBomLineDto, CreateBomDto, ImportCsvDto } from './bom.dto';
 
 class VersionDto {
   @IsString() version: string;
@@ -35,6 +35,18 @@ export class BomController {
   @Post(':id/import-csv')
   importCsv(@Param('id') id: string, @Body() dto: ImportCsvDto) {
     return this.bom.importCsv(id, dto);
+  }
+
+  @Roles('WAREHOUSE_MANAGER', 'TECHNICIAN', 'PURCHASING')
+  @Post(':id/lines')
+  addLine(@Param('id') id: string, @Body() dto: AddBomLineDto) {
+    return this.bom.addLine(id, dto);
+  }
+
+  @Roles('WAREHOUSE_MANAGER', 'TECHNICIAN', 'PURCHASING')
+  @Delete(':id/lines/:lineId')
+  removeLine(@Param('id') id: string, @Param('lineId') lineId: string) {
+    return this.bom.removeLine(id, lineId);
   }
 
   @Roles('WAREHOUSE_MANAGER', 'TECHNICIAN', 'PURCHASING')
