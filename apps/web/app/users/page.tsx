@@ -86,7 +86,7 @@ export default function UsersPage() {
       <form onSubmit={(e) => { e.preventDefault(); if (email && fullName && password.length >= 8) create.mutate(); }}
         className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-4">
         <Field l="Email"><input className={inp} type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-        <Field l="Nome"><input className={inp} value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
+        <Field l="Nome"><input className={inp} name="fullName" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
         <Field l="Password (min 8)"><input className={inp} type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
         <Field l="Ruolo"><select className={inp} value={role} onChange={(e) => setRole(e.target.value as UserRole)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select></Field>
         <button type="submit" disabled={!email || !fullName || password.length < 8 || create.isPending}

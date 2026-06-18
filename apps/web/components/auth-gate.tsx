@@ -66,7 +66,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await setupAdmin(email, fullName, password);
+      await setupAdmin(email.trim(), fullName.trim(), password);
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -78,7 +78,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
   return (
     <Shell title="Setup" subtitle="Primo avvio: crea l'account amministratore">
       <form onSubmit={submit} className="space-y-3">
-        <input className={fld} placeholder="Nome completo" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        <input className={fld} name="fullName" autoComplete="name" placeholder="Nome completo (es. Mario Rossi)" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         <input className={fld} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
         <input className={fld} type="password" placeholder="Password (min 8)" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
         <input className={fld} type="password" placeholder="Conferma password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
