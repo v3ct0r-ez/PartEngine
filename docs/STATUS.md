@@ -32,6 +32,6 @@ Legend: ✅ implemented & tested · 🟡 scaffolded (structure + key code, not f
 | Attachments / datasheet OCR | ✅ | Sprint 7: upload/list/download/delete (local FS storage), PDF/txt text extraction (pdf-parse) → searchable ocrText, field suggestion from datasheet; UI panel in editor. Image-OCR (tesseract) remains a server worker |
 | Barcode/QR, reports, dashboard | ✅ | Sprint 8: QR labels + print, USB-scan to open, CSV reports (inventory/value/movements), dashboard KPIs + category chart. Webcam scan & xlsx/PDF = future |
 | Notifications/alert engine | ✅ | Sprint 5: pure rules (5 tests) + service (event-driven + periodic sweep, dedupe + auto-resolve); list/read endpoints; UI bell |
-| E2E (Playwright), 80% coverage | 🟡 | unit tests green; E2E config to add in Sprint 9 |
+| E2E (Playwright), 80% coverage, a11y, perf | ✅ | Sprint 9: 70 core unit tests, coverage gate ≥80% enforced in CI (~97% lines); Playwright suite (auth gate + authenticated journey) with axe-core WCAG 2 A/AA checks; CI `e2e` job provisions the full stack; search backed by GIN (FTS/trgm/jsonb) + base-SI B-tree indexes. See [`PERFORMANCE.md`](PERFORMANCE.md) |
 
 See [`SPRINTS.md`](SPRINTS.md) for the build-out order.

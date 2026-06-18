@@ -1,11 +1,34 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { signIn } from './helpers';
 
-// Smoke E2E for the intelligent search flow. Expanded in Sprint 9.
-test('components page renders and accepts a natural-language query', async ({ page }) => {
-  await page.goto('/components');
-  await expect(page.getByRole('heading', { name: 'Componenti' })).toBeVisible();
+// Authenticated journeys. These require the full stack (Postgres + API + Next)
+// to be running — the CI e2e job provisions it; locally start `pnpm dev` first.
+test.describe('authenticated app', () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page);
+  });
 
-  const search = page.getByPlaceholder(/Ricerca intelligente/);
-  await search.fill('resistenza 10k 1% 0603');
-  await expect(search).toHaveValue('resistenza 10k 1% 0603');
+  test('navigates from the dashboard to the components hub', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await page.getByRole('link', { name: 'Componenti' }).click();
+    await expect(page.getByRole('heading', { name: 'Componenti' })).toBeVisible();
+  });
+
+  test('accepts a natural-language search query', async ({ page }) => {
+    await page.goto('/components');
+    await expect(page.getByRole('heading', { name: 'Componenti' })).toBeVisible();
+    const search = page.getByPlaceholder(/Ricerca/);
+    await search.fill('resistenza 10k 1% 0603');
+    await expect(search).toHaveValue('resistenza 10k 1% 0603');
+  });
+
+  test('dashboard has no serious or critical accessibility violations', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const blocking = results.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    );
+    expect(blocking, JSON.stringify(blocking.map((v) => v.id), null, 2)).toEqual([]);
+  });
 });
