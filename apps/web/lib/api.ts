@@ -77,22 +77,46 @@ async function attemptRefresh(): Promise<boolean> {
       return false;
     }
   })();
-  const ok = await refreshPromise;
-  refreshPromise = null;
-  return ok;
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /**
- * Runs an authenticated fetch and, on a 401, transparently refreshes the access
- * token once and retries. Only if the refresh itself fails do we hard-logout —
- * so an expired access token no longer bounces the user to the login screen.
- * `doFetch` must read the auth header lazily so the retry uses the new token.
+ * Runs an authenticated fetch with two layers of resilience:
+ *  1. Transient transport errors — when `fetch` itself throws (connection reset
+ *     / refused by the local web↔API proxy, e.g. just after the API spawns or
+ *     after an idle keep-alive drop), the request never reached the server, so
+ *     it's safe to retry even for POSTs. This is why a command sometimes "didn't
+ *     go through on the first try". We retry a few times with short backoff.
+ *  2. Auth — on a 401 we refresh the access token once and retry.
+ * `doFetch` must read the auth header lazily so retries use the latest token.
  */
 async function withAuthRetry(doFetch: () => Promise<Response>): Promise<Response> {
-  let res = await doFetch();
+  let res: Response | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      res = await doFetch();
+      break;
+    } catch {
+      if (attempt < 2) await sleep(150 * (attempt + 1));
+    }
+  }
+  if (!res) throw new Error('Impossibile contattare il server. Riprova.');
   if (res.status === 401) {
-    if (await attemptRefresh()) res = await doFetch();
-    else handleUnauthorized();
+    if (await attemptRefresh()) {
+      try {
+        res = await doFetch();
+      } catch {
+        /* keep the original 401 if the retry transport-fails */
+      }
+    } else {
+      handleUnauthorized();
+    }
   }
   return res;
 }
