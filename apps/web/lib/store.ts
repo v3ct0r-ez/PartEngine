@@ -18,6 +18,7 @@ interface UiState {
   setRange: (field: string, from?: string, to?: string) => void;
   clearRanges: () => void;
   setSort: (field: string, dir?: 'asc' | 'desc') => void;
+  applyView: (v: Partial<Pick<UiState, 'query' | 'category' | 'ranges' | 'sortField' | 'sortDir'>>) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -36,6 +37,14 @@ export const useUiStore = create<UiState>()(
       clearRanges: () => set({ ranges: [] }),
       setSort: (sortField, sortDir) =>
         set({ sortField, sortDir: sortDir ?? (get().sortDir === 'asc' ? 'desc' : 'asc') }),
+      applyView: (v) =>
+        set({
+          query: v.query ?? '',
+          category: v.category,
+          ranges: v.ranges ?? [],
+          sortField: v.sortField,
+          sortDir: v.sortDir ?? 'asc',
+        }),
     }),
     { name: 'partengine-ui' },
   ),

@@ -827,3 +827,55 @@ export async function searchComponents(params: {
   if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   return res.json();
 }
+
+// ── Persistent memory: preferences, saved views, recent items ──
+export type ThemePref = 'system' | 'light' | 'dark';
+export interface Preferences {
+  theme: ThemePref;
+  language: string;
+  uiState: Record<string, unknown>;
+}
+export function getPreferences() {
+  return request<Preferences>('/me/preferences');
+}
+export function updatePreferences(body: Partial<Pick<Preferences, 'theme' | 'language'>> & { uiState?: Record<string, unknown> }) {
+  return request<Preferences>('/me/preferences', { method: 'PUT', body: JSON.stringify(body) });
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  scope: string;
+  isDefault: boolean;
+  config: Record<string, unknown>;
+}
+export function listSavedViews(scope: string) {
+  return request<SavedView[]>(`/me/views?scope=${encodeURIComponent(scope)}`);
+}
+export function createSavedView(body: { name: string; scope: string; config: Record<string, unknown>; isDefault?: boolean }) {
+  return request<SavedView>('/me/views', { method: 'POST', body: JSON.stringify(body) });
+}
+export function updateSavedView(id: string, body: { name?: string; config?: Record<string, unknown>; isDefault?: boolean }) {
+  return request<SavedView>(`/me/views/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+}
+export function deleteSavedView(id: string) {
+  return request<{ deleted: boolean }>(`/me/views/${id}`, { method: 'DELETE' });
+}
+
+export interface RecentItem {
+  id: string;
+  kind: string;
+  refId: string | null;
+  label: string;
+  createdAt: string;
+}
+export function listRecent(kind?: string, limit?: number) {
+  const q = new URLSearchParams();
+  if (kind) q.set('kind', kind);
+  if (limit) q.set('limit', String(limit));
+  const s = q.toString();
+  return request<RecentItem[]>(`/me/recent${s ? `?${s}` : ''}`);
+}
+export function recordRecent(body: { kind: string; refId?: string; label: string }) {
+  return request<{ ok: boolean }>('/me/recent', { method: 'POST', body: JSON.stringify(body) });
+}

@@ -5,6 +5,7 @@ import { AuthGate } from '@/components/auth-gate';
 import { DialogHost } from '@/components/ui-dialogs';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { NotificationsBell } from '@/components/notifications-bell';
+import { ThemeApplier } from '@/components/theme';
 import { UpdateBanner } from '@/components/update-banner';
 import { Providers } from './providers';
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="it" suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <Providers>
+          <ThemeApplier />
           <AuthGate>
           <div className="flex min-h-screen">
             <aside className="hidden w-60 shrink-0 border-r border-border bg-muted/30 p-4 md:block">

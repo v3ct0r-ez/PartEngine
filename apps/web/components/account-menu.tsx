@@ -1,13 +1,21 @@
 'use client';
 
-import { changeMyPassword, getMe, logout } from '@/lib/api';
+import { changeMyPassword, getMe, logout, type ThemePref } from '@/lib/api';
+import { useTheme } from '@/components/theme';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+
+const THEMES: { value: ThemePref; label: string }[] = [
+  { value: 'system', label: 'Sistema' },
+  { value: 'light', label: 'Chiaro' },
+  { value: 'dark', label: 'Scuro' },
+];
 
 export function AccountMenu() {
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, retry: false });
   const [open, setOpen] = useState(false);
   const [pw, setPw] = useState(false);
+  const [theme, setTheme] = useTheme();
 
   return (
     <div className="relative">
@@ -15,8 +23,22 @@ export function AccountMenu() {
         {me.data?.email ?? 'Account'} ▾
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-border bg-background py-1 shadow-lg">
+        <div className="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-background py-1 shadow-lg">
           <div className="px-3 py-1.5 text-xs text-muted-foreground">{me.data?.role}</div>
+          <div className="px-3 py-2">
+            <div className="mb-1 text-xs text-muted-foreground">Tema</div>
+            <div className="flex gap-1">
+              {THEMES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setTheme(t.value)}
+                  className={`flex-1 rounded border px-2 py-1 text-xs ${theme === t.value ? 'border-primary bg-muted font-medium' : 'border-border hover:bg-muted'}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <button onClick={() => { setPw(true); setOpen(false); }} className="block w-full px-3 py-1.5 text-left text-sm hover:bg-muted">Cambia password</button>
           <button onClick={() => logout()} className="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-muted">Esci</button>
         </div>
