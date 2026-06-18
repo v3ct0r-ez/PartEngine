@@ -176,6 +176,7 @@ function createLoadingWindow() {
     frame: false,
     resizable: false,
     show: true,
+    icon: path.join(__dirname, '..', 'static', 'icon.ico'),
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'loading-preload.js'),
@@ -196,6 +197,7 @@ function createMainWindow() {
     height: 900,
     show: false,
     title: 'PartEngine',
+    icon: path.join(__dirname, '..', 'static', 'icon.ico'),
     // Frameless: the OS title bar is removed and replaced by an in-app,
     // theme-aware title bar (see DesktopTitleBar in the web UI) that provides
     // the drag region and minimize/maximize/close controls via IPC.

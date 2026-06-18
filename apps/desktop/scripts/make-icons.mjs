@@ -5,8 +5,8 @@
 // Produces:
 //   apps/desktop/static/icon.ico   Windows app icon (electron-builder), multi-size
 //   apps/desktop/static/tray.png   system-tray icon (referenced by main.ts)
-//   apps/web/public/logo.png       UI logo (sidebar, auth screen, splash)
-//   apps/web/public/favicon.ico    browser tab icon
+//   apps/web/public/logo.png       UI logo source (imported as a static asset)
+//   apps/web/app/favicon.ico       browser tab icon (Next app-router convention)
 import sharp from 'sharp';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -17,6 +17,7 @@ const repo = path.resolve(here, '..', '..', '..');
 const SRC = path.join(repo, 'apps/desktop/static/logo.png');
 const desktopStatic = path.join(repo, 'apps/desktop/static');
 const webPublic = path.join(repo, 'apps/web/public');
+const webApp = path.join(repo, 'apps/web/app');
 
 /** Render the source logo onto a transparent square PNG of the given size. */
 function pngAt(size) {
@@ -63,8 +64,11 @@ async function main() {
 
   await writeFile(path.join(desktopStatic, 'icon.ico'), await ico([16, 24, 32, 48, 64, 128, 256]));
   await writeFile(path.join(desktopStatic, 'tray.png'), await pngAt(32));
+  // logo.png is imported as a static asset by the web UI (bundled into
+  // .next/static), so it shows regardless of whether /public is staged.
   await writeFile(path.join(webPublic, 'logo.png'), await pngAt(512));
-  await writeFile(path.join(webPublic, 'favicon.ico'), await ico([16, 32, 48]));
+  // favicon goes in app/ (Next app-router convention) so it's part of the build.
+  await writeFile(path.join(webApp, 'favicon.ico'), await ico([16, 32, 48]));
 
   console.log('Icons regenerated from', path.relative(repo, SRC));
 }

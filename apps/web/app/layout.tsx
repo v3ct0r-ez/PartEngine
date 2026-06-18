@@ -15,7 +15,7 @@ import { Providers } from './providers';
 export const metadata: Metadata = {
   title: 'PartEngine — Gestione magazzino componenti',
   description: 'Enterprise WMS for electronic components',
-  icons: { icon: '/favicon.ico' },
+  // Favicon is provided by app/favicon.ico (Next app-router convention).
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
