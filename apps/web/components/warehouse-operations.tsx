@@ -41,11 +41,22 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   const [fromLoc, setFromLoc] = useState('');
   const [toLoc, setToLoc] = useState('');
   const [reason, setReason] = useState('');
+  const [reference, setReference] = useState('');
   const needs = OPS.find((o) => o.value === type)!.needs;
+
+  const locLabel = (l: { code: string; kind: string }) => `${l.code} (${l.kind})`;
+  // "To" can be any location in the warehouse; "from" must be a location where
+  // the component actually has stock (you can't unload from an empty location).
+  const whLocationIds = new Set(locations.map((l) => l.id));
+  const toOptions = locations.map((l) => ({ id: l.id, label: locLabel(l) }));
+  const fromOptions = (stock.data?.byLocation ?? [])
+    .filter((b) => Number(b.quantity) > 0 && (whLocationIds.size === 0 || whLocationIds.has(b.locationId)))
+    .map((b) => ({ id: b.locationId, label: `${b.locationCode} · ${b.quantity} pz` }));
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ['stock', componentId] });
     qc.invalidateQueries({ queryKey: ['movements', componentId] });
+    qc.invalidateQueries({ queryKey: ['dashboard'] });
   }
 
   const move = useMutation({
@@ -57,8 +68,9 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
         fromLocationId: needs.includes('from') ? fromLoc : undefined,
         toLocationId: needs.includes('to') ? toLoc : undefined,
         reason: reason || undefined,
+        reference: reference || undefined,
       }),
-    onSuccess: () => { setQty(''); setReason(''); refresh(); },
+    onSuccess: () => { setQty(''); setReason(''); setReference(''); refresh(); },
   });
 
   const [allocLoc, setAllocLoc] = useState('');
@@ -71,8 +83,6 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
     mutationFn: () => releaseStock({ componentId, locationId: allocLoc, quantity: Number(allocQty) }),
     onSuccess: refresh,
   });
-
-  const locLabel = (l: { code: string; kind: string }) => `${l.code} (${l.kind})`;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -121,9 +131,21 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
         )}
         <input className={`${inp} w-full`} type="number" value={qty} onChange={(e) => setQty(e.target.value)}
           placeholder={type === 'ADJUSTMENT' ? 'Delta (±)' : 'Quantità'} />
-        {needs.includes('from') && <LocSelect label="Da ubicazione" value={fromLoc} onChange={setFromLoc} locations={locations} fmt={locLabel} />}
-        {needs.includes('to') && <LocSelect label="A ubicazione" value={toLoc} onChange={setToLoc} locations={locations} fmt={locLabel} />}
-        {type === 'ADJUSTMENT' && <input className={`${inp} w-full`} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motivo (obbligatorio)" />}
+        {needs.includes('from') && (
+          // Outbound/transfer can only leave a location that actually holds stock;
+          // an adjustment (e.g. initial count) may target any location.
+          type === 'ADJUSTMENT' ? (
+            <LocSelect label="Ubicazione" value={fromLoc} onChange={setFromLoc} options={toOptions} />
+          ) : (
+            <LocSelect label="Da ubicazione" value={fromLoc} onChange={setFromLoc} options={fromOptions}
+              empty={fromOptions.length === 0 ? 'Nessuna giacenza per questo componente' : undefined} />
+          )
+        )}
+        {needs.includes('to') && <LocSelect label="A ubicazione" value={toLoc} onChange={setToLoc} options={toOptions} />}
+        <input className={`${inp} w-full`} value={reference} onChange={(e) => setReference(e.target.value)}
+          placeholder="Riferimento (es. ordine, DDT) — opzionale" />
+        <input className={`${inp} w-full`} value={reason} onChange={(e) => setReason(e.target.value)}
+          placeholder={type === 'ADJUSTMENT' ? 'Motivo (obbligatorio)' : 'Motivo — opzionale'} />
         <button onClick={() => move.mutate()} disabled={move.isPending || !qty}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
           {move.isPending ? 'Registrazione…' : 'Registra movimento'}</button>
@@ -132,7 +154,7 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
         <div className="mt-3 border-t border-border pt-3">
           <h4 className="mb-2 text-sm font-semibold">Allocazione (prenota / rilascia)</h4>
           <div className="flex flex-wrap items-end gap-2">
-            <LocSelect label="Ubicazione" value={allocLoc} onChange={setAllocLoc} locations={locations} fmt={locLabel} />
+            <LocSelect label="Ubicazione" value={allocLoc} onChange={setAllocLoc} options={fromOptions} />
             <input className={inp} type="number" value={allocQty} onChange={(e) => setAllocQty(e.target.value)} placeholder="Qtà" />
             <button onClick={() => reserve.mutate()} disabled={!allocLoc || !allocQty || reserve.isPending} className="rounded-md border border-border px-3 py-1.5 text-sm">Prenota</button>
             <button onClick={() => release.mutate()} disabled={!allocLoc || !allocQty || release.isPending} className="rounded-md border border-border px-3 py-1.5 text-sm">Rilascia</button>
@@ -168,19 +190,20 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
 }
 
 function LocSelect({
-  label, value, onChange, locations, fmt,
+  label, value, onChange, options, empty,
 }: {
   label: string; value: string; onChange: (v: string) => void;
-  locations: { id: string; code: string; kind: string }[];
-  fmt: (l: { code: string; kind: string }) => string;
+  options: { id: string; label: string }[];
+  empty?: string;
 }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <select className={inp} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select className={inp} value={value} onChange={(e) => onChange(e.target.value)} disabled={options.length === 0}>
         <option value="">—</option>
-        {locations.map((l) => <option key={l.id} value={l.id}>{fmt(l)}</option>)}
+        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
       </select>
+      {empty && <span className="text-xs text-amber-600">{empty}</span>}
     </label>
   );
 }

@@ -35,7 +35,7 @@ export class ReportsService {
     const [components, stock, byCatRaw, categories, suppliers, since] = await Promise.all([
       this.prisma.component.findMany({
         where: { deletedAt: null },
-        select: { id: true, avgPrice: true, minQty: true, categoryId: true },
+        select: { id: true, avgPrice: true, lastPrice: true, minQty: true, categoryId: true },
       }),
       this.stockByComponent(),
       this.prisma.component.groupBy({ by: ['categoryId'], where: { deletedAt: null }, _count: true }),
@@ -51,7 +51,9 @@ export class ReportsService {
     let outOfStock = 0;
     for (const c of components) {
       const s = stock.get(c.id) ?? { qty: 0, reserved: 0, onOrder: 0 };
-      stockValue += s.qty * (c.avgPrice ? Number(c.avgPrice) : 0);
+      // Average price, falling back to the last price.
+      const unitPrice = c.avgPrice != null ? Number(c.avgPrice) : c.lastPrice != null ? Number(c.lastPrice) : 0;
+      stockValue += s.qty * unitPrice;
       const health = stockHealth(s.qty - s.reserved, Number(c.minQty));
       if (health === 'OUT_OF_STOCK') outOfStock++;
       else if (health === 'LOW' || health === 'CRITICAL') lowStock++;
@@ -97,7 +99,7 @@ export class ReportsService {
     const stock = await this.stockByComponent();
     const rows = components.map((c) => {
       const qty = stock.get(c.id)?.qty ?? 0;
-      const avg = c.avgPrice ? Number(c.avgPrice) : 0;
+      const avg = c.avgPrice != null ? Number(c.avgPrice) : c.lastPrice != null ? Number(c.lastPrice) : 0;
       return [c.internalCode, c.name, avg, qty, Math.round(avg * qty * 100) / 100, c.currency];
     });
     return toCsv(['Codice', 'Nome', 'Prezzo medio', 'Giacenza', 'Valore', 'Valuta'], rows);

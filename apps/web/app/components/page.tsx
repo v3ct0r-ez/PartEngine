@@ -38,6 +38,11 @@ export default function ComponentsPage() {
     setEditorOpen(false);
     qc.invalidateQueries({ queryKey: ['components'] });
     qc.invalidateQueries({ queryKey: ['stock'] });
+    // Prices/thresholds changed → refresh the component's economic tab, the
+    // category counts and the dashboard total value.
+    qc.invalidateQueries({ queryKey: ['component-eco'] });
+    qc.invalidateQueries({ queryKey: ['categories'] });
+    qc.invalidateQueries({ queryKey: ['dashboard'] });
   }
 
   // USB/keyboard-wedge QR scanner: types the code then Enter → open the match.

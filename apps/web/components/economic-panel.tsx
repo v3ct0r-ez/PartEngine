@@ -42,7 +42,10 @@ export function EconomicPanel({ componentId }: { componentId: string }) {
   const last = n(c?.lastPrice);
   const currency = c?.currency || 'EUR';
   const onHand = stock.data?.quantity ?? 0;
-  const value = avg != null ? Math.round(avg * onHand * 100) / 100 : null;
+  // Value uses the average price, falling back to the last price so entering
+  // either one yields a stock value.
+  const unitPrice = avg ?? last;
+  const value = unitPrice != null ? Math.round(unitPrice * onHand * 100) / 100 : null;
   const fmt = (v: number | null) => (v == null ? '—' : `${v.toLocaleString('it-IT')} ${currency}`);
 
   return (
