@@ -1,6 +1,6 @@
 'use client';
 
-import { getPreferences, updatePreferences, type ThemePref } from '@/lib/api';
+import { getPreferences, getToken, updatePreferences, type ThemePref } from '@/lib/api';
 import { useEffect, useState } from 'react';
 
 const KEY = 'pe-theme';
@@ -26,8 +26,12 @@ export function getLocalTheme(): ThemePref {
 export function ThemeApplier() {
   useEffect(() => {
     applyTheme(getLocalTheme());
-    // Pull the durable preference and reconcile.
-    getPreferences()
+    // Pull the durable preference and reconcile — but only once authenticated.
+    // /me/preferences requires a token; probing it on the login screen yields a
+    // 401 with nothing to recover, which used to bounce the app into a reload
+    // loop. The local theme is already applied above, so skipping is harmless.
+    if (getToken())
+      getPreferences()
       .then((p) => {
         if (p?.theme) {
           localStorage.setItem(KEY, p.theme);

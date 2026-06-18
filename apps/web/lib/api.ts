@@ -42,9 +42,22 @@ export function getToken(): string | null {
 }
 
 export async function getAuthStatus(): Promise<{ needsSetup: boolean }> {
-  const res = await fetch(`${BASE}/api/auth/status`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Impossibile contattare il server');
-  return res.json();
+  // Retry transient transport failures: right after the desktop spawns the API
+  // and the web↔API proxy, the very first call can be reset/refused. Without a
+  // retry that throw lands the gate on "login" even on a fresh install.
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch(`${BASE}/api/auth/status`, { cache: 'no-store' });
+      if (res.ok) return res.json();
+      // Retry 5xx/429 (server warming up / throttled); fail fast on other 4xx.
+      if (res.status < 500 && res.status !== 429) throw new Error('Impossibile contattare il server');
+    } catch (err) {
+      lastErr = err;
+    }
+    await sleep(250 * (attempt + 1));
+  }
+  throw (lastErr instanceof Error ? lastErr : new Error('Impossibile contattare il server'));
 }
 
 function storeTokens(data: { accessToken: string; refreshToken?: string }) {
@@ -114,9 +127,16 @@ async function withAuthRetry(doFetch: () => Promise<Response>): Promise<Response
       } catch {
         /* keep the original 401 if the retry transport-fails */
       }
-    } else {
+    } else if (getToken() || getRefreshToken()) {
+      // A real session went invalid → drop it and bounce to the gate.
       handleUnauthorized();
     }
+    // Otherwise this was an UNAUTHENTICATED probe (no stored token at all) — e.g.
+    // the theme/preferences fetch that runs on the login/setup screen. We must
+    // NOT reload here: with no session to recover, handleUnauthorized()'s
+    // location.reload() would loop the whole app forever (this was the cause of
+    // the setup screen "flashing" then dropping to login on first run). Just
+    // return the 401 and let the caller's .catch() handle it.
   }
   return res;
 }
