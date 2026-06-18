@@ -22,6 +22,9 @@ const OPS: { value: MovementType; label: string; needs: ('from' | 'to')[] }[] = 
 const HEALTH: Record<string, string> = {
   OK: 'text-green-600', LOW: 'text-amber-600', CRITICAL: 'text-orange-600', OUT_OF_STOCK: 'text-red-600',
 };
+const KIND_IT: Record<string, string> = {
+  zone: 'zona', shelf: 'scaffale', cabinet: 'armadio', drawer: 'cassetto', box: 'slot',
+};
 
 /** Warehouse operations for one component: stock, load/unload/transfer/adjust,
  * allocation (reserve/release) and movement history. Reused by the unified
@@ -44,11 +47,13 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   const [reference, setReference] = useState('');
   const needs = OPS.find((o) => o.value === type)!.needs;
 
-  const locLabel = (l: { code: string; kind: string }) => `${l.code} (${l.kind})`;
-  // "To" can be any location in the warehouse; "from" must be a location where
-  // the component actually has stock (you can't unload from an empty location).
+  const locLabel = (l: { code: string; kind: string }) => `${l.code} (${KIND_IT[l.kind] ?? l.kind})`;
+  // Stock lives in slots, never in the root container, so loading/transferring
+  // targets only slots (locations with a parent). "From" must additionally be a
+  // location where the component currently has stock.
   const whLocationIds = new Set(locations.map((l) => l.id));
-  const toOptions = locations.map((l) => ({ id: l.id, label: locLabel(l) }));
+  const slots = locations.filter((l) => l.parentId != null);
+  const toOptions = slots.map((l) => ({ id: l.id, label: locLabel(l) }));
   const fromOptions = (stock.data?.byLocation ?? [])
     .filter((b) => Number(b.quantity) > 0 && (whLocationIds.size === 0 || whLocationIds.has(b.locationId)))
     .map((b) => ({ id: b.locationId, label: `${b.locationCode} · ${b.quantity} pz` }));
@@ -135,13 +140,17 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
           // Outbound/transfer can only leave a location that actually holds stock;
           // an adjustment (e.g. initial count) may target any location.
           type === 'ADJUSTMENT' ? (
-            <LocSelect label="Ubicazione" value={fromLoc} onChange={setFromLoc} options={toOptions} />
+            <LocSelect label="Ubicazione (slot)" value={fromLoc} onChange={setFromLoc} options={toOptions}
+              empty={toOptions.length === 0 ? 'Nessuno slot: creane uno nelle Ubicazioni' : undefined} />
           ) : (
             <LocSelect label="Da ubicazione" value={fromLoc} onChange={setFromLoc} options={fromOptions}
               empty={fromOptions.length === 0 ? 'Nessuna giacenza per questo componente' : undefined} />
           )
         )}
-        {needs.includes('to') && <LocSelect label="A ubicazione" value={toLoc} onChange={setToLoc} options={toOptions} />}
+        {needs.includes('to') && (
+          <LocSelect label="A ubicazione (slot)" value={toLoc} onChange={setToLoc} options={toOptions}
+            empty={toOptions.length === 0 ? 'Nessuno slot: creane uno nelle Ubicazioni' : undefined} />
+        )}
         <input className={`${inp} w-full`} value={reference} onChange={(e) => setReference(e.target.value)}
           placeholder="Riferimento (es. ordine, DDT) — opzionale" />
         <input className={`${inp} w-full`} value={reason} onChange={(e) => setReason(e.target.value)}

@@ -350,7 +350,7 @@ export interface WarehouseWithLocations {
   code: string;
   name: string;
   address?: string | null;
-  locations: { id: string; code: string; kind: string }[];
+  locations: { id: string; code: string; kind: string; parentId?: string | null }[];
   _count?: { locations: number };
 }
 export function listWarehouses() {
