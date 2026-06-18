@@ -103,8 +103,8 @@ export default function LocationsPage() {
                 </button>
                 {canWrite && (
                   <div className="flex gap-1">
-                    <button onClick={() => setWhModal({ mode: 'edit', wh: w })} title="Modifica" className="rounded px-1 text-xs hover:bg-muted">✎</button>
-                    <button onClick={async () => { if (await confirmDialog(`Eliminare il magazzino "${w.name}"?`)) delWh.mutate(w.id); }} title="Elimina" className="rounded px-1 text-xs text-red-600 hover:bg-muted">🗑</button>
+                    <button onClick={() => setWhModal({ mode: 'edit', wh: w })} className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted">Modifica</button>
+                    <button onClick={async () => { if (await confirmDialog(`Eliminare il magazzino "${w.name}"?`)) delWh.mutate(w.id); }} className="rounded border border-border px-2 py-0.5 text-xs text-red-600 hover:bg-muted">Elimina</button>
                   </div>
                 )}
               </div>
@@ -192,13 +192,13 @@ function LocationRow({
         <div className="flex items-center gap-2 text-sm">
           <span className="font-mono">{node.code}</span>
           <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{isSlot ? 'Slot' : KIND_LABEL[node.kind as LocationKind] ?? node.kind}</span>
-          {node.barcode && <span className="text-[11px] text-muted-foreground">⌗ {node.barcode}</span>}
+          {node.barcode && <span className="text-[11px] text-muted-foreground">Barcode: {node.barcode}</span>}
         </div>
         {canWrite && (
           <div className="flex gap-1 text-xs">
-            {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} title="Aggiungi slot" className="rounded px-1 hover:bg-muted">＋ slot</button>}
-            <button onClick={() => onEdit(node, isSlot)} title="Modifica" className="rounded px-1 hover:bg-muted">✎</button>
-            <button onClick={() => onDelete(node.id, node.code)} title="Elimina" className="rounded px-1 text-red-600 hover:bg-muted">🗑</button>
+            {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">+ Slot</button>}
+            <button onClick={() => onEdit(node, isSlot)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">Modifica</button>
+            <button onClick={() => onDelete(node.id, node.code)} className="rounded border border-border px-2 py-0.5 text-red-600 hover:bg-muted">Elimina</button>
           </div>
         )}
       </div>
