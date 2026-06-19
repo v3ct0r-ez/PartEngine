@@ -17,10 +17,7 @@ import {
 import { getComponent } from '@/lib/api';
 import {
   categoryCodePrefix,
-  formatEngineering,
-  generateComponentName,
-  generateInternalCode,
-  parseQuantity,
+  composeNaming,
   validateParameters,
   type FieldTemplate,
 } from '@partengine/core';
@@ -141,34 +138,26 @@ export function ComponentEditor({
   );
   const footprintValue =
     footprintKey && params[footprintKey] != null ? String(params[footprintKey]) : '';
-  // Colour is a short identifier (LEDs, displays): include it in the name/code
-  // when the category defines a `color` field.
-  const colorValue = params['color'] != null && params['color'] !== '' ? String(params['color']) : '';
 
-  // Auto-generate internal code + name from category/value/footprint/tolerance
-  // (a standard, editable suggestion). Stops once the user edits them manually.
-  const primaryField = templates.find((f) => f.type === 'QUANTITY' && f.unit !== '%');
+  // Auto-generate the name + code from the category's recognition parameters
+  // (data-driven via composeNaming, so colour/dielectric/channel/footprint… all
+  // flow in). A best-effort, editable suggestion that stops once the user edits.
   useEffect(() => {
     if (codeTouched && nameTouched) return;
     try {
-      let valueText: string | undefined;
-      if (primaryField && params[primaryField.key] != null && params[primaryField.key] !== '') {
-        const q = parseQuantity(String(params[primaryField.key]), primaryField.unit);
-        valueText = q && Number.isFinite(q.magnitude) ? formatEngineering(q.magnitude, primaryField.unit) : String(params[primaryField.key]);
-      }
-      const tol = params['tolerance'] != null && params['tolerance'] !== '' ? Number(params['tolerance']) : undefined;
-      if (!nameTouched) {
-        setName(generateComponentName({ categoryName: category?.name, color: colorValue || undefined, value: valueText, footprint: footprintValue || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
-      }
-      if (!codeTouched) {
-        const prefix = category?.codePrefix || categoryCodePrefix(category?.slug, category?.name);
-        setInternalCode(generateInternalCode({ prefix, color: colorValue || undefined, value: valueText, footprint: footprintValue || undefined }));
-      }
+      const { name: autoName, code: autoCode } = composeNaming({
+        categoryName: category?.name,
+        prefix: category?.codePrefix || categoryCodePrefix(category?.slug, category?.name),
+        fields: templates.map((f) => ({ key: f.key, type: f.type, unit: f.unit })),
+        params,
+      });
+      if (!nameTouched) setName(autoName);
+      if (!codeTouched) setInternalCode(autoCode);
     } catch {
       // Auto-suggestion is best-effort — never let a parse edge case crash the editor.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, footprintValue, colorValue, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
+  }, [categoryId, JSON.stringify(params), JSON.stringify(templates), codeTouched, nameTouched, category?.name, category?.slug]);
 
   const canSave = internalCode && name && categoryId && Object.keys(fieldErrors).length === 0;
 
