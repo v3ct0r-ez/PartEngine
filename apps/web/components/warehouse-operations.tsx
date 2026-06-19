@@ -51,9 +51,8 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   // Natural order (A-01-2 before A-01-10) for the slot dropdowns.
   const byCode = (a: { code: string }, b: { code: string }) =>
     a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
-  // These dropdowns only ever list slots, so the per-option "(slot)" suffix is
-  // redundant noise — the code (e.g. A-01-2) is self-explanatory and the field
-  // label already says "(slot)". Show just the code.
+  // These dropdowns only ever list slots, so a "(slot)" suffix is redundant
+  // noise — the code (e.g. A-01-2) is self-explanatory. Show just the code.
   const slots = locations.filter((l) => l.parentId != null).slice().sort(byCode);
   const toOptions = slots.map((l) => ({ id: l.id, label: l.code }));
   const fromOptions = (stock.data?.byLocation ?? [])
@@ -148,7 +147,7 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
           // Outbound/transfer can only leave a location that actually holds stock;
           // an adjustment (e.g. initial count) may target any location.
           type === 'ADJUSTMENT' ? (
-            <LocSelect label="Ubicazione (slot)" value={fromLoc} onChange={setFromLoc} options={toOptions}
+            <LocSelect label="Ubicazione" value={fromLoc} onChange={setFromLoc} options={toOptions}
               empty={toOptions.length === 0 ? 'Nessuno slot: creane uno nelle Ubicazioni' : undefined} />
           ) : (
             <LocSelect label="Da ubicazione" value={fromLoc}
@@ -158,7 +157,7 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
           )
         )}
         {needs.includes('to') && (
-          <LocSelect label="A ubicazione (slot)" value={toOptionsForUi.some((o) => o.id === toLoc) ? toLoc : ''} onChange={setToLoc} options={toOptionsForUi}
+          <LocSelect label="A ubicazione" value={toOptionsForUi.some((o) => o.id === toLoc) ? toLoc : ''} onChange={setToLoc} options={toOptionsForUi}
             empty={toOptionsForUi.length === 0
               ? (type === 'TRANSFER' && fromLoc ? 'Nessun altro slot disponibile come destinazione' : 'Nessuno slot: creane uno nelle Ubicazioni')
               : undefined} />
