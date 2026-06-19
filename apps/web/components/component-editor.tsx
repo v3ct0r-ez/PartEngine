@@ -62,7 +62,6 @@ export function ComponentEditor({
   const [internalCode, setInternalCode] = useState(component?.internalCode ?? '');
   const [name, setName] = useState(component?.name ?? '');
   const [mpn, setMpn] = useState(component?.mpn ?? '');
-  const [footprint, setFootprint] = useState(component?.footprint ?? '');
   const [manufacturerId, setManufacturerId] = useState(component?.manufacturerId ?? '');
   const [tags, setTags] = useState((component?.tags ?? []).join(', '));
   const [params, setParams] = useState<Record<string, unknown>>(component?.parameters ?? {});
@@ -132,6 +131,17 @@ export function ComponentEditor({
     return Object.fromEntries(list.map((e) => [e.field, e.message]));
   }, [templates, params]);
 
+  // Footprint has no separate top-level input: it lives in the per-category
+  // parameters. Whichever key the category defines — `footprint` (e.g. 0603) or
+  // `package` (e.g. SOT-23) — is the single source used for the name/code and
+  // for the denormalised Component.footprint column (listing + search).
+  const footprintKey = useMemo(
+    () => templates.find((f) => f.key === 'footprint' || f.key === 'package')?.key,
+    [templates],
+  );
+  const footprintValue =
+    footprintKey && params[footprintKey] != null ? String(params[footprintKey]) : '';
+
   // Auto-generate internal code + name from category/value/footprint/tolerance
   // (a standard, editable suggestion). Stops once the user edits them manually.
   const primaryField = templates.find((f) => f.type === 'QUANTITY' && f.unit !== '%');
@@ -145,17 +155,17 @@ export function ComponentEditor({
       }
       const tol = params['tolerance'] != null && params['tolerance'] !== '' ? Number(params['tolerance']) : undefined;
       if (!nameTouched) {
-        setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprint || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
+        setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprintValue || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
       }
       if (!codeTouched) {
         const prefix = category?.codePrefix || categoryCodePrefix(category?.slug, category?.name);
-        setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprint || undefined }));
+        setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprintValue || undefined }));
       }
     } catch {
       // Auto-suggestion is best-effort — never let a parse edge case crash the editor.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, footprint, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
+  }, [categoryId, footprintValue, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
 
   const canSave = internalCode && name && categoryId && Object.keys(fieldErrors).length === 0;
 
@@ -167,7 +177,7 @@ export function ComponentEditor({
       name,
       categoryId,
       mpn: mpn || undefined,
-      footprint: footprint || undefined,
+      footprint: footprintValue || undefined,
       manufacturerId: manufacturerId || undefined,
       tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       parameters: params,
@@ -228,7 +238,6 @@ export function ComponentEditor({
             </select>
           </Field>
           <Field label="MPN"><input className={inp} value={mpn ?? ''} onChange={(e) => setMpn(e.target.value)} /></Field>
-          <Field label="Footprint"><input className={inp} value={footprint ?? ''} onChange={(e) => setFootprint(e.target.value)} /></Field>
           <Field label="Produttore">
             <div className="flex gap-1">
               <select className={inp} value={manufacturerId ?? ''} onChange={(e) => setManufacturerId(e.target.value)}>
@@ -272,9 +281,9 @@ export function ComponentEditor({
                 const next = { ...p };
                 for (const [k, v] of Object.entries(s.suggestions)) next[k] = String(v);
                 if (s.tolerance != null && 'tolerance' in next) next.tolerance = String(s.tolerance);
+                if (s.footprint && footprintKey) next[footprintKey] = s.footprint;
                 return next;
               });
-              if (s.footprint) setFootprint(s.footprint);
             }}
           />
         )}
