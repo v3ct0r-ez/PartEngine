@@ -139,6 +139,30 @@ export function ComponentEditor({
     return Object.fromEntries(list.map((e) => [e.field, e.message]));
   }, [templates, params]);
 
+  // When editing, decide ONCE whether the loaded name/code are auto-generated
+  // (match what the generator produces for the loaded params) or hand-customised.
+  // If they're auto, clear the "touched" flags so they keep tracking parameter
+  // edits; if custom, leave them frozen. (New components always auto-generate.)
+  const decidedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const c = full.data;
+    if (!c || !category || category.slug !== c.category?.slug || decidedFor.current === c.id) return;
+    decidedFor.current = c.id;
+    try {
+      const prefix = category.codePrefix || categoryCodePrefix(category.slug, category.name);
+      const gen = composeNaming({
+        categoryName: category.name,
+        prefix,
+        fields: templates.map((f) => ({ key: f.key, type: f.type, unit: f.unit })),
+        params: (c.parameters ?? {}) as Record<string, unknown>,
+      });
+      setNameTouched(c.name !== gen.name);
+      setCodeTouched(c.internalCode !== gen.code);
+    } catch {
+      /* keep them frozen on any parse edge case */
+    }
+  }, [full.data, category, templates]);
+
   // Footprint has no separate top-level input: it lives in the per-category
   // parameters. Whichever key the category defines — `footprint` (e.g. 0603) or
   // `package` (e.g. SOT-23) — is the single source used for the name/code and
