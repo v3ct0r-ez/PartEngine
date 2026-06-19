@@ -7,7 +7,7 @@ import { FilterSidebar } from '@/components/filter-sidebar';
 import { LabelButton } from '@/components/label-button';
 import { SavedViews } from '@/components/saved-views';
 import { WarehouseOperations } from '@/components/warehouse-operations';
-import { listCategories, listRecent, recordRecent, searchComponents, type Category, type ComponentRow } from '@/lib/api';
+import { getComponent, listCategories, listRecent, recordRecent, searchComponents, type Category, type ComponentRow } from '@/lib/api';
 import { useUiStore } from '@/lib/store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -114,11 +114,11 @@ export default function ComponentsPage() {
             categories={categories}
             component={toEditing(editing)}
             onClose={() => setEditorOpen(false)}
-            onSaved={() => {
+            onSaved={async () => {
               onSaved();
-              // reflect edits in the header
-              if (editing && editing.id === selected.id) {
-                qc.invalidateQueries({ queryKey: ['components'] });
+              // Refresh the header (name/code/mpn/category) with the saved data.
+              if (selected) {
+                try { setSelected(await getComponent(selected.id)); } catch { /* keep current */ }
               }
             }}
           />

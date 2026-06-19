@@ -72,15 +72,21 @@ export function ComponentEditor({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // When editing, load economic fields from the full component record.
+  // When editing, load the authoritative record from the server (not the row
+  // passed in, whose parameters can be stale after a previous save) and seed the
+  // form from it: economic fields plus the parameters, name, code and MPN.
   useQuery({
     queryKey: ['component-eco', component?.id],
     enabled: editing,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: async () => {
       const c = await getComponent(component!.id);
       const s = (v: unknown) => (v == null ? '' : String(v));
       setMinQty(s(c.minQty)); setIdealQty(s(c.idealQty)); setMaxQty(s(c.maxQty));
       setLastPrice(s(c.lastPrice)); setAvgPrice(s(c.avgPrice)); setCurrency(c.currency || 'EUR');
+      setParams(c.parameters ?? {});
+      setName(c.name); setInternalCode(c.internalCode); setMpn(c.mpn ?? '');
       return c;
     },
   });
