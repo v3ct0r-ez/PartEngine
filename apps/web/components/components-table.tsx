@@ -1,23 +1,29 @@
 'use client';
 
 import { listCategories, searchComponents, type Category, type ComponentRow } from '@/lib/api';
+import { usePrefs } from '@/lib/preferences';
 import { useUiStore } from '@/lib/store';
 import { formatEngineering, parseQuantity } from '@partengine/core';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+
+type ValueField = { key: string; unit?: string | null };
 
 /**
  * Server-side-paginated components table. Sorting and range filtering happen on
  * the API against the indexed parameter projection, so "100Ω < 1kΩ < 1MΩ"
  * ordering is correct even across millions of rows. Quantity cells are rendered
- * with engineering formatting for readability.
+ * with engineering formatting for readability. The visible columns, their order
+ * and the page size come from the user's preferences.
  */
 export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow) => void }) {
   const { query, category, ranges, sortField, sortDir, setSort } = useUiStore();
+  const prefs = usePrefs();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['components', query, category, ranges, sortField, sortDir],
+    queryKey: ['components', query, category, ranges, sortField, sortDir, prefs.pageSize],
     queryFn: () =>
-      searchComponents({ q: query, categorySlug: category, ranges, sortField, sortDir, limit: 50 }),
+      searchComponents({ q: query, categorySlug: category, ranges, sortField, sortDir, limit: prefs.pageSize }),
     placeholderData: keepPreviousData,
   });
 
@@ -27,6 +33,9 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
   const activeCat = categories.find((c: Category) => c.slug === category);
   const valueField = activeCat?.fields.find((f) => f.type === 'QUANTITY');
 
+  const columns = prefs.componentColumns;
+  const colCount = columns.length;
+
   if (isError) return <div className="p-4 text-sm text-red-500">Errore nel caricamento.</div>;
 
   return (
@@ -34,22 +43,20 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
           <tr>
-            <Th label="Codice" field="internalCode" {...{ sortField, sortDir, setSort }} />
-            <Th label="Nome" field="name" {...{ sortField, sortDir, setSort }} />
-            <th className="px-3 py-2">Categoria</th>
-            <th className="px-3 py-2">MPN</th>
-            {valueField ? (
-              <Th label={`Valore${valueField.unit ? ` (${valueField.unit})` : ''}`} field={valueField.key} {...{ sortField, sortDir, setSort }} />
-            ) : (
-              <th className="px-3 py-2">Valore</th>
-            )}
-            <th className="px-3 py-2">Footprint</th>
+            {columns.map((key) => {
+              const h = header(key, valueField);
+              return h.sortField ? (
+                <Th key={key} label={h.label} field={h.sortField} {...{ sortField, sortDir, setSort }} />
+              ) : (
+                <th key={key} className="px-3 py-2">{h.label}</th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {isLoading && (
             <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+              <td colSpan={colCount} className="px-3 py-6 text-center text-muted-foreground">
                 Caricamento…
               </td>
             </tr>
@@ -60,17 +67,14 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
               onClick={() => onRowClick?.(c)}
               className={`border-t border-border hover:bg-muted/40 ${onRowClick ? 'cursor-pointer' : ''}`}
             >
-              <td className="px-3 py-2 font-mono text-xs">{c.internalCode}</td>
-              <td className="px-3 py-2">{c.name}</td>
-              <td className="px-3 py-2">{c.category?.name ?? '—'}</td>
-              <td className="px-3 py-2">{c.mpn ?? '—'}</td>
-              <td className="px-3 py-2">{primaryValue(c, valueField)}</td>
-              <td className="px-3 py-2">{c.footprint ?? '—'}</td>
+              {columns.map((key) => (
+                <td key={key} className="px-3 py-2">{cell(key, c, valueField)}</td>
+              ))}
             </tr>
           ))}
           {data && data.items.length === 0 && !isLoading && (
             <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+              <td colSpan={colCount} className="px-3 py-6 text-center text-muted-foreground">
                 Nessun componente trovato.
               </td>
             </tr>
@@ -79,6 +83,33 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
       </table>
     </div>
   );
+}
+
+/** Header label + (optional) server sort field for a column key. */
+function header(key: string, valueField?: ValueField): { label: string; sortField?: string } {
+  switch (key) {
+    case 'internalCode': return { label: 'Codice', sortField: 'internalCode' };
+    case 'name': return { label: 'Nome', sortField: 'name' };
+    case 'category': return { label: 'Categoria' };
+    case 'mpn': return { label: 'MPN', sortField: 'mpn' };
+    case 'manufacturer': return { label: 'Produttore' };
+    case 'value': return { label: `Valore${valueField?.unit ? ` (${valueField.unit})` : ''}`, sortField: valueField?.key };
+    case 'footprint': return { label: 'Footprint' };
+    default: return { label: key };
+  }
+}
+
+function cell(key: string, c: ComponentRow, valueField?: ValueField): ReactNode {
+  switch (key) {
+    case 'internalCode': return <span className="font-mono text-xs">{c.internalCode}</span>;
+    case 'name': return c.name;
+    case 'category': return c.category?.name ?? '—';
+    case 'mpn': return c.mpn ?? '—';
+    case 'manufacturer': return c.manufacturer?.name ?? '—';
+    case 'value': return primaryValue(c, valueField);
+    case 'footprint': return c.footprint ?? '—';
+    default: return '—';
+  }
 }
 
 function Th({
@@ -108,10 +139,7 @@ function Th({
 /** Render the active category's primary quantity parameter in engineering
  * notation. Works for any (incl. custom) category via its first QUANTITY field;
  * falls back to a built-in guess when no category is selected. */
-function primaryValue(
-  c: ComponentRow,
-  valueField?: { key: string; unit?: string | null },
-): string {
+function primaryValue(c: ComponentRow, valueField?: ValueField): string {
   const key =
     valueField?.key ??
     { resistors: 'resistance', capacitors: 'capacitance', inductors: 'inductance' }[

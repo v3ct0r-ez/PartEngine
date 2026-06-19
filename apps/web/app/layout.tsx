@@ -43,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   ['Fornitori', '/suppliers'],
                   ['Ordini', '/orders'],
                   ['Utenti', '/users'],
+                  ['Preferenze', '/preferences'],
                   ['Impostazioni', '/settings'],
                 ].map(([label, href]) => (
                   <a
