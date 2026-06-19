@@ -19,11 +19,19 @@ describe('generateComponentName', () => {
   it('omits missing parts', () => {
     expect(generateComponentName({ categoryName: 'Condensatore', value: '100nF' })).toBe('Condensatore 100nF');
   });
+  it('includes the colour descriptor right after the category (LED)', () => {
+    expect(
+      generateComponentName({ categoryName: 'LED', color: 'Rosso', value: '2.7V', footprint: '0603' }),
+    ).toBe('LED Rosso 2.7V 0603');
+  });
 });
 
 describe('generateInternalCode', () => {
   it('builds a standardised code', () => {
     expect(generateInternalCode({ prefix: 'R', value: '10kΩ', footprint: '0603' })).toBe('R-10K-0603');
     expect(generateInternalCode({ prefix: 'C', value: '100nF' })).toBe('C-100NF');
+  });
+  it('includes the colour when present', () => {
+    expect(generateInternalCode({ prefix: 'D', color: 'Rosso', value: '2.7V', footprint: '0603' })).toBe('D-ROSSO-2.7V-0603');
   });
 });

@@ -141,6 +141,9 @@ export function ComponentEditor({
   );
   const footprintValue =
     footprintKey && params[footprintKey] != null ? String(params[footprintKey]) : '';
+  // Colour is a short identifier (LEDs, displays): include it in the name/code
+  // when the category defines a `color` field.
+  const colorValue = params['color'] != null && params['color'] !== '' ? String(params['color']) : '';
 
   // Auto-generate internal code + name from category/value/footprint/tolerance
   // (a standard, editable suggestion). Stops once the user edits them manually.
@@ -155,17 +158,17 @@ export function ComponentEditor({
       }
       const tol = params['tolerance'] != null && params['tolerance'] !== '' ? Number(params['tolerance']) : undefined;
       if (!nameTouched) {
-        setName(generateComponentName({ categoryName: category?.name, value: valueText, footprint: footprintValue || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
+        setName(generateComponentName({ categoryName: category?.name, color: colorValue || undefined, value: valueText, footprint: footprintValue || undefined, tolerance: Number.isFinite(tol) ? tol : undefined }));
       }
       if (!codeTouched) {
         const prefix = category?.codePrefix || categoryCodePrefix(category?.slug, category?.name);
-        setInternalCode(generateInternalCode({ prefix, value: valueText, footprint: footprintValue || undefined }));
+        setInternalCode(generateInternalCode({ prefix, color: colorValue || undefined, value: valueText, footprint: footprintValue || undefined }));
       }
     } catch {
       // Auto-suggestion is best-effort — never let a parse edge case crash the editor.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, footprintValue, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
+  }, [categoryId, footprintValue, colorValue, JSON.stringify(params), codeTouched, nameTouched, category?.name, category?.slug]);
 
   const canSave = internalCode && name && categoryId && Object.keys(fieldErrors).length === 0;
 

@@ -39,12 +39,15 @@ export interface NamingParts {
   footprint?: string;
   /** Tolerance percentage (number), e.g. 1 → "1%". */
   tolerance?: number;
+  /** Short identifying descriptor, e.g. an LED colour ("Rosso"). */
+  color?: string;
 }
 
-/** Human name: "Resistenza 10kΩ 0603 1%". */
+/** Human name: "LED Rosso 2.7V 0603" / "Resistenza 10kΩ 0603 1%". */
 export function generateComponentName(parts: NamingParts): string {
   return [
     parts.categoryName,
+    parts.color,
     parts.value,
     parts.footprint,
     parts.tolerance != null ? `${parts.tolerance}%` : undefined,
@@ -54,10 +57,16 @@ export function generateComponentName(parts: NamingParts): string {
     .trim();
 }
 
-/** Standardised code: "R-10K-0603" (uppercased, symbols stripped from value). */
-export function generateInternalCode(parts: { prefix: string; value?: string; footprint?: string }): string {
+/** Standardised code: "D-ROSSO-2.7V-0603" / "R-10K-0603" (uppercased). */
+export function generateInternalCode(parts: {
+  prefix: string;
+  value?: string;
+  footprint?: string;
+  color?: string;
+}): string {
   const value = parts.value ? parts.value.replace(/[^a-zA-Z0-9.]/g, '').toUpperCase() : '';
-  return [parts.prefix, value, parts.footprint ? parts.footprint.toUpperCase() : '']
+  const color = parts.color ? parts.color.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+  return [parts.prefix, color, value, parts.footprint ? parts.footprint.toUpperCase() : '']
     .filter((p) => p && p.trim() !== '')
     .join('-');
 }
