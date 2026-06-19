@@ -13,7 +13,7 @@
           radial-gradient(640px 420px at 50% 115%, rgba(59, 130, 246, 0.16), transparent 70%),
           #0b1020;
       }
-      .brand-img {
+      .brand-img, .brand-vid {
         height: 132px; width: auto; max-width: 85%; object-fit: contain;
         filter: drop-shadow(0 8px 28px rgba(139, 92, 246, 0.45));
         animation: rise 0.5s ease both;
@@ -43,13 +43,30 @@
     </style>
   </head>
   <body>
-    <img class="brand-img" src="logo-splash.png" alt="PartEngine" />
+    <!-- Animated logo (logo.mp4). Falls back to the static logo if the video is
+         absent or can't play. Drop apps/desktop/static/logo.mp4 to enable it. -->
+    <video class="brand-vid" src="logo.mp4" autoplay muted loop playsinline></video>
+    <img class="brand-img" src="logo-splash.png" alt="PartEngine" style="display: none" />
     <div class="logo">PartEngine</div>
     <div class="sub">Avvio in corso… il primo avvio può richiedere qualche minuto.</div>
     <div class="card"><ul id="steps"></ul></div>
     <div class="footer">Non chiudere la finestra.</div>
 
     <script>
+      // Show the static logo if the MP4 is missing or can't be decoded.
+      (function () {
+        const vid = document.querySelector('.brand-vid');
+        const img = document.querySelector('.brand-img');
+        function fallback() {
+          if (vid) vid.style.display = 'none';
+          if (img) img.style.display = 'block';
+        }
+        if (!vid) return fallback();
+        vid.addEventListener('error', fallback);
+        const p = vid.play && vid.play();
+        if (p && typeof p.catch === 'function') p.catch(fallback);
+      })();
+
       const list = document.getElementById('steps');
       const items = new Map(); // label -> <li>
 
