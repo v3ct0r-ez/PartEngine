@@ -57,6 +57,10 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   const fromOptions = (stock.data?.byLocation ?? [])
     .filter((b) => Number(b.quantity) > 0 && (whLocationIds.size === 0 || whLocationIds.has(b.locationId)))
     .map((b) => ({ id: b.locationId, label: `${b.locationCode} · ${b.quantity} pz` }));
+  // For a transfer, the destination can't be the source slot — exclude it so the
+  // user can't pick a same-location move (which the API rejects).
+  const toOptionsForUi =
+    type === 'TRANSFER' && fromLoc ? toOptions.filter((o) => o.id !== fromLoc) : toOptions;
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ['stock', componentId] });
@@ -143,13 +147,17 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
             <LocSelect label="Ubicazione (slot)" value={fromLoc} onChange={setFromLoc} options={toOptions}
               empty={toOptions.length === 0 ? 'Nessuno slot: creane uno nelle Ubicazioni' : undefined} />
           ) : (
-            <LocSelect label="Da ubicazione" value={fromLoc} onChange={setFromLoc} options={fromOptions}
+            <LocSelect label="Da ubicazione" value={fromLoc}
+              onChange={(v) => { setFromLoc(v); if (v && v === toLoc) setToLoc(''); }}
+              options={fromOptions}
               empty={fromOptions.length === 0 ? 'Nessuna giacenza per questo componente' : undefined} />
           )
         )}
         {needs.includes('to') && (
-          <LocSelect label="A ubicazione (slot)" value={toLoc} onChange={setToLoc} options={toOptions}
-            empty={toOptions.length === 0 ? 'Nessuno slot: creane uno nelle Ubicazioni' : undefined} />
+          <LocSelect label="A ubicazione (slot)" value={toOptionsForUi.some((o) => o.id === toLoc) ? toLoc : ''} onChange={setToLoc} options={toOptionsForUi}
+            empty={toOptionsForUi.length === 0
+              ? (type === 'TRANSFER' && fromLoc ? 'Nessun altro slot disponibile come destinazione' : 'Nessuno slot: creane uno nelle Ubicazioni')
+              : undefined} />
         )}
         <input className={`${inp} w-full`} value={reference} onChange={(e) => setReference(e.target.value)}
           placeholder="Riferimento (es. ordine, DDT) — opzionale" />
