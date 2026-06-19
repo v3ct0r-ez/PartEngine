@@ -34,5 +34,6 @@ contextBridge.exposeInMainWorld('partengine', {
     minimize: () => ipcRenderer.invoke('win:minimize'),
     maximize: () => ipcRenderer.invoke('win:maximize'),
     close: () => ipcRenderer.invoke('win:close'),
+    enterFullscreen: () => ipcRenderer.invoke('win:enterFullscreen'),
   },
 });

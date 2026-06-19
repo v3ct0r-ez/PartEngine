@@ -131,6 +131,11 @@ function registerIpc() {
     return mainWindow.isMaximized();
   });
   ipcMain.handle('win:close', () => mainWindow?.close());
+  // Non-toggling: ensure the window is maximized (used to go full-size on login).
+  ipcMain.handle('win:enterFullscreen', () => {
+    if (mainWindow && !mainWindow.isMaximized()) mainWindow.maximize();
+    return true;
+  });
 
   ipcMain.handle('settings:get', () => ({
     settings: readUserSettings(),

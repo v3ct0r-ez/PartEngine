@@ -30,6 +30,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       .catch(() => setPhase('login'));
   }, []);
 
+  // On the desktop, go full-size (maximized) once the user is in — the login
+  // shows in a normal window, the app itself uses the whole screen.
+  useEffect(() => {
+    if (phase === 'authed') window.partengine?.window?.enterFullscreen?.();
+  }, [phase]);
+
   if (phase === 'loading') return null;
   if (phase === 'authed') return <>{children}</>;
   if (phase === 'setup') return <SetupForm onDone={() => setPhase('authed')} />;
@@ -38,12 +44,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-full items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-background p-8 shadow-sm">
+    <div
+      className="flex min-h-full items-center justify-center p-4"
+      style={{
+        background:
+          'radial-gradient(900px 500px at 50% -15%, hsl(var(--primary) / 0.18), transparent 70%), hsl(var(--muted) / 0.35)',
+      }}
+    >
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-background/95 p-10 shadow-xl backdrop-blur">
         <div className="text-center">
-          <LogoMark size={96} className="mb-3" />
-          <div className="text-2xl font-bold">PartEngine</div>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          <LogoMark size={112} className="mb-4 drop-shadow" />
+          <div className="text-2xl font-bold tracking-tight">PartEngine</div>
+          <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
         </div>
         {children}
       </div>
@@ -51,7 +63,10 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
   );
 }
 
-const fld = 'w-full rounded-md border border-border bg-background px-3 py-2 text-sm';
+const fld =
+  'w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30';
+const btn =
+  'w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50';
 
 function SetupForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState('');
@@ -86,7 +101,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
         <input className={fld} type="password" placeholder="Conferma password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
         {error && <p className="text-sm text-red-500">{error}</p>}
         <button type="submit" disabled={busy || !email || !fullName || !password}
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+          className={btn}>
           {busy ? 'Creazione…' : "Crea amministratore e accedi"}
         </button>
         <p className="text-center text-xs text-muted-foreground">Questo account avrà ruolo SUPER_ADMIN.</p>
@@ -122,7 +137,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         <input className={fld} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         {error && <p className="text-sm text-red-500">{error}</p>}
         <button type="submit" disabled={busy || !email || !password}
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+          className={btn}>
           {busy ? 'Accesso…' : 'Accedi'}
         </button>
       </form>

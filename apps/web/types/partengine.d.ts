@@ -34,6 +34,12 @@ export interface PartEngineBridge {
     pickFolder: () => Promise<string | null>;
     openPath: (p: string) => Promise<string>;
   };
+  window: {
+    minimize: () => void;
+    maximize: () => void;
+    close: () => void;
+    enterFullscreen: () => void;
+  };
 }
 
 declare global {
