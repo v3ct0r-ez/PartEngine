@@ -22,9 +22,6 @@ const OPS: { value: MovementType; label: string; needs: ('from' | 'to')[] }[] = 
 const HEALTH: Record<string, string> = {
   OK: 'text-green-600', LOW: 'text-amber-600', CRITICAL: 'text-orange-600', OUT_OF_STOCK: 'text-red-600',
 };
-const KIND_IT: Record<string, string> = {
-  zone: 'zona', shelf: 'scaffale', cabinet: 'armadio', drawer: 'cassetto', container: 'contenitore', box: 'slot',
-};
 
 /** Warehouse operations for one component: stock, load/unload/transfer/adjust,
  * allocation (reserve/release) and movement history. Reused by the unified
@@ -47,7 +44,6 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   const [reference, setReference] = useState('');
   const needs = OPS.find((o) => o.value === type)!.needs;
 
-  const locLabel = (l: { code: string; kind: string }) => `${l.code} (${KIND_IT[l.kind] ?? l.kind})`;
   // Stock lives in slots, never in the root container, so loading/transferring
   // targets only slots (locations with a parent). "From" must additionally be a
   // location where the component currently has stock.
@@ -55,8 +51,11 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   // Natural order (A-01-2 before A-01-10) for the slot dropdowns.
   const byCode = (a: { code: string }, b: { code: string }) =>
     a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+  // These dropdowns only ever list slots, so the per-option "(slot)" suffix is
+  // redundant noise — the code (e.g. A-01-2) is self-explanatory and the field
+  // label already says "(slot)". Show just the code.
   const slots = locations.filter((l) => l.parentId != null).slice().sort(byCode);
-  const toOptions = slots.map((l) => ({ id: l.id, label: locLabel(l) }));
+  const toOptions = slots.map((l) => ({ id: l.id, label: l.code }));
   const fromOptions = (stock.data?.byLocation ?? [])
     .filter((b) => Number(b.quantity) > 0 && (whLocationIds.size === 0 || whLocationIds.has(b.locationId)))
     .slice()
