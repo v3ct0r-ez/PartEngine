@@ -144,10 +144,11 @@ function OrderDetail({ id, onChanged }: { id: string; onChanged: () => void }) {
           {warehouses.data && warehouses.data.length > 1 && (
             <select className={inp} value={wh?.id ?? ''} onChange={(e) => setWhId(e.target.value)}>{warehouses.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
           )}
-          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Ubicazione</span>
+          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Ubicazione (slot)</span>
             <select className={inp} value={locId} onChange={(e) => setLocId(e.target.value)}>
               <option value="">—</option>
-              {locations.map((l) => <option key={l.id} value={l.id}>{l.code} ({l.kind})</option>)}
+              {/* Stock lives in slots, not the root containers — match the movements convention. */}
+              {locations.filter((l) => l.parentId != null).map((l) => <option key={l.id} value={l.id}>{l.code} ({l.kind})</option>)}
             </select></label>
           {p.status === 'DRAFT' ? (
             <button onClick={() => submit.mutate()} disabled={!locId || submit.isPending} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">Invia ordine</button>

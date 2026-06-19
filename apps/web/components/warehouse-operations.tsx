@@ -163,7 +163,13 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
           placeholder="Riferimento (es. ordine, DDT) — opzionale" />
         <input className={`${inp} w-full`} value={reason} onChange={(e) => setReason(e.target.value)}
           placeholder={type === 'ADJUSTMENT' ? 'Motivo (obbligatorio)' : 'Motivo — opzionale'} />
-        <button onClick={() => move.mutate()} disabled={move.isPending || !qty}
+        <button onClick={() => move.mutate()}
+          disabled={
+            move.isPending || !qty ||
+            // An ADJUSTMENT needs a non-zero delta and a mandatory reason (the API
+            // rejects both), so don't let the user submit a guaranteed error.
+            (type === 'ADJUSTMENT' && (Number(qty) === 0 || !reason.trim()))
+          }
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
           {move.isPending ? 'Registrazione…' : 'Registra movimento'}</button>
         {move.isError && <p className="text-xs text-red-500">{(move.error as Error).message}</p>}
