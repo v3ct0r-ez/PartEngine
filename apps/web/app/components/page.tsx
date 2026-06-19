@@ -5,6 +5,7 @@ import { ComponentsTable } from '@/components/components-table';
 import { EconomicPanel } from '@/components/economic-panel';
 import { FilterSidebar } from '@/components/filter-sidebar';
 import { LabelButton } from '@/components/label-button';
+import { ParametersPanel } from '@/components/parameters-panel';
 import { SavedViews } from '@/components/saved-views';
 import { WarehouseOperations } from '@/components/warehouse-operations';
 import { getComponent, listCategories, listRecent, recordRecent, searchComponents, type Category, type ComponentRow } from '@/lib/api';
@@ -36,6 +37,7 @@ export default function ComponentsPage() {
   const [selected, setSelected] = useState<ComponentRow | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ComponentRow | null>(null);
+  const [tab, setTab] = useState<'warehouse' | 'params' | 'eco'>('warehouse');
 
   function openNew() {
     setEditing(null);
@@ -106,8 +108,30 @@ export default function ComponentsPage() {
           </div>
         </div>
 
-        <EconomicPanel componentId={selected.id} />
-        <WarehouseOperations componentId={selected.id} />
+        {/* Auto-sized tabs (sized to their label, not stretched). */}
+        <div className="flex flex-wrap gap-1 border-b border-border">
+          {([
+            ['warehouse', 'Ubicazioni'],
+            ['params', 'Parametri'],
+            ['eco', 'Economia'],
+          ] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${
+                tab === k
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'warehouse' && <WarehouseOperations componentId={selected.id} />}
+        {tab === 'params' && <ParametersPanel component={selected} categories={categories} />}
+        {tab === 'eco' && <EconomicPanel componentId={selected.id} />}
 
         {editorOpen && (
           <ComponentEditor
