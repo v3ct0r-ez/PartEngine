@@ -11,7 +11,8 @@ test.describe('authenticated app', () => {
 
   test('navigates from the dashboard to the components hub', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await page.getByRole('link', { name: 'Componenti' }).click();
+    // Scope to the sidebar nav — "Componenti" also appears as a body link.
+    await page.getByRole('navigation').getByRole('link', { name: 'Componenti' }).click();
     await expect(page.getByRole('heading', { name: 'Componenti' })).toBeVisible();
   });
 
