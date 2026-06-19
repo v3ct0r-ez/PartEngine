@@ -19,6 +19,15 @@ import type {
  * treated as a (unit-aware) parameter sort against the indexed projection. */
 const SCALAR_SORT_FIELDS = new Set(['internalCode', 'name', 'mpn', 'createdAt', 'updatedAt']);
 
+/** Collapse per-location stockLevels into a single `onHand` total (and drop the
+ * raw rows from the payload) so the list can show a warehouse-quantity column. */
+function withOnHand<T extends { stockLevels?: { quantity: unknown }[] }>(items: T[]) {
+  return items.map(({ stockLevels, ...rest }) => ({
+    ...rest,
+    onHand: (stockLevels ?? []).reduce((sum, l) => sum + Number(l.quantity), 0),
+  }));
+}
+
 @Injectable()
 export class ComponentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -234,7 +243,11 @@ export class ComponentsService {
     }
 
     const dir: Prisma.SortOrder = dto.sortDir === 'desc' ? 'desc' : 'asc';
-    const include = { category: true, manufacturer: true };
+    const include = {
+      category: true,
+      manufacturer: true,
+      stockLevels: { select: { quantity: true } },
+    };
 
     // Sorting by a QUANTITY parameter must be UNIT-AWARE: order by the indexed
     // base-SI magnitude in ComponentParameterValue, not by the lexical string.
@@ -250,7 +263,7 @@ export class ComponentsService {
       });
       const items = rows.map((r) => r.component);
       const nextCursor = rows.length > take ? rows[take].id : null;
-      return { items: items.slice(0, take), nextCursor, parsed };
+      return { items: withOnHand(items.slice(0, take)), nextCursor, parsed };
     }
 
     // Scalar column sort (or default).
@@ -267,7 +280,7 @@ export class ComponentsService {
     });
 
     const nextCursor = items.length > take ? items[take].id : null;
-    return { items: items.slice(0, take), nextCursor, parsed };
+    return { items: withOnHand(items.slice(0, take)), nextCursor, parsed };
   }
 
   async remove(id: string) {

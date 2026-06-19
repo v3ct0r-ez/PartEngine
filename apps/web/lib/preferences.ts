@@ -19,6 +19,7 @@ export const COMPONENT_COLUMNS: { key: string; label: string }[] = [
   { key: 'manufacturer', label: 'Produttore' },
   { key: 'value', label: 'Valore' },
   { key: 'footprint', label: 'Footprint' },
+  { key: 'stock', label: 'Q.tà magazzino' },
 ];
 const COLUMN_KEYS = COMPONENT_COLUMNS.map((c) => c.key);
 

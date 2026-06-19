@@ -95,6 +95,7 @@ function header(key: string, valueField?: ValueField): { label: string; sortFiel
     case 'manufacturer': return { label: 'Produttore' };
     case 'value': return { label: `Valore${valueField?.unit ? ` (${valueField.unit})` : ''}`, sortField: valueField?.key };
     case 'footprint': return { label: 'Footprint' };
+    case 'stock': return { label: 'Q.tà magazzino' };
     default: return { label: key };
   }
 }
@@ -108,6 +109,7 @@ function cell(key: string, c: ComponentRow, valueField?: ValueField): ReactNode 
     case 'manufacturer': return c.manufacturer?.name ?? '—';
     case 'value': return primaryValue(c, valueField);
     case 'footprint': return c.footprint ?? '—';
+    case 'stock': return c.onHand ?? 0;
     default: return '—';
   }
 }

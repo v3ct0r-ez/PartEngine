@@ -17,6 +17,8 @@ export interface ComponentRow {
   manufacturerId?: string | null;
   category?: { slug: string; name: string };
   manufacturer?: { name: string } | null;
+  /** On-hand quantity across all locations (sum of stock levels). */
+  onHand?: number;
 }
 
 export interface SearchResult {
