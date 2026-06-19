@@ -3,10 +3,14 @@
 // logo changes:  node apps/desktop/scripts/make-icons.mjs
 //
 // Produces:
-//   apps/desktop/static/icon.ico   Windows app icon (electron-builder), multi-size
-//   apps/desktop/static/tray.png   system-tray icon (referenced by main.ts)
-//   apps/web/public/logo.png       UI logo source (imported as a static asset)
-//   apps/web/app/favicon.ico       browser tab icon (Next app-router convention)
+//   apps/desktop/static/icon.ico        Windows app icon (electron-builder), multi-size
+//   apps/desktop/static/tray.png         system-tray icon (referenced by main.ts)
+//   apps/desktop/static/logo-splash.png  trimmed wide logo for the startup splash
+//   apps/web/public/logo.png             UI logo source (imported as a static asset)
+//   apps/web/app/favicon.ico             browser tab icon (Next app-router convention)
+//
+// The source has wide transparent margins, so everything is `.trim()`-ed first:
+// the mark then fills the frame and reads much larger at the same pixel size.
 import sharp from 'sharp';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -19,12 +23,20 @@ const desktopStatic = path.join(repo, 'apps/desktop/static');
 const webPublic = path.join(repo, 'apps/web/public');
 const webApp = path.join(repo, 'apps/web/app');
 
-/** Render the source logo onto a transparent square PNG of the given size. */
-function pngAt(size) {
+const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
+
+/** Trimmed mark centred on a transparent square (for the square icon formats). */
+function pngSquare(size) {
   return sharp(SRC)
-    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .trim()
+    .resize(size, size, { fit: 'contain', background: TRANSPARENT })
     .png()
     .toBuffer();
+}
+
+/** Trimmed mark scaled to a height, aspect preserved (for the wide UI logo). */
+function pngByHeight(height) {
+  return sharp(SRC).trim().resize({ height }).png().toBuffer();
 }
 
 /** Pack PNG buffers into a single .ico (modern PNG-compressed icon directory). */
@@ -55,7 +67,7 @@ function buildIco(entries) {
 
 async function ico(sizes) {
   const entries = [];
-  for (const size of sizes) entries.push({ size, data: await pngAt(size) });
+  for (const size of sizes) entries.push({ size, data: await pngSquare(size) });
   return buildIco(entries);
 }
 
@@ -63,10 +75,11 @@ async function main() {
   await mkdir(webPublic, { recursive: true });
 
   await writeFile(path.join(desktopStatic, 'icon.ico'), await ico([16, 24, 32, 48, 64, 128, 256]));
-  await writeFile(path.join(desktopStatic, 'tray.png'), await pngAt(32));
+  await writeFile(path.join(desktopStatic, 'tray.png'), await pngSquare(32));
+  await writeFile(path.join(desktopStatic, 'logo-splash.png'), await pngByHeight(220));
   // logo.png is imported as a static asset by the web UI (bundled into
   // .next/static), so it shows regardless of whether /public is staged.
-  await writeFile(path.join(webPublic, 'logo.png'), await pngAt(512));
+  await writeFile(path.join(webPublic, 'logo.png'), await pngByHeight(256));
   // favicon goes in app/ (Next app-router convention) so it's part of the build.
   await writeFile(path.join(webApp, 'favicon.ico'), await ico([16, 32, 48]));
 

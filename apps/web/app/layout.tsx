@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGate>
           <div className="flex min-h-full">
             <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-muted/30 p-4 md:flex">
-              <Logo size={30} className="mb-6" />
+              <Logo size={44} className="mb-6" />
               <nav className="space-y-1 text-sm">
                 {[
                   ['Dashboard', '/'],
