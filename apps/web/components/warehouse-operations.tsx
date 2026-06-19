@@ -52,10 +52,15 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
   // targets only slots (locations with a parent). "From" must additionally be a
   // location where the component currently has stock.
   const whLocationIds = new Set(locations.map((l) => l.id));
-  const slots = locations.filter((l) => l.parentId != null);
+  // Natural order (A-01-2 before A-01-10) for the slot dropdowns.
+  const byCode = (a: { code: string }, b: { code: string }) =>
+    a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+  const slots = locations.filter((l) => l.parentId != null).slice().sort(byCode);
   const toOptions = slots.map((l) => ({ id: l.id, label: locLabel(l) }));
   const fromOptions = (stock.data?.byLocation ?? [])
     .filter((b) => Number(b.quantity) > 0 && (whLocationIds.size === 0 || whLocationIds.has(b.locationId)))
+    .slice()
+    .sort((a, b) => a.locationCode.localeCompare(b.locationCode, undefined, { numeric: true, sensitivity: 'base' }))
     .map((b) => ({ id: b.locationId, label: `${b.locationCode} · ${b.quantity} pz` }));
   // For a transfer, the destination can't be the source slot — exclude it so the
   // user can't pick a same-location move (which the API rejects).

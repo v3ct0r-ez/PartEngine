@@ -128,10 +128,7 @@ export class LocationsService {
 
   /** Build the nested location tree (warehouse → zone → … → box) in one query. */
   async tree(warehouseId: string): Promise<LocationNode[]> {
-    const flat = await this.prisma.location.findMany({
-      where: { warehouseId },
-      orderBy: { code: 'asc' },
-    });
+    const flat = await this.prisma.location.findMany({ where: { warehouseId } });
 
     const byId = new Map<string, LocationNode>();
     for (const l of flat) {
@@ -144,6 +141,16 @@ export class LocationsService {
       if (l.parentId && byId.has(l.parentId)) byId.get(l.parentId)!.children.push(node);
       else roots.push(node);
     }
+
+    // Natural (numeric-aware) order so A-01-2 sorts before A-01-10 — a plain
+    // lexical sort orders by the first digit ("10" < "2"). Applies at every level.
+    const cmp = (a: LocationNode, b: LocationNode) =>
+      a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+    const sortRec = (nodes: LocationNode[]) => {
+      nodes.sort(cmp);
+      for (const n of nodes) sortRec(n.children);
+    };
+    sortRec(roots);
     return roots;
   }
 }
