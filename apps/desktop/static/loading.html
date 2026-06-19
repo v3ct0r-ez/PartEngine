@@ -53,18 +53,19 @@
     <div class="footer">Non chiudere la finestra.</div>
 
     <script>
-      // Show the static logo if the MP4 is missing or can't be decoded.
+      // Show the static logo only if the MP4 genuinely fails to load/decode.
       (function () {
         const vid = document.querySelector('.brand-vid');
         const img = document.querySelector('.brand-img');
-        function fallback() {
-          if (vid) vid.style.display = 'none';
+        if (!vid) { if (img) img.style.display = 'block'; return; }
+        vid.addEventListener('error', () => {
+          vid.style.display = 'none';
           if (img) img.style.display = 'block';
-        }
-        if (!vid) return fallback();
-        vid.addEventListener('error', fallback);
-        const p = vid.play && vid.play();
-        if (p && typeof p.catch === 'function') p.catch(fallback);
+        });
+        // Kick playback (muted autoplay is allowed); retry once it can play.
+        const tryPlay = () => { const p = vid.play && vid.play(); if (p && p.catch) p.catch(() => {}); };
+        vid.addEventListener('canplay', tryPlay);
+        tryPlay();
       })();
 
       const list = document.getElementById('steps');
