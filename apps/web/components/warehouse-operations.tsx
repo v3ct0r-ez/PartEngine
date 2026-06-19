@@ -23,7 +23,7 @@ const HEALTH: Record<string, string> = {
   OK: 'text-green-600', LOW: 'text-amber-600', CRITICAL: 'text-orange-600', OUT_OF_STOCK: 'text-red-600',
 };
 const KIND_IT: Record<string, string> = {
-  zone: 'zona', shelf: 'scaffale', cabinet: 'armadio', drawer: 'cassetto', box: 'slot',
+  zone: 'zona', shelf: 'scaffale', cabinet: 'armadio', drawer: 'cassetto', container: 'contenitore', box: 'slot',
 };
 
 /** Warehouse operations for one component: stock, load/unload/transfer/adjust,

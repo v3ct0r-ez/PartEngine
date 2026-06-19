@@ -4,7 +4,7 @@ import { IsIn, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validato
 
 export const MOVEMENT_TYPES = ['INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT'] as const;
 
-export const LOCATION_KINDS = ['zone', 'shelf', 'cabinet', 'drawer', 'box'] as const;
+export const LOCATION_KINDS = ['zone', 'shelf', 'cabinet', 'drawer', 'container', 'box'] as const;
 
 export class CreateMovementDto {
   @IsIn(MOVEMENT_TYPES) type: (typeof MOVEMENT_TYPES)[number];

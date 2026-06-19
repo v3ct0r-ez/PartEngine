@@ -23,10 +23,11 @@ const KIND_LABEL: Record<LocationKind, string> = {
   shelf: 'Scaffale',
   cabinet: 'Armadio',
   drawer: 'Cassetto',
-  box: 'Contenitore',
+  container: 'Contenitore',
+  box: 'Slot',
 };
 // Kinds offered for a main location (a slot is always a "box").
-const MAIN_KINDS: LocationKind[] = ['drawer', 'cabinet', 'shelf', 'zone'];
+const MAIN_KINDS: LocationKind[] = ['drawer', 'cabinet', 'shelf', 'container', 'zone'];
 const inp = 'rounded border border-border bg-background px-2 py-1.5 text-sm';
 
 type LocModal =

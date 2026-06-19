@@ -386,7 +386,7 @@ export function getComponentMovements(id: string) {
   return request<Movement[]>(`/inventory/components/${id}/movements`);
 }
 
-export const LOCATION_KINDS = ['zone', 'shelf', 'cabinet', 'drawer', 'box'] as const;
+export const LOCATION_KINDS = ['zone', 'shelf', 'cabinet', 'drawer', 'container', 'box'] as const;
 export type LocationKind = (typeof LOCATION_KINDS)[number];
 
 export interface WarehouseWithLocations {
