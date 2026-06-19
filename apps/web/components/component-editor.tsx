@@ -72,24 +72,29 @@ export function ComponentEditor({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // When editing, load the authoritative record from the server (not the row
-  // passed in, whose parameters can be stale after a previous save) and seed the
-  // form from it: economic fields plus the parameters, name, code and MPN.
-  useQuery({
-    queryKey: ['component-eco', component?.id],
+  // Load the authoritative record on a DEDICATED key. Using the shared
+  // ['component-eco'] key (EconomicPanel registers it too, with a different
+  // queryFn) made the editor reuse that cached query, so the seeding side-effect
+  // never ran and the form kept the stale parameters passed in. A separate key +
+  // seeding via useEffect (not inside queryFn) loads the live values reliably.
+  const full = useQuery({
+    queryKey: ['component-edit', component?.id],
     enabled: editing,
     staleTime: 0,
-    refetchOnMount: 'always',
-    queryFn: async () => {
-      const c = await getComponent(component!.id);
-      const s = (v: unknown) => (v == null ? '' : String(v));
-      setMinQty(s(c.minQty)); setIdealQty(s(c.idealQty)); setMaxQty(s(c.maxQty));
-      setLastPrice(s(c.lastPrice)); setAvgPrice(s(c.avgPrice)); setCurrency(c.currency || 'EUR');
-      setParams(c.parameters ?? {});
-      setName(c.name); setInternalCode(c.internalCode); setMpn(c.mpn ?? '');
-      return c;
-    },
+    queryFn: () => getComponent(component!.id),
   });
+  // Seed the form from the fetched record. Keyed on full.data so that when a
+  // re-open serves a stale cache entry first and then the fresh refetch lands,
+  // the fresh values win (an id guard would have frozen the stale ones).
+  useEffect(() => {
+    const c = full.data;
+    if (!c) return;
+    const s = (v: unknown) => (v == null ? '' : String(v));
+    setMinQty(s(c.minQty)); setIdealQty(s(c.idealQty)); setMaxQty(s(c.maxQty));
+    setLastPrice(s(c.lastPrice)); setAvgPrice(s(c.avgPrice)); setCurrency(c.currency || 'EUR');
+    setParams(c.parameters ?? {});
+    setName(c.name); setInternalCode(c.internalCode); setMpn(c.mpn ?? '');
+  }, [full.data]);
   // Once the user edits code/name manually we stop auto-generating them.
   // When editing an existing component we never auto-overwrite.
   const [codeTouched, setCodeTouched] = useState(editing);
