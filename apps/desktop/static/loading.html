@@ -14,7 +14,7 @@
           #0b1020;
       }
       .brand-img, .brand-canvas {
-        height: 132px; width: auto; max-width: 85%; object-fit: contain;
+        height: 168px; width: auto; max-width: 85%; object-fit: contain;
         filter: drop-shadow(0 8px 28px rgba(139, 92, 246, 0.45));
         animation: rise 0.5s ease both;
       }
@@ -46,7 +46,7 @@
     <!-- Animated logo (logo.mp4), background chroma-keyed onto a canvas. Falls
          back to the static logo if the video is absent or can't play. -->
     <canvas class="brand-canvas"></canvas>
-    <video class="brand-vid" src="logo.mp4" muted loop playsinline style="display: none"></video>
+    <video class="brand-vid" src="logo.mp4" muted playsinline style="display: none"></video>
     <img class="brand-img" src="logo-splash.png" alt="PartEngine" style="display: none" />
     <div class="logo">PartEngine</div>
     <div class="sub">Avvio in corso… il primo avvio può richiedere qualche minuto.</div>
@@ -95,6 +95,12 @@
           ctx.putImageData(f, 0, 0);
         }
         const tryPlay = () => { const p = vid.play && vid.play(); if (p && p.catch) p.catch(() => {}); };
+        // Play the intro (logo.mp4) once, then switch to logo_loop.mp4 looping.
+        vid.addEventListener('ended', function () {
+          vid.src = 'logo_loop.mp4';
+          vid.loop = true;
+          tryPlay();
+        });
         vid.addEventListener('canplay', tryPlay);
         tryPlay();
         requestAnimationFrame(draw);

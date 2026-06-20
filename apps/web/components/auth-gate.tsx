@@ -70,9 +70,10 @@ function AnimatedLogo() {
   return (
     <ChromaLogo
       src="/logo.mp4"
-      height={112}
+      loopSrc="/logo_loop.mp4"
+      height={168}
       className="mx-auto mb-4 drop-shadow"
-      fallback={<LogoMark size={112} className="mb-4 drop-shadow" />}
+      fallback={<LogoMark size={168} className="mb-4 drop-shadow" />}
     />
   );
 }

@@ -11,13 +11,15 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
  */
 export function ChromaLogo({
   src,
+  loopSrc,
   height = 112,
   keyColor = [0, 255, 0],
   threshold = 0.45,
   className = '',
   fallback = null,
 }: {
-  src: string;
+  src: string; // intro, played once
+  loopSrc?: string; // played in a loop after the intro ends
   height?: number;
   keyColor?: [number, number, number];
   threshold?: number; // 0..1 colour distance to the key for full transparency
@@ -40,6 +42,14 @@ export function ChromaLogo({
     const [kr, kg, kb] = keyColor;
     const tFull = threshold * 255;
     const tEdge = tFull * 1.35;
+
+    // After the intro plays once, switch to the looping clip (if provided).
+    const onEnded = () => {
+      if (!loopSrc) return;
+      video.src = loopSrc;
+      video.loop = true;
+      video.play?.().catch(() => {});
+    };
 
     const draw = () => {
       raf = requestAnimationFrame(draw);
@@ -75,18 +85,20 @@ export function ChromaLogo({
 
     const onErr = () => setFailed(true);
     video.addEventListener('error', onErr);
+    video.addEventListener('ended', onEnded);
     video.play?.().catch(() => {});
     raf = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(raf);
       video.removeEventListener('error', onErr);
+      video.removeEventListener('ended', onEnded);
     };
-  }, [src, height, threshold, keyColor]);
+  }, [src, loopSrc, height, threshold, keyColor]);
 
   if (failed) return <>{fallback}</>;
   return (
     <>
-      <video ref={videoRef} src={src} muted loop playsInline autoPlay style={{ display: 'none' }} />
+      <video ref={videoRef} src={src} muted loop={!loopSrc} playsInline autoPlay style={{ display: 'none' }} />
       <canvas ref={canvasRef} className={className} style={{ height, width: 'auto' }} />
     </>
   );
