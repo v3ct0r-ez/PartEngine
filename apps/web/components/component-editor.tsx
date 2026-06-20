@@ -61,6 +61,8 @@ export function ComponentEditor({
   const [mpn, setMpn] = useState(component?.mpn ?? '');
   const [manufacturerId, setManufacturerId] = useState(component?.manufacturerId ?? '');
   const [tags, setTags] = useState((component?.tags ?? []).join(', '));
+  // Alternative manufacturers / MPNs for the same logical part (single stock).
+  const [aliases, setAliases] = useState('');
   const [params, setParams] = useState<Record<string, unknown>>(component?.parameters ?? {});
   // Economic / stock thresholds.
   const [minQty, setMinQty] = useState('');
@@ -94,6 +96,8 @@ export function ComponentEditor({
     setLastPrice(s(c.lastPrice)); setAvgPrice(s(c.avgPrice)); setCurrency(c.currency || 'EUR');
     setParams(c.parameters ?? {});
     setName(c.name); setInternalCode(c.internalCode); setMpn(c.mpn ?? '');
+    setTags((c.tags ?? []).join(', '));
+    setAliases((c.aliases ?? []).join(', '));
   }, [full.data]);
   // Once the user edits code/name manually we stop auto-generating them.
   // When editing an existing component we never auto-overwrite.
@@ -207,6 +211,7 @@ export function ComponentEditor({
       footprint: footprintValue || undefined,
       manufacturerId: manufacturerId || undefined,
       tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      aliases: aliases ? aliases.split(',').map((a) => a.trim()).filter(Boolean) : [],
       parameters: params,
       minQty: minQty !== '' ? Number(minQty) : undefined,
       idealQty: idealQty !== '' ? Number(idealQty) : undefined,
@@ -275,6 +280,7 @@ export function ComponentEditor({
             </div>
           </Field>
           <Field label="Tag (separati da virgola)"><input className={inp} value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
+          <Field label="Produttori / MPN alternativi (separati da virgola)"><input className={inp} value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="es. Yageo RC0603, Vishay CRCW0603" /></Field>
         </div>
 
         {templates.length > 0 && (

@@ -564,6 +564,8 @@ export interface ComponentInput {
   footprint?: string;
   manufacturerId?: string;
   tags?: string[];
+  /** Alternative identifiers (e.g. other manufacturers' MPNs); searchable. */
+  aliases?: string[];
   parameters?: Record<string, unknown>;
   minQty?: number;
   maxQty?: number;
@@ -576,6 +578,8 @@ export interface ComponentInput {
 export interface ComponentDetail extends ComponentRow {
   parameters: Record<string, unknown>;
   categoryId?: string;
+  tags?: string[];
+  aliases?: string[];
   minQty?: string | number | null;
   maxQty?: string | number | null;
   idealQty?: string | number | null;
