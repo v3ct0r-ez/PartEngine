@@ -63,9 +63,14 @@ export class SeedService implements OnModuleInit {
           });
         }
       }
+
+      // Single-site is the common case: provision one default warehouse so the
+      // user can add locations and stock immediately (multi-warehouse stays an
+      // advanced option). No demo locations/components are seeded.
+      await tx.warehouse.create({ data: { code: 'WH1', name: 'Magazzino principale' } });
     });
 
-    this.logger.log('Seed complete (taxonomy only). Create a warehouse, locations and the first admin at launch.');
+    this.logger.log('Seed complete: taxonomy + default warehouse. Create locations and the first admin at launch.');
   }
 }
 

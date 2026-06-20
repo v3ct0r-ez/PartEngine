@@ -17,7 +17,7 @@ import {
 import { confirmDialog, toast } from '@/components/ui-dialogs';
 import { printLabel } from '@/lib/label';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const KIND_LABEL: Record<LocationKind, string> = {
   zone: 'Zona',
@@ -73,6 +73,26 @@ export default function LocationsPage() {
     onError: (e) => toast((e as Error).message, 'error'),
   });
 
+  // Single-site is the common case: auto-provision one warehouse so the user
+  // never has to think about it, and keep multi-warehouse as an advanced option.
+  const createDefault = useMutation({
+    mutationFn: () => createWarehouse({ code: 'WH1', name: 'Magazzino principale' }),
+    onSuccess: (w) => { refreshWarehouses(); setSelectedId(w.id); },
+  });
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (!autoTried.current && canWrite && warehouses.isSuccess && warehouses.data.length === 0) {
+      autoTried.current = true;
+      createDefault.mutate();
+    }
+  }, [warehouses.isSuccess, warehouses.data, canWrite]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hide the warehouses column when there's a single warehouse (the common case),
+  // unless the user opens the advanced "Gestisci magazzini" panel.
+  const count = warehouses.data?.length ?? 0;
+  const [advanced, setAdvanced] = useState(false);
+  const showWhColumn = count > 1 || advanced;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -84,14 +104,20 @@ export default function LocationsPage() {
         <span className="font-mono"> A-01-1</span>, <span className="font-mono">A-01-2</span>… dove l’ultima cifra è lo slot.
       </p>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr]">
-        {/* Warehouses column */}
+      <div className={showWhColumn ? 'grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr]' : ''}>
+        {/* Warehouses column — shown only with multiple warehouses or in advanced mode */}
+        {showWhColumn && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase text-muted-foreground">Magazzini</h2>
-            {canWrite && (
-              <button onClick={() => setWhModal({ mode: 'create' })} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">+ Nuovo</button>
-            )}
+            <div className="flex gap-1">
+              {canWrite && (
+                <button onClick={() => setWhModal({ mode: 'create' })} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">+ Nuovo</button>
+              )}
+              {count <= 1 && (
+                <button onClick={() => setAdvanced(false)} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">Nascondi</button>
+              )}
+            </div>
           </div>
           <div className="space-y-1">
             {warehouses.data?.map((w) => (
@@ -114,6 +140,7 @@ export default function LocationsPage() {
             {warehouses.data?.length === 0 && <p className="text-xs text-muted-foreground">Nessun magazzino.</p>}
           </div>
         </section>
+        )}
 
         {/* Location tree */}
         <section className="space-y-3">
@@ -121,9 +148,14 @@ export default function LocationsPage() {
             <h2 className="text-xs font-semibold uppercase text-muted-foreground">
               Struttura {selected ? `· ${selected.name}` : ''}
             </h2>
-            {canWrite && selected && (
-              <button onClick={() => setLocModal({ mode: 'create-main' })} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">+ Ubicazione principale</button>
-            )}
+            <div className="flex items-center gap-2">
+              {!showWhColumn && (
+                <button onClick={() => setAdvanced(true)} className="text-xs text-muted-foreground hover:text-foreground hover:underline">Gestisci magazzini</button>
+              )}
+              {canWrite && selected && (
+                <button onClick={() => setLocModal({ mode: 'create-main' })} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">+ Ubicazione principale</button>
+              )}
+            </div>
           </div>
 
           {!selected ? (
