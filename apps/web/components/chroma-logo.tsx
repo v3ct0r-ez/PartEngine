@@ -7,11 +7,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 const GREEN: [number, number, number] = [0, 255, 0];
 
 /**
- * Plays a video with a real-time chroma key: each frame is drawn to a canvas and
- * the green-screen background (#00FF00 by default) is made transparent, so a logo
- * on a green background floats on the page. Includes green-spill suppression on
- * the edges. Same-origin source only (canvas pixel read would otherwise taint).
- * Falls back to `fallback` if the video can't load/play.
+ * Plays a video with a real-time green-screen chroma key (#00FF00 by default) and
+ * auto-crops the result to the logo's content, so the surrounding transparent
+ * margins of the source clip don't add uneven whitespace. The clip plays once and
+ * freezes on the last frame. Same-origin source only (canvas pixel read would
+ * otherwise taint). Falls back to `fallback` if the video can't load/play.
  */
 export function ChromaLogo({
   src,
@@ -34,34 +34,36 @@ export function ChromaLogo({
 
   useEffect(() => {
     const video = videoRef.current;
-    const canvas = canvasRef.current;
+    const canvas = canvasRef.current; // visible (cropped) output
     if (!video || !canvas) return;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
+    const ctx = canvas.getContext('2d');
+    const buf = document.createElement('canvas'); // offscreen full-frame buffer
+    const bctx = buf.getContext('2d', { willReadFrequently: true });
+    if (!ctx || !bctx) return;
 
     let raf = 0;
     let sized = false;
-    let done = false; // stop drawing after the clip ends (freeze last frame)
+    let done = false; // freeze after the clip ends
     const [kr, kg, kb] = keyColor;
     const tFull = threshold * 255;
     const tEdge = tFull * 1.35;
-
-    const onEnded = () => { done = true; }; // play once, then hold the last frame
+    // Union bounding box of opaque pixels across frames (never shrinks, so the
+    // crop is stable and never clips an intro frame).
+    let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
 
     const draw = () => {
       if (!done) raf = requestAnimationFrame(draw);
       if (video.readyState < 2 || !video.videoWidth) return;
       if (!sized) {
-        // Match the canvas bitmap to the video's native size (CSS scales it to
-        // `height` with width:auto), so the aspect ratio is preserved.
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        buf.width = video.videoWidth;
+        buf.height = video.videoHeight;
         sized = true;
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const w = buf.width, h = buf.height;
+      bctx.drawImage(video, 0, 0, w, h);
       let img: ImageData;
       try {
-        img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        img = bctx.getImageData(0, 0, w, h);
       } catch {
         setFailed(true);
         cancelAnimationFrame(raf);
@@ -71,16 +73,35 @@ export function ChromaLogo({
       for (let i = 0; i < d.length; i += 4) {
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const dist = Math.sqrt((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2);
-        if (dist < tFull) d[i + 3] = 0;
-        else if (dist < tEdge) d[i + 3] = Math.round(((dist - tFull) / (tEdge - tFull)) * 255);
-        // Green-spill suppression: pull a dominant green channel down to the
-        // brighter of red/blue so edges don't keep a green fringe.
-        if (g > r && g > b) d[i + 1] = Math.max(r, b);
+        let a = 255;
+        if (dist < tFull) a = 0;
+        else if (dist < tEdge) a = Math.round(((dist - tFull) / (tEdge - tFull)) * 255);
+        d[i + 3] = a;
+        if (g > r && g > b) d[i + 1] = Math.max(r, b); // green-spill suppression
+        if (a > 16) {
+          const px = (i / 4) % w;
+          const py = (i / 4 / w) | 0;
+          if (px < x0) x0 = px;
+          if (px > x1) x1 = px;
+          if (py < y0) y0 = py;
+          if (py > y1) y1 = py;
+        }
       }
-      ctx.putImageData(img, 0, 0);
+      bctx.putImageData(img, 0, 0);
+
+      if (x1 >= x0 && y1 >= y0) {
+        const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+        if (canvas.width !== cw || canvas.height !== ch) {
+          canvas.width = cw;
+          canvas.height = ch;
+        }
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(buf, x0, y0, cw, ch, 0, 0, cw, ch);
+      }
     };
 
     const onErr = () => setFailed(true);
+    const onEnded = () => { done = true; };
     video.addEventListener('error', onErr);
     video.addEventListener('ended', onEnded);
     video.play?.().catch(() => {});
