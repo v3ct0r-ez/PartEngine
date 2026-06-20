@@ -1,5 +1,6 @@
 'use client';
 
+import { ChromaLogo } from '@/components/chroma-logo';
 import { LogoMark } from '@/components/logo';
 import { getAuthStatus, getMe, getToken, login, setupAdmin } from '@/lib/api';
 import { useEffect, useState } from 'react';
@@ -63,20 +64,15 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
   );
 }
 
-/** Animated logo (logo.mp4) with a graceful fall back to the static mark. */
+/** Animated logo (logo.mp4) with its background chroma-keyed out, falling back
+ * to the static mark if the video can't play. */
 function AnimatedLogo() {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <LogoMark size={112} className="mb-4 drop-shadow" />;
   return (
-    <video
+    <ChromaLogo
       src="/logo.mp4"
-      autoPlay
-      muted
-      loop
-      playsInline
-      onError={() => setFailed(true)}
-      className="mx-auto mb-4 rounded-xl drop-shadow"
-      style={{ height: 112, width: 'auto' }}
+      height={112}
+      className="mx-auto mb-4 drop-shadow"
+      fallback={<LogoMark size={112} className="mb-4 drop-shadow" />}
     />
   );
 }

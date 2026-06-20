@@ -13,7 +13,7 @@
           radial-gradient(640px 420px at 50% 115%, rgba(59, 130, 246, 0.16), transparent 70%),
           #0b1020;
       }
-      .brand-img, .brand-vid {
+      .brand-img, .brand-canvas {
         height: 132px; width: auto; max-width: 85%; object-fit: contain;
         filter: drop-shadow(0 8px 28px rgba(139, 92, 246, 0.45));
         animation: rise 0.5s ease both;
@@ -43,9 +43,10 @@
     </style>
   </head>
   <body>
-    <!-- Animated logo (logo.mp4). Falls back to the static logo if the video is
-         absent or can't play. Drop apps/desktop/static/logo.mp4 to enable it. -->
-    <video class="brand-vid" src="logo.mp4" autoplay muted loop playsinline></video>
+    <!-- Animated logo (logo.mp4), background chroma-keyed onto a canvas. Falls
+         back to the static logo if the video is absent or can't play. -->
+    <canvas class="brand-canvas"></canvas>
+    <video class="brand-vid" src="logo.mp4" muted loop playsinline style="display: none"></video>
     <img class="brand-img" src="logo-splash.png" alt="PartEngine" style="display: none" />
     <div class="logo">PartEngine</div>
     <div class="sub">Avvio in corso… il primo avvio può richiedere qualche minuto.</div>
@@ -53,19 +54,47 @@
     <div class="footer">Non chiudere la finestra.</div>
 
     <script>
-      // Show the static logo only if the MP4 genuinely fails to load/decode.
+      // Chroma-key the MP4 background onto the canvas; fall back to the static
+      // logo if it can't load/decode.
       (function () {
         const vid = document.querySelector('.brand-vid');
+        const canvas = document.querySelector('.brand-canvas');
         const img = document.querySelector('.brand-img');
-        if (!vid) { if (img) img.style.display = 'block'; return; }
-        vid.addEventListener('error', () => {
-          vid.style.display = 'none';
+        const H = 132;
+        function fallback() {
+          if (canvas) canvas.style.display = 'none';
           if (img) img.style.display = 'block';
-        });
-        // Kick playback (muted autoplay is allowed); retry once it can play.
+        }
+        if (!vid || !canvas) return fallback();
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return fallback();
+        vid.addEventListener('error', fallback);
+        let key = null;
+        const tFull = 0.2 * 255, tEdge = tFull * 1.7;
+        function draw() {
+          requestAnimationFrame(draw);
+          if (vid.readyState < 2 || !vid.videoWidth) return;
+          if (!canvas.width) {
+            const ratio = vid.videoWidth / vid.videoHeight || 1;
+            canvas.width = Math.max(1, Math.round(H * ratio));
+            canvas.height = H;
+          }
+          ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+          let f;
+          try { f = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch (e) { return fallback(); }
+          const d = f.data;
+          if (!key) key = [d[0], d[1], d[2]];
+          for (let i = 0; i < d.length; i += 4) {
+            const dist = Math.sqrt((d[i] - key[0]) ** 2 + (d[i + 1] - key[1]) ** 2 + (d[i + 2] - key[2]) ** 2);
+            if (dist < tFull) d[i + 3] = 0;
+            else if (dist < tEdge) d[i + 3] = Math.round(((dist - tFull) / (tEdge - tFull)) * 255);
+          }
+          ctx.putImageData(f, 0, 0);
+        }
         const tryPlay = () => { const p = vid.play && vid.play(); if (p && p.catch) p.catch(() => {}); };
         vid.addEventListener('canplay', tryPlay);
         tryPlay();
+        requestAnimationFrame(draw);
       })();
 
       const list = document.getElementById('steps');
