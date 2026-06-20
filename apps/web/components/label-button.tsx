@@ -19,7 +19,9 @@ export function LabelButton({ internalCode, name }: { internalCode: string; name
   async function open() {
     setBusy(true);
     try {
-      setDataUrl(await QRCode.toDataURL(internalCode, { margin: 1, width: 240 }));
+      // Higher resolution than the printed size so the QR stays crisp on a
+      // 203-dpi thermal head (26mm ≈ 207px).
+      setDataUrl(await QRCode.toDataURL(internalCode, { margin: 1, width: 360 }));
     } finally {
       setBusy(false);
     }
@@ -40,15 +42,21 @@ export function LabelButton({ internalCode, name }: { internalCode: string; name
     doc.open();
     doc.write(`<!doctype html><html><head><title>${escapeHtml(internalCode)}</title>
       <style>
-        @page { size: 50mm 30mm; margin: 2mm; }
-        body { font-family: system-ui, sans-serif; margin: 0; display: flex; gap: 10px; align-items: center; padding: 6px; }
-        img { width: 110px; height: 110px; }
-        .t { font-size: 13px; }
-        .code { font-family: monospace; font-weight: 700; }
-        .name { color: #444; font-size: 11px; }
+        @page { size: 50mm 30mm; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; }
+        /* 2mm safe padding inside the 50x30 label (printers clip the very edge). */
+        .label { width: 50mm; height: 30mm; padding: 2mm; display: flex; align-items: center; gap: 2mm; }
+        .qr { width: 26mm; height: 26mm; flex: 0 0 26mm; image-rendering: pixelated; }
+        .info { flex: 1; min-width: 0; overflow: hidden; }
+        .code { font-family: ui-monospace, monospace; font-weight: 700; font-size: 3.2mm; line-height: 1.1; word-break: break-all; }
+        .name { font-family: system-ui, sans-serif; font-size: 2.3mm; line-height: 1.15; margin-top: 1mm;
+                display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       </style></head><body>
-        <img src="${dataUrl}" />
-        <div class="t"><div class="code">${escapeHtml(internalCode)}</div><div class="name">${escapeHtml(name)}</div></div>
+        <div class="label">
+          <img class="qr" src="${dataUrl}" />
+          <div class="info"><div class="code">${escapeHtml(internalCode)}</div><div class="name">${escapeHtml(name)}</div></div>
+        </div>
       </body></html>`);
     doc.close();
     const win = iframe.contentWindow!;
