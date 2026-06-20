@@ -69,15 +69,16 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return fallback();
         vid.addEventListener('error', fallback);
-        let key = null;
+        let key = null, sized = false;
         const tFull = 0.2 * 255, tEdge = tFull * 1.7;
         function draw() {
           requestAnimationFrame(draw);
           if (vid.readyState < 2 || !vid.videoWidth) return;
-          if (!canvas.width) {
-            const ratio = vid.videoWidth / vid.videoHeight || 1;
-            canvas.width = Math.max(1, Math.round(H * ratio));
-            canvas.height = H;
+          if (!sized) {
+            // Native video size; CSS scales it to height H with width:auto.
+            canvas.width = vid.videoWidth;
+            canvas.height = vid.videoHeight;
+            sized = true;
           }
           ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
           let f;

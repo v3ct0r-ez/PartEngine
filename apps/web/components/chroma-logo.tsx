@@ -34,6 +34,7 @@ export function ChromaLogo({
     if (!ctx) return;
 
     let raf = 0;
+    let sized = false;
     let key: [number, number, number] | null = null;
     const tFull = threshold * 255;
     const tEdge = tFull * 1.7;
@@ -41,10 +42,12 @@ export function ChromaLogo({
     const draw = () => {
       raf = requestAnimationFrame(draw);
       if (video.readyState < 2 || !video.videoWidth) return;
-      if (!canvas.width) {
-        const ratio = video.videoWidth / video.videoHeight || 1;
-        canvas.width = Math.max(1, Math.round(height * ratio));
-        canvas.height = height;
+      if (!sized) {
+        // Match the canvas bitmap to the video's native size (CSS scales it to
+        // `height` with width:auto), so the aspect ratio is preserved.
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        sized = true;
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       let img: ImageData;
