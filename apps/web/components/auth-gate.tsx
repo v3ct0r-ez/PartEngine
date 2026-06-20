@@ -53,13 +53,31 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
     >
       <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-background/95 p-10 shadow-xl backdrop-blur">
         <div className="text-center">
-          <LogoMark size={112} className="mb-4 drop-shadow" />
+          <AnimatedLogo />
           <div className="text-2xl font-bold tracking-tight">PartEngine</div>
           <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
         </div>
         {children}
       </div>
     </div>
+  );
+}
+
+/** Animated logo (logo.mp4) with a graceful fall back to the static mark. */
+function AnimatedLogo() {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <LogoMark size={112} className="mb-4 drop-shadow" />;
+  return (
+    <video
+      src="/logo.mp4"
+      autoPlay
+      muted
+      loop
+      playsInline
+      onError={() => setFailed(true)}
+      className="mx-auto mb-4 rounded-xl drop-shadow"
+      style={{ height: 112, width: 'auto' }}
+    />
   );
 }
 
