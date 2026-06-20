@@ -11,15 +11,13 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
  */
 export function ChromaLogo({
   src,
-  loopSrc,
   height = 112,
   keyColor = [0, 255, 0],
   threshold = 0.45,
   className = '',
   fallback = null,
 }: {
-  src: string; // intro, played once
-  loopSrc?: string; // played in a loop after the intro ends
+  src: string; // played once, then frozen on the last frame
   height?: number;
   keyColor?: [number, number, number];
   threshold?: number; // 0..1 colour distance to the key for full transparency
@@ -39,20 +37,15 @@ export function ChromaLogo({
 
     let raf = 0;
     let sized = false;
+    let done = false; // stop drawing after the clip ends (freeze last frame)
     const [kr, kg, kb] = keyColor;
     const tFull = threshold * 255;
     const tEdge = tFull * 1.35;
 
-    // After the intro plays once, switch to the looping clip (if provided).
-    const onEnded = () => {
-      if (!loopSrc) return;
-      video.src = loopSrc;
-      video.loop = true;
-      video.play?.().catch(() => {});
-    };
+    const onEnded = () => { done = true; }; // play once, then hold the last frame
 
     const draw = () => {
-      raf = requestAnimationFrame(draw);
+      if (!done) raf = requestAnimationFrame(draw);
       if (video.readyState < 2 || !video.videoWidth) return;
       if (!sized) {
         // Match the canvas bitmap to the video's native size (CSS scales it to
@@ -93,12 +86,12 @@ export function ChromaLogo({
       video.removeEventListener('error', onErr);
       video.removeEventListener('ended', onEnded);
     };
-  }, [src, loopSrc, height, threshold, keyColor]);
+  }, [src, height, threshold, keyColor]);
 
   if (failed) return <>{fallback}</>;
   return (
     <>
-      <video ref={videoRef} src={src} muted loop={!loopSrc} playsInline autoPlay style={{ display: 'none' }} />
+      <video ref={videoRef} src={src} muted playsInline autoPlay style={{ display: 'none' }} />
       <canvas ref={canvasRef} className={className} style={{ height, width: 'auto' }} />
     </>
   );

@@ -69,11 +69,12 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return fallback();
         vid.addEventListener('error', fallback);
-        let sized = false;
+        let sized = false, done = false;
         const kr = 0, kg = 255, kb = 0;             // green screen #00FF00
         const tFull = 0.45 * 255, tEdge = tFull * 1.35;
+        vid.addEventListener('ended', function () { done = true; }); // play once, freeze
         function draw() {
-          requestAnimationFrame(draw);
+          if (!done) requestAnimationFrame(draw);
           if (vid.readyState < 2 || !vid.videoWidth) return;
           if (!sized) {
             // Native video size; CSS scales it to height H with width:auto.
@@ -95,12 +96,6 @@
           ctx.putImageData(f, 0, 0);
         }
         const tryPlay = () => { const p = vid.play && vid.play(); if (p && p.catch) p.catch(() => {}); };
-        // Play the intro (logo.mp4) once, then switch to logo_loop.mp4 looping.
-        vid.addEventListener('ended', function () {
-          vid.src = 'logo_loop.mp4';
-          vid.loop = true;
-          tryPlay();
-        });
         vid.addEventListener('canplay', tryPlay);
         tryPlay();
         requestAnimationFrame(draw);
