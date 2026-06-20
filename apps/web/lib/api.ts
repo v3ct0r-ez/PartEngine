@@ -533,6 +533,13 @@ export function updateCategoryField(fieldId: string, body: Partial<CategoryField
 export function deleteCategoryField(fieldId: string) {
   return request<{ deleted: boolean }>(`/categories/fields/${fieldId}`, { method: 'DELETE' });
 }
+/** Persist the display order of a category's parameters (drag-and-drop). */
+export function reorderCategoryFields(categoryId: string, fieldIds: string[]) {
+  return request<{ ok: boolean }>(`/categories/${categoryId}/fields/reorder`, {
+    method: 'PATCH',
+    body: JSON.stringify({ fieldIds }),
+  });
+}
 
 // ── Manufacturers ─────────────────────────────────────────────
 export interface Manufacturer {

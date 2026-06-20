@@ -6,6 +6,7 @@ import {
   deleteCategory,
   deleteCategoryField,
   listCategories,
+  reorderCategoryFields,
   updateCategory,
   updateCategoryField,
   type Category,
@@ -13,7 +14,7 @@ import {
   type FieldType,
 } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const FIELD_TYPES: FieldType[] = ['STRING', 'TEXT', 'NUMBER', 'QUANTITY', 'BOOLEAN', 'ENUM', 'DATE'];
 const inp = 'rounded border border-border bg-background px-2 py-1.5 text-sm';
@@ -164,15 +165,45 @@ function CategoryFields({ category, onChange }: { category: Category; onChange: 
   });
   const del = useMutation({ mutationFn: deleteCategoryField, onSuccess: onChange });
 
+  // Drag-and-drop ordering of the category's parameters (persisted as sortOrder).
+  // `items` mirrors the saved order and is updated optimistically on drop.
+  const [items, setItems] = useState<CategoryField[]>(category.fields);
+  useEffect(() => setItems(category.fields), [category.fields]);
+  const dragId = useRef<string | null>(null);
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) => reorderCategoryFields(category.id, ids),
+    onSuccess: onChange,
+  });
+  function handleDrop(targetId: string) {
+    const from = dragId.current;
+    dragId.current = null;
+    if (!from || from === targetId) return;
+    const ids = items.map((f) => f.id);
+    ids.splice(ids.indexOf(from), 1);
+    ids.splice(ids.indexOf(targetId), 0, from);
+    setItems(ids.map((id) => items.find((f) => f.id === id)!)); // optimistic
+    reorder.mutate(ids);
+  }
+
   return (
     <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">Trascina <span className="font-mono">☰</span> per cambiare l’ordine dei parametri (usato nella scheda del componente).</p>
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-          <tr><th className="px-3 py-2">Chiave</th><th className="px-3 py-2">Etichetta</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Unità</th><th className="px-3 py-2">Opzioni/Obbl.</th><th /></tr>
+          <tr><th className="w-6" /><th className="px-3 py-2">Chiave</th><th className="px-3 py-2">Etichetta</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Unità</th><th className="px-3 py-2">Opzioni/Obbl.</th><th /></tr>
         </thead>
         <tbody>
-          {category.fields.map((f) => <EditableFieldRow key={f.id} field={f} onSaved={onChange} onDelete={() => del.mutate(f.id)} />)}
-          {category.fields.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-muted-foreground">Nessun parametro.</td></tr>}
+          {items.map((f) => (
+            <EditableFieldRow
+              key={f.id}
+              field={f}
+              onSaved={onChange}
+              onDelete={() => del.mutate(f.id)}
+              onDragStart={() => { dragId.current = f.id; }}
+              onDropRow={() => handleDrop(f.id)}
+            />
+          ))}
+          {items.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-muted-foreground">Nessun parametro.</td></tr>}
         </tbody>
       </table>
 
@@ -194,7 +225,19 @@ function Field({ l, children }: { l: string; children: React.ReactNode }) {
   return <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">{l}</span>{children}</label>;
 }
 
-function EditableFieldRow({ field, onSaved, onDelete }: { field: CategoryField; onSaved: () => void; onDelete: () => void }) {
+function EditableFieldRow({
+  field,
+  onSaved,
+  onDelete,
+  onDragStart,
+  onDropRow,
+}: {
+  field: CategoryField;
+  onSaved: () => void;
+  onDelete: () => void;
+  onDragStart: () => void;
+  onDropRow: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(field.label);
   const [type, setType] = useState<FieldType>(field.type);
@@ -213,7 +256,14 @@ function EditableFieldRow({ field, onSaved, onDelete }: { field: CategoryField; 
 
   if (!editing) {
     return (
-      <tr className="border-t border-border">
+      <tr
+        className="border-t border-border"
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDropRow}
+      >
+        <td className="cursor-grab select-none px-2 text-center text-muted-foreground" title="Trascina per riordinare">☰</td>
         <td className="px-3 py-2 font-mono text-xs">{field.key}</td>
         <td className="px-3 py-2">{field.label}</td>
         <td className="px-3 py-2">{field.type}</td>
@@ -228,6 +278,7 @@ function EditableFieldRow({ field, onSaved, onDelete }: { field: CategoryField; 
   }
   return (
     <tr className="border-t border-border bg-muted/30">
+      <td className="px-2 text-center text-muted-foreground">☰</td>
       <td className="px-3 py-2 font-mono text-xs">{field.key}</td>
       <td className="px-2 py-2"><input className={inp} value={label} onChange={(e) => setLabel(e.target.value)} /></td>
       <td className="px-2 py-2"><select className={inp} value={type} onChange={(e) => setType(e.target.value as FieldType)}>{FIELD_TYPES.map((t) => <option key={t}>{t}</option>)}</select></td>

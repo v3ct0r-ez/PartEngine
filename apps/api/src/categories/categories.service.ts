@@ -123,6 +123,25 @@ export class CategoriesService {
     return { id: fieldId, deleted: true };
   }
 
+  /** Persist a new display order for a category's fields (drag-and-drop). */
+  async reorderFields(categoryId: string, fieldIds: string[]) {
+    await this.assertExists(categoryId);
+    const fields = await this.prisma.categoryField.findMany({
+      where: { categoryId },
+      select: { id: true },
+    });
+    const owned = new Set(fields.map((f) => f.id));
+    if (fieldIds.length !== owned.size || !fieldIds.every((id) => owned.has(id))) {
+      throw new BadRequestException('fieldIds must list exactly this category’s fields');
+    }
+    await this.prisma.$transaction(
+      fieldIds.map((id, i) =>
+        this.prisma.categoryField.update({ where: { id }, data: { sortOrder: i } }),
+      ),
+    );
+    return { ok: true };
+  }
+
   private async assertExists(id: string) {
     const c = await this.prisma.category.findUnique({ where: { id } });
     if (!c) throw new NotFoundException('Category not found');

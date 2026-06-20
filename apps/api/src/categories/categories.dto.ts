@@ -63,3 +63,8 @@ export class UpdateFieldDto {
   @IsOptional() @IsBoolean() isSortable?: boolean;
   @IsOptional() @Type(() => Number) sortOrder?: number;
 }
+
+export class ReorderFieldsDto {
+  /** Field ids in the desired display order. */
+  @IsArray() @IsString({ each: true }) fieldIds: string[];
+}

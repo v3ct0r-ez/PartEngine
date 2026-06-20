@@ -4,6 +4,7 @@ import { Roles } from '../auth/roles.decorator';
 import {
   CreateCategoryDto,
   FieldDto,
+  ReorderFieldsDto,
   UpdateCategoryDto,
   UpdateFieldDto,
 } from './categories.dto';
@@ -50,6 +51,12 @@ export class CategoriesController {
   @Post(':id/fields')
   addField(@Param('id') id: string, @Body() dto: FieldDto) {
     return this.categories.addField(id, dto);
+  }
+
+  @Roles('SUPER_ADMIN', 'WAREHOUSE_MANAGER')
+  @Patch(':id/fields/reorder')
+  reorderFields(@Param('id') id: string, @Body() dto: ReorderFieldsDto) {
+    return this.categories.reorderFields(id, dto.fieldIds);
   }
 
   @Roles('SUPER_ADMIN', 'WAREHOUSE_MANAGER')
