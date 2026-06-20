@@ -55,8 +55,10 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
       <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-background/95 p-10 shadow-xl backdrop-blur">
         <div className="text-center">
           <AnimatedLogo />
-          <div className="text-2xl font-bold tracking-tight">PartEngine</div>
-          <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
+          <div className="-mt-4 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-400 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent">
+            PartEngine
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
         </div>
         {children}
       </div>
@@ -71,8 +73,8 @@ function AnimatedLogo() {
     <ChromaLogo
       src="/logo.mp4"
       height={168}
-      className="mx-auto mb-4 drop-shadow"
-      fallback={<LogoMark size={168} className="mb-4 drop-shadow" />}
+      className="mx-auto drop-shadow"
+      fallback={<LogoMark size={168} />}
     />
   );
 }
