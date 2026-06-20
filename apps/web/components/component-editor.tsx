@@ -22,6 +22,8 @@ import {
   type FieldTemplate,
 } from '@partengine/core';
 import { confirmDialog, promptDialog } from '@/components/ui-dialogs';
+import { InfoDot } from '@/components/info-dot';
+import { lookupAcronym } from '@/lib/glossary';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -269,7 +271,7 @@ export function ComponentEditor({
               {leaves.filter((l) => !l.parentId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
-          <Field label="MPN"><input className={inp} value={mpn ?? ''} onChange={(e) => setMpn(e.target.value)} /></Field>
+          <Field label="MPN" hint={lookupAcronym('MPN')}><input className={inp} value={mpn ?? ''} onChange={(e) => setMpn(e.target.value)} /></Field>
           <Field label="Produttore">
             <div className="flex gap-1">
               <select className={inp} value={manufacturerId ?? ''} onChange={(e) => setManufacturerId(e.target.value)}>
@@ -288,7 +290,7 @@ export function ComponentEditor({
             <h3 className="mb-2 mt-5 text-xs font-semibold uppercase text-muted-foreground">Parametri ({category?.name})</h3>
             <div className="grid grid-cols-2 gap-3">
               {templates.map((f) => (
-                <Field key={f.key} label={`${f.label}${f.required ? ' *' : ''}${f.unit && f.type === 'QUANTITY' ? ` (${f.unit})` : ''}`} err={fieldErrors[f.key]}>
+                <Field key={f.key} label={`${f.label}${f.required ? ' *' : ''}${f.unit && f.type === 'QUANTITY' ? ` (${f.unit})` : ''}`} hint={lookupAcronym(f.label)} err={fieldErrors[f.key]}>
                   <FieldInput field={f} value={params[f.key]} onChange={(v) => setParams((p) => ({ ...p, [f.key]: v }))} />
                 </Field>
               ))}
@@ -341,10 +343,10 @@ export function ComponentEditor({
 
 const inp = 'w-full rounded border border-border bg-background px-2 py-1.5 text-sm';
 
-function Field({ label, err, children }: { label: string; err?: string; children: React.ReactNode }) {
+function Field({ label, err, hint, children }: { label: string; err?: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}{hint && <InfoDot text={hint} />}</span>
       {children}
       {err && <span className="text-xs text-red-500">{err}</span>}
     </label>
