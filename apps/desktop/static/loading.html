@@ -69,8 +69,9 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return fallback();
         vid.addEventListener('error', fallback);
-        let key = null, sized = false;
-        const tFull = 0.2 * 255, tEdge = tFull * 1.7;
+        let sized = false;
+        const kr = 0, kg = 255, kb = 0;             // green screen #00FF00
+        const tFull = 0.45 * 255, tEdge = tFull * 1.35;
         function draw() {
           requestAnimationFrame(draw);
           if (vid.readyState < 2 || !vid.videoWidth) return;
@@ -84,11 +85,12 @@
           let f;
           try { f = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch (e) { return fallback(); }
           const d = f.data;
-          if (!key) key = [d[0], d[1], d[2]];
           for (let i = 0; i < d.length; i += 4) {
-            const dist = Math.sqrt((d[i] - key[0]) ** 2 + (d[i + 1] - key[1]) ** 2 + (d[i + 2] - key[2]) ** 2);
+            const r = d[i], g = d[i + 1], b = d[i + 2];
+            const dist = Math.sqrt((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2);
             if (dist < tFull) d[i + 3] = 0;
             else if (dist < tEdge) d[i + 3] = Math.round(((dist - tFull) / (tEdge - tFull)) * 255);
+            if (g > r && g > b) d[i + 1] = Math.max(r, b); // green-spill suppression
           }
           ctx.putImageData(f, 0, 0);
         }
