@@ -15,6 +15,7 @@ import {
   type WarehouseWithLocations,
 } from '@/lib/api';
 import { confirmDialog, toast } from '@/components/ui-dialogs';
+import { printLabel } from '@/lib/label';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -195,13 +196,23 @@ function LocationRow({
           <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{isSlot ? 'Slot' : KIND_LABEL[node.kind as LocationKind] ?? node.kind}</span>
           {node.barcode && <span className="text-[11px] text-muted-foreground">Barcode: {node.barcode}</span>}
         </div>
-        {canWrite && (
-          <div className="flex gap-1 text-xs">
-            {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">+ Slot</button>}
-            <button onClick={() => onEdit(node, isSlot)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">Modifica</button>
-            <button onClick={() => onDelete(node.id, node.code)} className="rounded border border-border px-2 py-0.5 text-red-600 hover:bg-muted">Elimina</button>
-          </div>
-        )}
+        <div className="flex gap-1 text-xs">
+          {/* Slots get a QR label; root locations get a text-only "A-01" label. */}
+          <button
+            onClick={() => printLabel({ code: node.code, qr: isSlot })}
+            className="rounded border border-border px-2 py-0.5 hover:bg-muted"
+            title={isSlot ? 'Stampa etichetta QR (50×30)' : 'Stampa etichetta testo (50×30)'}
+          >
+            🏷 Etichetta
+          </button>
+          {canWrite && (
+            <>
+              {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">+ Slot</button>}
+              <button onClick={() => onEdit(node, isSlot)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">Modifica</button>
+              <button onClick={() => onDelete(node.id, node.code)} className="rounded border border-border px-2 py-0.5 text-red-600 hover:bg-muted">Elimina</button>
+            </>
+          )}
+        </div>
       </div>
       {node.children.length > 0 && (
         <ul className="mt-1 space-y-1">
