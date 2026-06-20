@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+// Stable default so the effect deps don't change every render (a fresh
+// [0,255,0] literal would re-run the effect on each keystroke and restart the clip).
+const GREEN: [number, number, number] = [0, 255, 0];
+
 /**
  * Plays a video with a real-time chroma key: each frame is drawn to a canvas and
  * the green-screen background (#00FF00 by default) is made transparent, so a logo
@@ -12,7 +16,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 export function ChromaLogo({
   src,
   height = 112,
-  keyColor = [0, 255, 0],
+  keyColor = GREEN,
   threshold = 0.45,
   className = '',
   fallback = null,
@@ -86,7 +90,9 @@ export function ChromaLogo({
       video.removeEventListener('error', onErr);
       video.removeEventListener('ended', onEnded);
     };
-  }, [src, height, threshold, keyColor]);
+    // Depend on the key colour by value (not array reference) so re-renders
+    // (e.g. typing in a form) don't restart the clip.
+  }, [src, height, threshold, keyColor[0], keyColor[1], keyColor[2]]);
 
   if (failed) return <>{fallback}</>;
   return (
