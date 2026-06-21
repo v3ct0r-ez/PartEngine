@@ -53,7 +53,9 @@ async function qrDataUrlWithLogo(text: string, size: number): Promise<string> {
     ctx.fillStyle = '#fff';
     roundRectPath(ctx, lx - pad, ly - pad, lw + pad * 2, lh + pad * 2, (lh + pad * 2) * 0.22);
     ctx.fill();
+    ctx.filter = 'grayscale(100%)'; // logo in greyscale
     ctx.drawImage(logo, lx, ly, lw, lh);
+    ctx.filter = 'none';
   } catch {
     /* logo failed to load — keep the plain QR */
   }
