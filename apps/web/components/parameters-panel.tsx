@@ -1,8 +1,7 @@
 'use client';
 
-import { InfoDot } from '@/components/info-dot';
+import { AcronymLabel } from '@/components/info-dot';
 import type { Category, CategoryField, ComponentRow } from '@/lib/api';
-import { lookupAcronym } from '@/lib/glossary';
 import { formatEngineering, parseQuantity } from '@partengine/core';
 
 /** Human-readable value for a parameter, honouring its field type/unit. */
@@ -47,7 +46,7 @@ export function ParametersPanel({
         <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
           {rows.map((f) => (
             <div key={f.key} className="flex items-baseline justify-between gap-3 border-b border-border/60 py-1.5 text-sm">
-              <dt className="text-muted-foreground">{f.label}{(() => { const h = lookupAcronym(f.label); return h ? <InfoDot text={h} /> : null; })()}</dt>
+              <dt className="text-muted-foreground"><AcronymLabel label={f.label} /></dt>
               <dd className="font-medium">{formatValue(f, params[f.key])}</dd>
             </div>
           ))}

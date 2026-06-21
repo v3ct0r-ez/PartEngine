@@ -346,7 +346,7 @@ const inp = 'w-full rounded border border-border bg-background px-2 py-1.5 text-
 function Field({ label, err, hint, children }: { label: string; err?: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}{hint && <InfoDot text={hint} />}</span>
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">{label}{hint && <InfoDot text={hint} />}</span>
       {children}
       {err && <span className="text-xs text-red-500">{err}</span>}
     </label>
