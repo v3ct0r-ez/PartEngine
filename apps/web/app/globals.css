@@ -33,11 +33,10 @@ body {
 
 /* Slim, fully-rounded, theme-aware scrollbars (sidebar + scrollable panes). The
    thumb is a floating pill (transparent padding via background-clip) with a
-   minimum length, soft translucent colour and a smooth brighten on hover. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
-}
+   minimum length, soft translucent colour and a smooth brighten on hover.
+   NB: do NOT set the standard `scrollbar-width`/`scrollbar-color` here — in
+   recent Chromium (Electron) that switches to the system "fluent" scrollbar
+   and disables all `::-webkit-scrollbar` styling below (no rounding). */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-track {
   background: transparent;
