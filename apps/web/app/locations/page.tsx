@@ -15,7 +15,7 @@ import {
   type WarehouseWithLocations,
 } from '@/lib/api';
 import { confirmDialog, toast } from '@/components/ui-dialogs';
-import { printLabel } from '@/lib/label';
+import { LabelPreviewModal } from '@/components/label-preview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
@@ -217,6 +217,7 @@ function LocationRow({
   onDelete: (id: string, code: string) => void;
 }) {
   const isSlot = depth > 0;
+  const [labelOpen, setLabelOpen] = useState(false);
   return (
     <li>
       <div
@@ -231,12 +232,15 @@ function LocationRow({
         <div className="flex gap-1 text-xs">
           {/* Slots get a QR label; root locations get a text-only "A-01" label. */}
           <button
-            onClick={() => printLabel({ code: node.code, qr: isSlot })}
+            onClick={() => setLabelOpen(true)}
             className="rounded border border-border px-2 py-0.5 hover:bg-muted"
-            title={isSlot ? 'Stampa etichetta QR (50×30)' : 'Stampa etichetta testo (50×30)'}
+            title={isSlot ? 'Anteprima etichetta QR (50×30)' : 'Anteprima etichetta testo (50×30)'}
           >
             🏷 Etichetta
           </button>
+          {labelOpen && (
+            <LabelPreviewModal spec={{ code: node.code, qr: isSlot }} onClose={() => setLabelOpen(false)} />
+          )}
           {canWrite && (
             <>
               {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">+ Slot</button>}
