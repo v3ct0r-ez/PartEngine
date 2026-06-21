@@ -65,7 +65,12 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
           {data?.items.map((c) => (
             <tr
               key={c.id}
-              onClick={() => onRowClick?.(c)}
+              onClick={() => {
+                // Don't open the component if the click was actually a text
+                // selection (e.g. the user is selecting the code to copy it).
+                if (window.getSelection()?.toString()) return;
+                onRowClick?.(c);
+              }}
               className={`border-t border-border hover:bg-muted/40 ${onRowClick ? 'cursor-pointer' : ''}`}
             >
               {columns.map((key) => (
