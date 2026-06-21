@@ -22,6 +22,9 @@ const OPS: { value: MovementType; label: string; needs: ('from' | 'to')[] }[] = 
 const HEALTH: Record<string, string> = {
   OK: 'text-green-600', LOW: 'text-amber-600', CRITICAL: 'text-orange-600', OUT_OF_STOCK: 'text-red-600',
 };
+const HEALTH_LABEL: Record<string, string> = {
+  OK: 'Disponibile', LOW: 'Scorta bassa', CRITICAL: 'Scorta critica', OUT_OF_STOCK: 'Esaurito',
+};
 
 /** Warehouse operations for one component: stock, load/unload/transfer/adjust,
  * allocation (reserve/release) and movement history. Reused by the unified
@@ -105,7 +108,7 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold">{stock.data.available}</span>
               <span className="text-sm text-muted-foreground">disponibili</span>
-              <span className={`text-xs font-semibold ${HEALTH[stock.data.health]}`}>{stock.data.health.replace(/_/g, ' ')}</span>
+              <span className={`rounded-full border border-current/30 px-2 py-0.5 text-xs font-semibold ${HEALTH[stock.data.health]}`}>{HEALTH_LABEL[stock.data.health] ?? stock.data.health.replace(/_/g, ' ')}</span>
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               Totale {stock.data.quantity} · Riservati {stock.data.reserved} · In ordine {stock.data.onOrder} · Min {stock.data.minQty}

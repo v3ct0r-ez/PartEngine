@@ -11,6 +11,13 @@ const KIND_STYLES: Record<string, string> = {
   ORDER_LATE: 'text-purple-600',
   MISSING_DATASHEET: 'text-blue-600',
 };
+const KIND_LABEL: Record<string, string> = {
+  OUT_OF_STOCK: 'Esaurito',
+  CRITICAL_STOCK: 'Scorta critica',
+  LOW_STOCK: 'Scorta bassa',
+  ORDER_LATE: 'Ordine in ritardo',
+  MISSING_DATASHEET: 'Datasheet mancante',
+};
 
 /** Notification bell with unread badge and a dropdown list. Polls the alert engine. */
 export function NotificationsBell() {
@@ -66,7 +73,7 @@ export function NotificationsBell() {
               onClick={() => read.mutate(n.id)}
               className={`flex w-full flex-col items-start gap-0.5 border-b border-border px-3 py-2 text-left text-sm hover:bg-muted ${n.isRead ? 'opacity-50' : ''}`}
             >
-              <span className={`text-xs font-semibold ${KIND_STYLES[n.kind] ?? ''}`}>{n.kind.replace(/_/g, ' ')}</span>
+              <span className={`rounded-full border border-current/30 px-2 py-0.5 text-xs font-semibold ${KIND_STYLES[n.kind] ?? ''}`}>{KIND_LABEL[n.kind] ?? n.kind.replace(/_/g, ' ')}</span>
               <span>{n.message}</span>
               <span className="text-xs text-muted-foreground">
                 {new Date(n.createdAt).toLocaleString()}
