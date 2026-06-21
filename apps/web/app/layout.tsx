@@ -3,7 +3,7 @@ import './globals.css';
 import { AccountMenu } from '@/components/account-menu';
 import { AppVersion } from '@/components/app-version';
 import { AuthGate } from '@/components/auth-gate';
-import { AutoAcronyms } from '@/components/info-dot';
+import { SideNav } from '@/components/side-nav';
 import { DesktopTitleBar } from '@/components/desktop-titlebar';
 import { DialogHost } from '@/components/ui-dialogs';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -30,33 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="min-h-0 flex-1 overflow-hidden">
           <AuthGate>
           <div className="flex h-full">
-            <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-muted/30 p-4 md:flex">
-              <Logo size={44} className="mb-6" />
-              <nav className="space-y-1 text-sm">
-                {[
-                  ['Dashboard', '/'],
-                  ['Componenti', '/components'],
-                  ['Categorie', '/categories'],
-                  ['Ubicazioni', '/locations'],
-                  ['Movimenti', '/movements'],
-                  ['BOM', '/boms'],
-                  ['Produttori', '/manufacturers'],
-                  ['Fornitori', '/suppliers'],
-                  ['Ordini', '/orders'],
-                  ['Utenti', '/users'],
-                  ['Preferenze', '/preferences'],
-                  ['Impostazioni', '/settings'],
-                ].map(([label, href]) => (
-                  <a
-                    key={href}
-                    href={href}
-                    className="block rounded-md px-3 py-2 hover:bg-muted"
-                  >
-                    <AutoAcronyms>{label}</AutoAcronyms>
-                  </a>
-                ))}
-              </nav>
-              <div className="mt-auto pt-4">
+            <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-muted/30 px-3 py-4 md:flex">
+              <Logo size={44} className="mb-6 px-2" />
+              <SideNav />
+              <div className="mt-auto px-2 pt-4">
                 <AppVersion />
               </div>
             </aside>
