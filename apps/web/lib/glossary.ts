@@ -2,7 +2,6 @@
 // Keys are normalised (uppercase, alphanumerics only), so "RDS(on)" matches RDSON.
 const ACRONYMS: Record<string, string> = {
   MPN: 'Manufacturer Part Number — codice prodotto del produttore',
-  BOM: 'Bill of Materials — distinta base (elenco dei componenti)',
   MOQ: 'Minimum Order Quantity — quantità minima ordinabile',
   SKU: 'Stock Keeping Unit — codice articolo del fornitore',
   QR: 'Quick Response code — codice a barre bidimensionale',
