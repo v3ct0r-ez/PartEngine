@@ -4,7 +4,7 @@ import { LabelPreviewModal } from '@/components/label-preview';
 import { useState } from 'react';
 
 /** Small QR-code glyph used in place of the literal text "QR". */
-function QrIcon({ className = '' }: { className?: string }) {
+export function QrIcon({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" className={className}>
       {/* three finder squares */}

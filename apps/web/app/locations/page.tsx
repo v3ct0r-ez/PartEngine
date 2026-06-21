@@ -16,6 +16,7 @@ import {
 } from '@/lib/api';
 import { confirmDialog, toast } from '@/components/ui-dialogs';
 import { LabelPreviewModal } from '@/components/label-preview';
+import { QrIcon } from '@/components/label-button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
@@ -233,10 +234,11 @@ function LocationRow({
           {/* Slots get a QR label; root locations get a text-only "A-01" label. */}
           <button
             onClick={() => setLabelOpen(true)}
-            className="rounded border border-border px-2 py-0.5 hover:bg-muted"
+            className="inline-flex items-center gap-1.5 rounded border border-border px-2 py-0.5 hover:bg-muted"
             title={isSlot ? 'Anteprima etichetta QR (50×30)' : 'Anteprima etichetta testo (50×30)'}
           >
-            🏷 Etichetta
+            Etichetta
+            {isSlot && <QrIcon />}
           </button>
           {labelOpen && (
             <LabelPreviewModal spec={{ code: node.code, qr: isSlot }} onClose={() => setLabelOpen(false)} />
