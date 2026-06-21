@@ -105,7 +105,7 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold">{stock.data.available}</span>
               <span className="text-sm text-muted-foreground">disponibili</span>
-              <span className={`text-xs font-semibold ${HEALTH[stock.data.health]}`}>{stock.data.health}</span>
+              <span className={`text-xs font-semibold ${HEALTH[stock.data.health]}`}>{stock.data.health.replace(/_/g, ' ')}</span>
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               Totale {stock.data.quantity} · Riservati {stock.data.reserved} · In ordine {stock.data.onOrder} · Min {stock.data.minQty}

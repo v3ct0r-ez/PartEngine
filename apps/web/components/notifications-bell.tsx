@@ -66,7 +66,7 @@ export function NotificationsBell() {
               onClick={() => read.mutate(n.id)}
               className={`flex w-full flex-col items-start gap-0.5 border-b border-border px-3 py-2 text-left text-sm hover:bg-muted ${n.isRead ? 'opacity-50' : ''}`}
             >
-              <span className={`text-xs font-semibold ${KIND_STYLES[n.kind] ?? ''}`}>{n.kind}</span>
+              <span className={`text-xs font-semibold ${KIND_STYLES[n.kind] ?? ''}`}>{n.kind.replace(/_/g, ' ')}</span>
               <span>{n.message}</span>
               <span className="text-xs text-muted-foreground">
                 {new Date(n.createdAt).toLocaleString()}
