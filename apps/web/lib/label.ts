@@ -14,6 +14,22 @@ function escapeHtml(s: string) {
 }
 
 /**
+ * Pick a font size (mm) so a name-only label fills the ~17.5×25 mm text column
+ * without clipping: bounded both by the longest word (must fit one line) and by
+ * the total length (must fit the area). Generalises to every category — long
+ * names like "Guaine termorestringenti" simply shrink to fit.
+ */
+function fitNameFontMm(name: string): number {
+  const W = 17.5, H = 25; // usable text column (mm), next to the 26mm QR
+  const charW = 0.55, lineH = 1.25; // approx Inter metrics relative to font size
+  const len = Math.max(name.length, 1);
+  const longest = name.split(/\s+/).reduce((m, w) => Math.max(m, w.length), 1);
+  const byWord = W / (charW * longest); // longest word fits on a line
+  const byArea = Math.sqrt((W * H * 0.82) / (charW * lineH * len)); // total text fits the area
+  return Math.max(1.8, Math.min(3.4, byWord, byArea));
+}
+
+/**
  * Builds the full HTML document for a 50×30 mm thermal label. With `qr` (default)
  * it's the horizontal layout — a 26 mm QR (encoding `code`) on the left, `code` +
  * `name` on the right. With `qr: false` it's a text-only label: a large centred
@@ -29,7 +45,7 @@ export async function buildLabelHtml({ code, name = '', qr = true, showCode = tr
   const body = qr
     ? `<div class="label">
          <img class="qr" src="${dataUrl}" />
-         <div class="info">${showCode ? `<div class="code mono">${escapeHtml(code)}</div>` : ''}${name ? `<div class="name sans${showCode ? '' : ' only'}">${escapeHtml(name)}</div>` : ''}</div>
+         <div class="info">${showCode ? `<div class="code mono">${escapeHtml(code)}</div>` : ''}${name ? `<div class="name sans${showCode ? '' : ' only'}"${!showCode ? ` style="font-size:${fitNameFontMm(name)}mm"` : ''}>${escapeHtml(name)}</div>` : ''}</div>
        </div>`
     : `<div class="label center">
          <div class="bigcode mono">${escapeHtml(code)}</div>${name ? `<div class="name sans">${escapeHtml(name)}</div>` : ''}
@@ -54,9 +70,11 @@ export async function buildLabelHtml({ code, name = '', qr = true, showCode = tr
       .code { font-weight: 700; font-size: 3.6mm; line-height: 1.05; letter-spacing: 0.01em; overflow-wrap: anywhere; }
       .bigcode { font-weight: 800; font-size: 10mm; line-height: 0.95; letter-spacing: 0.02em; }
       .name { font-weight: 500; font-size: 2.5mm; line-height: 1.2; margin-top: 1.2mm; color: #111;
+              overflow-wrap: anywhere; /* break over-long words instead of clipping */
               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-      /* When the name is the only text (no code), give it more room and weight. */
-      .name.only { font-weight: 600; font-size: 3.4mm; line-height: 1.2; margin-top: 0; -webkit-line-clamp: 6; }
+      /* When the name is the only text (no code), it fills the column; the font
+         size is set inline (auto-fit) and it may use more lines. */
+      .name.only { font-weight: 600; line-height: 1.2; margin-top: 0; -webkit-line-clamp: 8; }
     </style></head><body>${body}</body></html>`;
 }
 
