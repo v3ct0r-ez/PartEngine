@@ -244,7 +244,10 @@ function LocationRow({
             <QrIcon />
           </button>
           {labelOpen && (
-            <LabelPreviewModal spec={{ code: node.code, qr: isSlot }} onClose={() => setLabelOpen(false)} />
+            <LabelPreviewModal
+              spec={{ code: node.code, qr: isSlot, name: isSlot ? undefined : (KIND_LABEL[node.kind as LocationKind] ?? node.kind) }}
+              onClose={() => setLabelOpen(false)}
+            />
           )}
           {canWrite && (
             <>
