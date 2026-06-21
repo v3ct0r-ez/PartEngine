@@ -27,10 +27,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeApplier />
           <div className="flex h-screen flex-col overflow-hidden">
             <DesktopTitleBar />
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div className="min-h-0 flex-1 overflow-hidden">
           <AuthGate>
-          <div className="flex min-h-full">
-            <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-muted/30 p-4 md:flex">
+          <div className="flex h-full">
+            <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-muted/30 p-4 md:flex">
               <Logo size={44} className="mb-6" />
               <nav className="space-y-1 text-sm">
                 {[
@@ -60,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <AppVersion />
               </div>
             </aside>
-            <div className="flex-1">
+            <div className="flex-1 overflow-auto">
               <UpdateBanner />
               <div className="flex items-center justify-end gap-1 border-b border-border px-6 py-2">
                 <NotificationsBell />
