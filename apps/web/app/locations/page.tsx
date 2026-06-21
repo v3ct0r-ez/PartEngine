@@ -232,6 +232,9 @@ function LocationRow({
         </div>
         <div className="flex gap-1 text-xs">
           {/* Slots get a QR label; root locations get a text-only "A-01" label. */}
+          {canWrite && !isSlot && (
+            <button onClick={() => onAddSlot(node.id, node.code)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">+ Slot</button>
+          )}
           <button
             onClick={() => setLabelOpen(true)}
             className="inline-flex items-center gap-1.5 rounded border border-border px-2 py-0.5 hover:bg-muted"
@@ -245,7 +248,6 @@ function LocationRow({
           )}
           {canWrite && (
             <>
-              {!isSlot && <button onClick={() => onAddSlot(node.id, node.code)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">+ Slot</button>}
               <button onClick={() => onEdit(node, isSlot)} className="rounded border border-border px-2 py-0.5 hover:bg-muted">Modifica</button>
               <button onClick={() => onDelete(node.id, node.code)} className="rounded border border-border px-2 py-0.5 text-red-600 hover:bg-muted">Elimina</button>
             </>
