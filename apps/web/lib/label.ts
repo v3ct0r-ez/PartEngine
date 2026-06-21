@@ -22,25 +22,31 @@ export async function buildLabelHtml({ code, name = '', qr = true }: LabelSpec):
   const body = qr
     ? `<div class="label">
          <img class="qr" src="${dataUrl}" />
-         <div class="info"><div class="code">${escapeHtml(code)}</div>${name ? `<div class="name">${escapeHtml(name)}</div>` : ''}</div>
+         <div class="info"><div class="code mono">${escapeHtml(code)}</div>${name ? `<div class="name sans">${escapeHtml(name)}</div>` : ''}</div>
        </div>`
     : `<div class="label center">
-         <div class="bigcode">${escapeHtml(code)}</div>${name ? `<div class="name">${escapeHtml(name)}</div>` : ''}
+         <div class="bigcode mono">${escapeHtml(code)}</div>${name ? `<div class="name sans">${escapeHtml(name)}</div>` : ''}
        </div>`;
 
   return `<!doctype html><html><head><title>${escapeHtml(code)}</title>
     <style>
       @page { size: 50mm 30mm; margin: 0; }
       * { box-sizing: border-box; }
-      html, body { margin: 0; }
+      html, body { margin: 0;
+        /* Crisp, high-contrast glyphs for both the screen preview and the printer. */
+        -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+      /* Monospace stack with a true tabular, high-legibility face first. */
+      .mono { font-family: "JetBrains Mono", "Roboto Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, Menlo, Consolas, monospace;
+        font-feature-settings: "tnum" 1, "zero" 1; font-variant-ligatures: none; }
+      .sans { font-family: "Inter", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif; }
       /* 2mm safe padding inside the 50x30 label (printers clip the very edge). */
       .label { width: 50mm; height: 30mm; padding: 2mm; display: flex; align-items: center; gap: 2mm; }
       .label.center { flex-direction: column; justify-content: center; text-align: center; gap: 1mm; }
       .qr { width: 26mm; height: 26mm; flex: 0 0 26mm; image-rendering: pixelated; }
       .info { flex: 1; min-width: 0; overflow: hidden; }
-      .code { font-family: ui-monospace, monospace; font-weight: 700; font-size: 3.2mm; line-height: 1.1; word-break: break-all; }
-      .bigcode { font-family: ui-monospace, monospace; font-weight: 700; font-size: 9mm; line-height: 1; }
-      .name { font-family: system-ui, sans-serif; font-size: 2.3mm; line-height: 1.15; margin-top: 1mm;
+      .code { font-weight: 700; font-size: 3.6mm; line-height: 1.05; letter-spacing: 0.01em; overflow-wrap: anywhere; }
+      .bigcode { font-weight: 800; font-size: 10mm; line-height: 0.95; letter-spacing: 0.02em; }
+      .name { font-weight: 500; font-size: 2.5mm; line-height: 1.2; margin-top: 1.2mm; color: #111;
               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     </style></head><body>${body}</body></html>`;
 }
