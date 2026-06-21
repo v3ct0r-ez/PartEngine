@@ -1,5 +1,6 @@
 'use client';
 
+import { AutoAcronyms } from '@/components/info-dot';
 import { listCategories, searchComponents, type Category, type ComponentRow } from '@/lib/api';
 import { usePrefs } from '@/lib/preferences';
 import { useUiStore } from '@/lib/store';
@@ -48,7 +49,7 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
               return h.sortField ? (
                 <Th key={key} label={h.label} field={h.sortField} {...{ sortField, sortDir, setSort }} />
               ) : (
-                <th key={key} className="px-3 py-2">{h.label}</th>
+                <th key={key} className="px-3 py-2"><AutoAcronyms>{h.label}</AutoAcronyms></th>
               );
             })}
           </tr>
@@ -131,7 +132,7 @@ function Th({
   return (
     <th className="px-3 py-2">
       <button onClick={() => setSort(field)} className="flex items-center gap-1 hover:text-foreground">
-        {label}
+        <AutoAcronyms>{label}</AutoAcronyms>
         {active && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
       </button>
     </th>

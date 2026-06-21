@@ -3,6 +3,7 @@ import './globals.css';
 import { AccountMenu } from '@/components/account-menu';
 import { AppVersion } from '@/components/app-version';
 import { AuthGate } from '@/components/auth-gate';
+import { AutoAcronyms } from '@/components/info-dot';
 import { DesktopTitleBar } from '@/components/desktop-titlebar';
 import { DialogHost } from '@/components/ui-dialogs';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -51,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     href={href}
                     className="block rounded-md px-3 py-2 hover:bg-muted"
                   >
-                    {label}
+                    <AutoAcronyms>{label}</AutoAcronyms>
                   </a>
                 ))}
               </nav>

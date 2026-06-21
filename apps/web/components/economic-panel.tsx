@@ -1,5 +1,7 @@
 'use client';
 
+import { AutoAcronyms } from '@/components/info-dot';
+
 import {
   getComponent,
   getComponentStock,
@@ -74,7 +76,7 @@ export function EconomicPanel({ componentId }: { componentId: string }) {
         <h3 className="mb-2 font-semibold">Prezzi fornitore</h3>
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase text-muted-foreground">
-            <tr><th className="py-1">Fornitore</th><th>Prezzo</th><th>MOQ</th><th>Lead (gg)</th></tr>
+            <tr><th className="py-1">Fornitore</th><th>Prezzo</th><th><AutoAcronyms>MOQ</AutoAcronyms></th><th>Lead (gg)</th></tr>
           </thead>
           <tbody>
             {parts.data?.map((p) => (
@@ -95,7 +97,7 @@ export function EconomicPanel({ componentId }: { componentId: string }) {
               {suppliers.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select></label>
           <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Prezzo</span><input className={`${inp} w-24`} type="number" step="0.0001" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
-          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">MOQ</span><input className={`${inp} w-20`} type="number" value={moq} onChange={(e) => setMoq(e.target.value)} /></label>
+          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground"><AutoAcronyms>MOQ</AutoAcronyms></span><input className={`${inp} w-20`} type="number" value={moq} onChange={(e) => setMoq(e.target.value)} /></label>
           <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Lead</span><input className={`${inp} w-20`} type="number" value={lead} onChange={(e) => setLead(e.target.value)} /></label>
           <button type="submit" disabled={!supplierId || add.isPending} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">Aggiungi</button>
           {suppliers.data?.length === 0 && <span className="text-xs text-muted-foreground">Crea prima un fornitore.</span>}

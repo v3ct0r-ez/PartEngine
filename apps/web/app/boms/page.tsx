@@ -1,5 +1,6 @@
 'use client';
 
+import { AutoAcronyms } from '@/components/info-dot';
 import {
   addBomLine,
   createBom,
@@ -47,7 +48,7 @@ export default function BomsPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">Distinte base (BOM)</h1>
+      <h1 className="text-2xl font-bold">Distinte base (<AutoAcronyms>BOM</AutoAcronyms>)</h1>
 
       <form
         onSubmit={(e) => { e.preventDefault(); if (code && name) create.mutate(); }}
