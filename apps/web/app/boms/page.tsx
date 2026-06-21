@@ -29,6 +29,12 @@ const STATUS_LABEL: Record<AvailabilityStatus, string> = {
   MISSING: 'Mancante',
 };
 
+/** Derive a tidy BOM code from its name, e.g. "Scheda alimentatore" → "BOM-SCHEDA-ALIMENTATORE". */
+function bomCodeFromName(name: string): string {
+  const slug = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug ? `BOM-${slug}` : '';
+}
+
 export default function BomsPage() {
   const qc = useQueryClient();
   const { data: boms = [] } = useQuery({ queryKey: ['boms'], queryFn: listBoms });
@@ -36,11 +42,17 @@ export default function BomsPage() {
 
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  // The code is auto-derived from the name until the user edits it by hand.
+  const [codeTouched, setCodeTouched] = useState(false);
+  useEffect(() => {
+    if (!codeTouched) setCode(bomCodeFromName(name));
+  }, [name, codeTouched]);
   const create = useMutation({
     mutationFn: () => createBom({ code, name }),
     onSuccess: (b) => {
       setCode('');
       setName('');
+      setCodeTouched(false);
       qc.invalidateQueries({ queryKey: ['boms'] });
       setSelectedId(b.id);
     },
@@ -54,10 +66,10 @@ export default function BomsPage() {
         onSubmit={(e) => { e.preventDefault(); if (code && name) create.mutate(); }}
         className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-4"
       >
-        <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Codice</span>
-          <input className={inp} value={code} onChange={(e) => setCode(e.target.value)} placeholder="BOM-001" /></label>
         <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Nome</span>
-          <input className={inp} value={name} onChange={(e) => setName(e.target.value)} placeholder="Scheda alimentatore" /></label>
+          <input className={inp} value={name} onChange={(e) => setName(e.target.value)} placeholder="Scheda alimentatore" autoFocus /></label>
+        <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Codice (automatico, modificabile)</span>
+          <input className={inp} value={code} onChange={(e) => { setCode(e.target.value); setCodeTouched(true); }} placeholder="BOM-001" /></label>
         <button type="submit" disabled={!code || !name || create.isPending}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">+ Nuova BOM</button>
         {create.isError && <span className="text-xs text-red-500">{(create.error as Error).message}</span>}
