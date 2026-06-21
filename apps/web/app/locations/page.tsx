@@ -238,7 +238,7 @@ function LocationRow({
             title={isSlot ? 'Anteprima etichetta QR (50×30)' : 'Anteprima etichetta testo (50×30)'}
           >
             Etichetta
-            {isSlot && <QrIcon />}
+            <QrIcon />
           </button>
           {labelOpen && (
             <LabelPreviewModal spec={{ code: node.code, qr: isSlot }} onClose={() => setLabelOpen(false)} />
