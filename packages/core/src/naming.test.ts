@@ -44,10 +44,10 @@ describe('composeNaming', () => {
     { key: 'mount', type: 'ENUM' },
     { key: 'footprint', type: 'ENUM' },
   ];
-  it('includes the recognition params of an LED (colour + value + footprint)', () => {
+  it('includes every set quantity of an LED (colour + Vf + If + footprint)', () => {
     const r = composeNaming({ categoryName: 'LED', prefix: 'D', fields: led, params: { color: 'Rosso', vf: '2.7', footprint: '0603', if_forward: '0.02', mount: 'SMD' } });
-    expect(r.name).toBe('LED Rosso 2.7V 0603'); // mount + secondary current excluded
-    expect(r.code).toBe('D-ROSSO-2.7V-0603');
+    expect(r.name).toBe('LED Rosso 2.7V 20mA 0603'); // construction mount excluded, ratings kept
+    expect(r.code).toBe('D-ROSSO-2.7V-20MA-0603');
   });
 
   const resistor = [
@@ -57,10 +57,32 @@ describe('composeNaming', () => {
     { key: 'footprint', type: 'ENUM' },
     { key: 'series', type: 'ENUM' },
   ];
-  it('keeps construction enums (technology/series) out, tolerance in the name only', () => {
+  it('keeps construction enums (technology/series) out but puts tolerance in name AND code', () => {
     const r = composeNaming({ categoryName: 'Resistenze', prefix: 'R', fields: resistor, params: { resistance: '10k', tolerance: '1', technology: 'Thick Film', footprint: '0603', series: 'E24' } });
     expect(r.name).toBe('Resistenze 10kΩ 1% 0603');
-    expect(r.code).toBe('R-10K-0603'); // no tolerance/technology/series in the code
+    expect(r.code).toBe('R-10K-1PCT-0603'); // tolerance encoded; technology/series stay out
+  });
+
+  it('gives two resistors that differ only by tolerance distinct codes', () => {
+    const params = (tol: string) => ({ resistance: '10k', tolerance: tol, footprint: '0603' });
+    const a = composeNaming({ categoryName: 'Resistenze', prefix: 'R', fields: resistor, params: params('1') });
+    const b = composeNaming({ categoryName: 'Resistenze', prefix: 'R', fields: resistor, params: params('5') });
+    expect(a.code).toBe('R-10K-1PCT-0603');
+    expect(b.code).toBe('R-10K-5PCT-0603');
+    expect(a.code).not.toBe(b.code);
+  });
+
+  const capacitor = [
+    { key: 'capacitance', type: 'QUANTITY', unit: 'F' },
+    { key: 'voltage', type: 'QUANTITY', unit: 'V' },
+    { key: 'tolerance', type: 'QUANTITY', unit: '%' },
+    { key: 'dielectric', type: 'ENUM' },
+    { key: 'footprint', type: 'ENUM' },
+  ];
+  it('includes the voltage rating of a capacitor in name and code', () => {
+    const r = composeNaming({ categoryName: 'Condensatore', prefix: 'C', fields: capacitor, params: { capacitance: '100n', voltage: '25', tolerance: '10', dielectric: 'X7R', footprint: '0603' } });
+    expect(r.name).toBe('Condensatore 100nF 25V 10% X7R 0603');
+    expect(r.code).toBe('C-100NF-25V-10PCT-X7R-0603');
   });
 
   it('uses the package string as the footprint equivalent (ICs)', () => {

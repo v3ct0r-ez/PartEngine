@@ -85,13 +85,21 @@ export interface NamingFieldMeta {
 /**
  * Build the display name and internal code from a category's *recognition*
  * parameters — data-driven, so it generalises to every category (and custom
- * ones). Walking the fields in their defined order it includes:
- *   - the primary quantity (first non-% QUANTITY), engineering-formatted;
- *   - the tolerance (a "%" QUANTITY) — in the name only;
+ * ones). Walking the fields in their defined order it includes, for every
+ * parameter the user actually filled in:
+ *   - all quantities, engineering-formatted (e.g. capacitance AND voltage AND
+ *     current — not just the primary one), so ratings like a capacitor's
+ *     voltage appear in the name;
+ *   - percentage quantities such as tolerance, shown as "1%" in the name and
+ *     "1PCT" in the code — so two otherwise-identical parts that differ only by
+ *     tolerance get *distinct* codes;
  *   - every identifying ENUM (e.g. colour, dielectric, channel, footprint),
  *     except construction details (mount/series/technology);
  *   - the `package` string (the footprint equivalent for ICs).
- * e.g. an LED → "LED Rosso 2.7V 0603", code "D-ROSSO-2.7V-0603".
+ * The code therefore reflects every set recognition parameter, guaranteeing
+ * that components with different specs never collide on the same code.
+ * e.g. a capacitor → "Condensatore 100nF 25V 10% X7R 0603",
+ * code "C-100NF-25V-10PCT-X7R-0603".
  */
 export function composeNaming(opts: {
   categoryName?: string;
@@ -100,7 +108,6 @@ export function composeNaming(opts: {
   params: Record<string, unknown>;
 }): { name: string; code: string } {
   const { categoryName, prefix, fields, params } = opts;
-  const primaryKey = fields.find((f) => f.type === 'QUANTITY' && f.unit && f.unit !== '%')?.key;
   const nameParts: string[] = [];
   const codeParts: string[] = [];
   const compact = (s: string, keepDot = false) =>
@@ -111,14 +118,16 @@ export function composeNaming(opts: {
     if (raw == null || String(raw).trim() === '') continue;
 
     if (f.type === 'QUANTITY' && f.unit && f.unit !== '%') {
-      if (f.key !== primaryKey) continue; // only the primary quantity is the "value"
       const q = parseQuantity(String(raw), f.unit);
       const token = q && Number.isFinite(q.magnitude) ? formatEngineering(q.magnitude, f.unit) : String(raw);
       nameParts.push(token);
       codeParts.push(compact(token, true));
     } else if (f.type === 'QUANTITY' && f.unit === '%') {
       const n = Number(raw);
-      if (Number.isFinite(n)) nameParts.push(`${n}%`); // tolerance: name only, keeps the code clean
+      if (Number.isFinite(n)) {
+        nameParts.push(`${n}%`);
+        codeParts.push(compact(`${n}PCT`, true)); // also in the code: distinct tolerances ⇒ distinct codes
+      }
     } else if (f.type === 'ENUM') {
       if (NAME_ENUM_DENYLIST.has(f.key)) continue;
       const token = String(raw);
