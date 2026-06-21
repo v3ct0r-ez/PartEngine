@@ -116,8 +116,8 @@ export default function ComponentsPage() {
         {/* Auto-sized tabs (sized to their label, not stretched). */}
         <div className="flex flex-wrap gap-1 border-b border-border">
           {([
-            ['warehouse', 'Ubicazioni'],
             ['params', 'Parametri'],
+            ['warehouse', 'Ubicazioni'],
             ['eco', 'Economia'],
           ] as const).map(([k, label]) => (
             <button
