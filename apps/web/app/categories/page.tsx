@@ -170,13 +170,16 @@ function CategoryFields({ category, onChange }: { category: Category; onChange: 
   const [items, setItems] = useState<CategoryField[]>(category.fields);
   useEffect(() => setItems(category.fields), [category.fields]);
   const dragId = useRef<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const clearDrag = () => { dragId.current = null; setDraggingId(null); setOverId(null); };
   const reorder = useMutation({
     mutationFn: (ids: string[]) => reorderCategoryFields(category.id, ids),
     onSuccess: onChange,
   });
   function handleDrop(targetId: string) {
     const from = dragId.current;
-    dragId.current = null;
+    clearDrag();
     if (!from || from === targetId) return;
     const ids = items.map((f) => f.id);
     ids.splice(ids.indexOf(from), 1);
@@ -197,10 +200,14 @@ function CategoryFields({ category, onChange }: { category: Category; onChange: 
             <EditableFieldRow
               key={f.id}
               field={f}
+              isDragging={draggingId === f.id}
+              isOver={overId === f.id && draggingId !== f.id}
               onSaved={onChange}
               onDelete={() => del.mutate(f.id)}
-              onDragStart={() => { dragId.current = f.id; }}
+              onDragStart={() => { dragId.current = f.id; setDraggingId(f.id); }}
+              onDragOverRow={() => setOverId(f.id)}
               onDropRow={() => handleDrop(f.id)}
+              onDragEnd={clearDrag}
             />
           ))}
           {items.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-muted-foreground">Nessun parametro.</td></tr>}
@@ -227,16 +234,24 @@ function Field({ l, children }: { l: string; children: React.ReactNode }) {
 
 function EditableFieldRow({
   field,
+  isDragging,
+  isOver,
   onSaved,
   onDelete,
   onDragStart,
+  onDragOverRow,
   onDropRow,
+  onDragEnd,
 }: {
   field: CategoryField;
+  isDragging: boolean;
+  isOver: boolean;
   onSaved: () => void;
   onDelete: () => void;
   onDragStart: () => void;
+  onDragOverRow: () => void;
   onDropRow: () => void;
+  onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(field.label);
@@ -257,13 +272,20 @@ function EditableFieldRow({
   if (!editing) {
     return (
       <tr
-        className="border-t border-border"
+        className={`border-t transition-all ${
+          isDragging
+            ? 'border-primary bg-primary/10 opacity-60 shadow-lg [&>td]:ring-1 [&>td]:ring-inset [&>td]:ring-primary'
+            : isOver
+              ? 'border-t-[3px] border-primary bg-primary/5'
+              : 'border-border'
+        }`}
         draggable
         onDragStart={onDragStart}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={(e) => { e.preventDefault(); onDragOverRow(); }}
         onDrop={onDropRow}
+        onDragEnd={onDragEnd}
       >
-        <td className="cursor-grab select-none px-2 text-center text-muted-foreground" title="Trascina per riordinare">☰</td>
+        <td className={`select-none px-2 text-center text-base ${isDragging ? 'cursor-grabbing text-primary' : 'cursor-grab text-muted-foreground hover:text-foreground'}`} title="Trascina per riordinare">☰</td>
         <td className="px-3 py-2 font-mono text-xs">{field.key}</td>
         <td className="px-3 py-2">{field.label}</td>
         <td className="px-3 py-2">{field.type}</td>
