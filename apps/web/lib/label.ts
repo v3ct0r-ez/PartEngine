@@ -13,6 +13,53 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/**
+ * Render a QR for `text` with the app logo composited in the centre. Uses the
+ * highest error-correction level (H, ~30%) and keeps the logo small (~26%) so
+ * the code stays reliably scannable. Falls back to a plain QR if the logo or
+ * canvas isn't available.
+ */
+async function qrDataUrlWithLogo(text: string, size: number): Promise<string> {
+  const canvas = document.createElement('canvas');
+  await QRCode.toCanvas(canvas, text, { margin: 1, width: size, errorCorrectionLevel: 'H' });
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas.toDataURL('image/png');
+  try {
+    const logo = await loadImage('/logo.png');
+    const lw = canvas.width * 0.26;
+    const lh = lw * (logo.naturalHeight / logo.naturalWidth || 1);
+    const lx = (canvas.width - lw) / 2;
+    const ly = (canvas.height - lh) / 2;
+    const pad = canvas.width * 0.02;
+    ctx.fillStyle = '#fff';
+    roundRectPath(ctx, lx - pad, ly - pad, lw + pad * 2, lh + pad * 2, (lh + pad * 2) * 0.22);
+    ctx.fill();
+    ctx.drawImage(logo, lx, ly, lw, lh);
+  } catch {
+    /* logo failed to load — keep the plain QR */
+  }
+  return canvas.toDataURL('image/png');
+}
+
 /**
  * Pick a font size (mm) so a name-only label fills the ~17.5×25 mm text column
  * without clipping: bounded both by the longest word (must fit one line) and by
@@ -40,7 +87,7 @@ function fitNameFontMm(name: string): number {
  */
 export async function buildLabelHtml({ code, name = '', qr = true, showCode = true }: LabelSpec): Promise<string> {
   // Higher resolution than the print size so the QR stays crisp at 203 dpi.
-  const dataUrl = qr ? await QRCode.toDataURL(code, { margin: 1, width: 360 }) : '';
+  const dataUrl = qr ? await qrDataUrlWithLogo(code, 360) : '';
 
   const body = qr
     ? `<div class="label">
