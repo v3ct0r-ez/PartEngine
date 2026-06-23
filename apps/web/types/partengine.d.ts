@@ -11,10 +11,16 @@ export interface DesktopUpdaterState {
 }
 
 export interface DesktopSettings {
-  settings: { dataDir?: string; storageDir?: string; backupDir?: string; backupKeep?: number };
+  settings: { dataDir?: string; storageDir?: string; backupDir?: string; backupKeep?: number; printerName?: string };
   paths: { dataDir: string; storageDir: string; backupDir: string; configFile: string };
   backupEnabled: boolean;
   backups: { name: string; at: string }[];
+}
+
+export interface DesktopPrinter {
+  name: string;
+  displayName: string;
+  isDefault: boolean;
 }
 
 export interface PartEngineBridge {
@@ -30,7 +36,7 @@ export interface PartEngineBridge {
   };
   settings: {
     get: () => Promise<DesktopSettings>;
-    save: (patch: { dataDir?: string; storageDir?: string; backupDir?: string; backupKeep?: number }) => Promise<{ ok: boolean }>;
+    save: (patch: { dataDir?: string; storageDir?: string; backupDir?: string; backupKeep?: number; printerName?: string }) => Promise<{ ok: boolean }>;
     pickFolder: () => Promise<string | null>;
     openPath: (p: string) => Promise<string>;
   };
@@ -42,6 +48,7 @@ export interface PartEngineBridge {
   };
   print: {
     label: (html: string) => Promise<{ ok: boolean; error?: string }>;
+    listPrinters: () => Promise<DesktopPrinter[]>;
   };
 }
 

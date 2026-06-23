@@ -46,6 +46,8 @@ export interface UserSettings {
   storageDir?: string;
   backupDir?: string;
   backupKeep?: number;
+  /** Name of the printer used for silent label printing (empty = system default). */
+  printerName?: string;
 }
 
 export function settingsFilePath(): string {

@@ -117,6 +117,7 @@ function sanitizeSettings(patch: unknown): UserSettings {
     const n = Math.floor(Number(p.backupKeep));
     if (Number.isFinite(n) && n >= 0) out.backupKeep = Math.min(n, 1000);
   }
+  if (typeof p.printerName === 'string') out.printerName = p.printerName.slice(0, 200);
   return out;
 }
 
@@ -173,9 +174,18 @@ function registerIpc() {
   });
 
   // Silent label printing: render the HTML in an offscreen window and print to
-  // the default printer with no dialog, at the 50×30 mm label page size.
+  // the chosen (or default) printer with no dialog, at the 50×30 mm page size.
+  ipcMain.handle('print:listPrinters', async () => {
+    try {
+      const printers = (await mainWindow?.webContents.getPrintersAsync()) ?? [];
+      return printers.map((p) => ({ name: p.name, displayName: p.displayName, isDefault: p.isDefault }));
+    } catch {
+      return [];
+    }
+  });
   ipcMain.handle('print:label', async (_e, html: unknown) => {
     if (typeof html !== 'string') return { ok: false, error: 'invalid html' };
+    const deviceName = readUserSettings().printerName || undefined; // empty → system default
     const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
     try {
       await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
@@ -185,6 +195,7 @@ function registerIpc() {
           {
             silent: true,
             printBackground: true,
+            deviceName,
             margins: { marginType: 'none' },
             pageSize: { width: 50000, height: 30000 }, // microns: 50×30 mm
           },

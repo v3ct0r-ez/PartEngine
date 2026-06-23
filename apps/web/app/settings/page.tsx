@@ -1,17 +1,21 @@
 'use client';
 
-import type { DesktopSettings } from '@/types/partengine';
+import type { DesktopPrinter, DesktopSettings } from '@/types/partengine';
 import { useEffect, useState } from 'react';
 
 export default function SettingsPage() {
   const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
   const [data, setData] = useState<DesktopSettings | null>(null);
+  const [printers, setPrinters] = useState<DesktopPrinter[]>([]);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const desktop = typeof window !== 'undefined' && !!window.partengine?.isDesktop;
     setIsDesktop(desktop);
-    if (desktop) window.partengine!.settings.get().then(setData);
+    if (desktop) {
+      window.partengine!.settings.get().then(setData);
+      window.partengine!.print?.listPrinters?.().then(setPrinters).catch(() => {});
+    }
   }, []);
 
   if (isDesktop === null) return null;
@@ -37,6 +41,10 @@ export default function SettingsPage() {
   }
   async function clear(key: 'backupDir') {
     await b.save({ [key]: '' });
+    setData(await b.get());
+  }
+  async function savePrinter(name: string) {
+    await b.save({ printerName: name });
     setData(await b.get());
   }
 
@@ -72,6 +80,29 @@ export default function SettingsPage() {
             <p className={`mt-2 text-xs ${r.warn ? 'text-amber-600' : 'text-muted-foreground'}`}>{r.help}</p>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Stampante etichette</div>
+            <div className="mt-1 text-xs text-muted-foreground">Usata per la stampa diretta (senza finestra di sistema) delle etichette 50×30 mm.</div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <select
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+              value={data.settings.printerName ?? ''}
+              onChange={(e) => savePrinter(e.target.value)}
+            >
+              <option value="">Predefinita di sistema</option>
+              {printers.map((p) => (
+                <option key={p.name} value={p.name}>{p.displayName || p.name}{p.isDefault ? ' (predefinita)' : ''}</option>
+              ))}
+            </select>
+            <button onClick={() => window.partengine!.print.listPrinters().then(setPrinters)} className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted" title="Aggiorna elenco">↻</button>
+          </div>
+        </div>
+        {printers.length === 0 && <p className="mt-2 text-xs text-muted-foreground">Nessuna stampante rilevata. Collegane una e premi ↻.</p>}
       </div>
 
       <div className="rounded-lg border border-border p-4">
