@@ -128,10 +128,25 @@ export async function buildLabelHtml({ code, name = '', qr = true, showCode = tr
 }
 
 /**
- * Prints a previously-built label document via a hidden <iframe> (not
- * window.open, which the Electron shell blocks).
+ * Prints a label document. On the desktop it prints **silently** to the default
+ * printer via the Electron bridge (no system print dialog). In a plain browser
+ * — or if silent printing fails — it falls back to the dialog-based print
+ * through a hidden <iframe> (window.open is blocked in the Electron shell).
  */
 export function printLabelHtml(html: string): void {
+  const bridge = typeof window !== 'undefined' ? window.partengine : undefined;
+  if (bridge?.print?.label) {
+    bridge.print
+      .label(html)
+      .then((r) => { if (!r?.ok) browserPrintHtml(html); }) // fall back to the dialog
+      .catch(() => browserPrintHtml(html));
+    return;
+  }
+  browserPrintHtml(html);
+}
+
+/** Dialog-based print via a hidden <iframe> (browser fallback). */
+function browserPrintHtml(html: string): void {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
   document.body.appendChild(iframe);

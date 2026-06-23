@@ -40,6 +40,9 @@ export interface PartEngineBridge {
     close: () => void;
     enterFullscreen: () => void;
   };
+  print: {
+    label: (html: string) => Promise<{ ok: boolean; error?: string }>;
+  };
 }
 
 declare global {

@@ -171,6 +171,34 @@ function registerIpc() {
     void shell.openPath(p);
     return { ok: true };
   });
+
+  // Silent label printing: render the HTML in an offscreen window and print to
+  // the default printer with no dialog, at the 50×30 mm label page size.
+  ipcMain.handle('print:label', async (_e, html: unknown) => {
+    if (typeof html !== 'string') return { ok: false, error: 'invalid html' };
+    const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+    try {
+      await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      await new Promise((r) => setTimeout(r, 200)); // let the QR/logo image paint
+      await new Promise<void>((resolve, reject) => {
+        win.webContents.print(
+          {
+            silent: true,
+            printBackground: true,
+            margins: { marginType: 'none' },
+            pageSize: { width: 50000, height: 30000 }, // microns: 50×30 mm
+          },
+          (success, reason) => (success ? resolve() : reject(new Error(reason || 'print failed'))),
+        );
+      });
+      return { ok: true };
+    } catch (err) {
+      log(`print:label failed — ${(err as Error).message}`, 'warn');
+      return { ok: false, error: (err as Error).message };
+    } finally {
+      if (!win.isDestroyed()) win.close();
+    }
+  });
 }
 
 function createLoadingWindow() {

@@ -36,4 +36,8 @@ contextBridge.exposeInMainWorld('partengine', {
     close: () => ipcRenderer.invoke('win:close'),
     enterFullscreen: () => ipcRenderer.invoke('win:enterFullscreen'),
   },
+  print: {
+    /** Print a label HTML document silently to the default printer (no dialog). */
+    label: (html: string) => ipcRenderer.invoke('print:label', html),
+  },
 });
