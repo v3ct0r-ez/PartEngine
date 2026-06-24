@@ -96,11 +96,11 @@ function header(key: string, valueField?: ValueField): { label: string; sortFiel
   switch (key) {
     case 'internalCode': return { label: 'Codice', sortField: 'internalCode' };
     case 'name': return { label: 'Nome', sortField: 'name' };
-    case 'category': return { label: 'Categoria' };
+    case 'category': return { label: 'Categoria', sortField: 'category' };
     case 'mpn': return { label: 'MPN', sortField: 'mpn' };
-    case 'manufacturer': return { label: 'Produttore' };
+    case 'manufacturer': return { label: 'Produttore', sortField: 'manufacturer' };
     case 'value': return { label: `Valore${valueField?.unit ? ` (${valueField.unit})` : ''}`, sortField: valueField?.key };
-    case 'footprint': return { label: 'Footprint' };
+    case 'footprint': return { label: 'Footprint', sortField: 'footprint' };
     case 'stock': return { label: 'Q.tà magazzino' };
     default: return { label: key };
   }
@@ -136,9 +136,13 @@ function Th({
   const active = sortField === field;
   return (
     <th className="px-3 py-2">
-      <button onClick={() => setSort(field)} className="flex items-center gap-1 hover:text-foreground">
+      <button
+        onClick={() => setSort(field)}
+        className="flex items-center gap-1 hover:text-foreground"
+        title="Ordina (clic: crescente → decrescente → predefinito)"
+      >
         <AutoAcronyms>{label}</AutoAcronyms>
-        {active && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+        <span className={active ? 'text-foreground' : 'text-muted-foreground/30'}>{active ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
       </button>
     </th>
   );

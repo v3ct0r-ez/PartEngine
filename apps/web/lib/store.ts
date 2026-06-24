@@ -35,8 +35,15 @@ export const useUiStore = create<UiState>()(
         set({ ranges });
       },
       clearRanges: () => set({ ranges: [] }),
+      // Click cycle on a column: asc → desc → off (back to the default order).
+      // An explicit `sortDir` (e.g. from a saved view) sets it directly.
       setSort: (sortField, sortDir) =>
-        set({ sortField, sortDir: sortDir ?? (get().sortDir === 'asc' ? 'desc' : 'asc') }),
+        set((s) => {
+          if (sortDir) return { sortField, sortDir };
+          if (s.sortField !== sortField) return { sortField, sortDir: 'asc' };
+          if (s.sortDir === 'asc') return { sortField, sortDir: 'desc' };
+          return { sortField: undefined, sortDir: 'asc' }; // third click: reset
+        }),
       applyView: (v) =>
         set({
           query: v.query ?? '',

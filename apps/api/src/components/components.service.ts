@@ -17,7 +17,13 @@ import type {
 
 /** Scalar Component columns that can be sorted directly; anything else is
  * treated as a (unit-aware) parameter sort against the indexed projection. */
-const SCALAR_SORT_FIELDS = new Set(['internalCode', 'name', 'mpn', 'createdAt', 'updatedAt']);
+const SCALAR_SORT_FIELDS = new Set(['internalCode', 'name', 'mpn', 'footprint', 'createdAt', 'updatedAt']);
+
+/** Sort fields that map to a related record's name rather than a scalar column. */
+const RELATION_SORT_FIELDS: Record<string, 'category' | 'manufacturer'> = {
+  category: 'category',
+  manufacturer: 'manufacturer',
+};
 
 /** Collapse per-location stockLevels into a single `onHand` total (and drop the
  * raw rows from the payload) so the list can show a warehouse-quantity column. */
@@ -255,7 +261,7 @@ export class ComponentsService {
     // base-SI magnitude in ComponentParameterValue, not by the lexical string.
     // We query the projection (whose `numeric` is already in base units) with the
     // component filter applied, so 100Ω < 1kΩ < 1MΩ comes out correctly.
-    if (dto.sortField && !SCALAR_SORT_FIELDS.has(dto.sortField)) {
+    if (dto.sortField && !SCALAR_SORT_FIELDS.has(dto.sortField) && !RELATION_SORT_FIELDS[dto.sortField]) {
       const rows = await this.prisma.componentParameterValue.findMany({
         where: { fieldKey: dto.sortField, numeric: { not: null }, component: where },
         orderBy: { numeric: dir },
@@ -268,9 +274,11 @@ export class ComponentsService {
       return { items: withOnHand(items.slice(0, take)), nextCursor, parsed };
     }
 
-    // Scalar column sort (or default).
+    // Scalar column sort, related-record name sort, or the default order.
     const orderBy: Prisma.ComponentOrderByWithRelationInput = dto.sortField
-      ? { [dto.sortField]: dir }
+      ? RELATION_SORT_FIELDS[dto.sortField]
+        ? { [RELATION_SORT_FIELDS[dto.sortField]]: { name: dir } }
+        : { [dto.sortField]: dir }
       : { internalCode: 'asc' };
 
     const items = await this.prisma.component.findMany({
