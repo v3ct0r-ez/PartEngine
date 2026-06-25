@@ -291,8 +291,27 @@ export class AttachmentsService {
       throw new BadRequestException(`AI provider unreachable: ${(err as Error).message}`);
     }
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new BadRequestException(`AI provider error ${res.status}: ${body.slice(0, 300)}`);
+      const raw = await res.text().catch(() => '');
+      // Pull the provider's human message out of the JSON error envelope, if any.
+      let providerMsg = '';
+      try {
+        const j = JSON.parse(raw);
+        providerMsg = (Array.isArray(j) ? j[0]?.error?.message : j?.error?.message) || '';
+      } catch {
+        providerMsg = raw;
+      }
+      if (res.status === 429) {
+        throw new BadRequestException(
+          'Quota AI esaurita (piano gratuito): hai superato il limite di richieste. Attendi qualche minuto e riprova, oppure cambia modello in Impostazioni. Dettagli: https://ai.google.dev/gemini-api/docs/rate-limits',
+        );
+      }
+      if (res.status === 401 || res.status === 403) {
+        throw new BadRequestException('Chiave AI non valida o senza permessi. Controlla la API key in Impostazioni.');
+      }
+      if (res.status === 404) {
+        throw new BadRequestException(`Modello AI non trovato ("${opts.model}"). Correggi il nome del modello in Impostazioni.`);
+      }
+      throw new BadRequestException(`Errore provider AI (${res.status}): ${providerMsg.slice(0, 200)}`);
     }
     const data: any = await res.json().catch(() => null);
     const content: string = data?.choices?.[0]?.message?.content ?? '';
