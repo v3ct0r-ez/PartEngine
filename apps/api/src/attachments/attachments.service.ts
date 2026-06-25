@@ -47,12 +47,13 @@ export class AttachmentsService {
   }
 
   /**
-   * OCR an image buffer with tesseract.js (lazy-loaded so it never weighs on
-   * startup; the wasm core is bundled, only the language data is fetched once
-   * and cached). Returns null on any failure (offline first run, undecodable
-   * image, …) — OCR is best-effort, never fatal to the upload.
+   * Run OCR over one or more image buffers with tesseract.js, reusing a single
+   * worker. Lazy-loaded so it never weighs on startup; the wasm core is bundled
+   * and only the language data is fetched once and cached. Returns null on any
+   * failure (offline first run, undecodable image, …) — OCR is best-effort.
    */
-  private async ocrImage(buffer: Buffer): Promise<string | null> {
+  private async ocrImages(images: Buffer[]): Promise<string | null> {
+    if (!images.length) return null;
     try {
       const tesseract = (await import('tesseract.js')) as unknown as {
         createWorker: (langs?: string, oem?: number, opts?: Record<string, unknown>) => Promise<{
@@ -63,8 +64,13 @@ export class AttachmentsService {
       const cachePath = path.join(os.tmpdir(), 'partengine-ocr');
       const worker = await tesseract.createWorker('eng', 1, { cachePath });
       try {
-        const { data } = await worker.recognize(buffer);
-        return data.text?.trim() || null;
+        const parts: string[] = [];
+        for (const img of images) {
+          const { data } = await worker.recognize(img);
+          const t = data.text?.trim();
+          if (t) parts.push(t);
+        }
+        return parts.join('\n').trim() || null;
       } finally {
         await worker.terminate();
       }
@@ -74,12 +80,41 @@ export class AttachmentsService {
     }
   }
 
-  /** Background OCR for an uploaded image; fills ocrText when it completes. */
-  private async runImageOcr(attachmentId: string, buffer: Buffer): Promise<void> {
-    const text = await this.ocrImage(buffer);
-    if (!text) return;
+  /**
+   * OCR a scanned (image-only) PDF: rasterize each page with pdf.js + a Node
+   * canvas, then OCR the page images. Capped at a few pages to bound the work.
+   */
+  private async ocrPdf(buffer: Buffer): Promise<string | null> {
     try {
-      await this.setOcrText(attachmentId, text);
+      const pdfjs = (await import('pdfjs-dist/legacy/build/pdf.mjs')) as any;
+      const { createCanvas } = (await import('@napi-rs/canvas')) as any;
+      const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise;
+      const maxPages = Math.min(doc.numPages as number, 5);
+      const pages: Buffer[] = [];
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale: 2 }); // upscale for legible OCR
+        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        pages.push(canvas.toBuffer('image/png'));
+      }
+      await doc.destroy();
+      return this.ocrImages(pages);
+    } catch (err) {
+      this.logger.warn(`PDF OCR failed: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** Background OCR for an image or scanned PDF; sets ocrText + ocrStatus. */
+  private async runOcr(attachmentId: string, buffer: Buffer, mimetype: string): Promise<void> {
+    const text = mimetype === 'application/pdf' ? await this.ocrPdf(buffer) : await this.ocrImages([buffer]);
+    try {
+      await this.prisma.attachment.update({
+        where: { id: attachmentId },
+        data: { ocrText: text, ocrStatus: text ? 'DONE' : 'FAILED' },
+      });
     } catch {
       /* attachment may have been deleted meanwhile — ignore */
     }
@@ -91,7 +126,20 @@ export class AttachmentsService {
 
     const storageKey = `${componentId}/${randomUUID()}-${file.originalname}`.replace(/\s+/g, '_');
     await this.storage.save(storageKey, file.buffer);
-    const ocrText = await this.extractText(file);
+    const ocrText = await this.extractText(file); // text layer (txt / PDF with text)
+
+    // Decide the extraction state. Images and text-less PDFs are OCR'd in the
+    // background (status PENDING) so the upload returns immediately.
+    const isImage = file.mimetype.startsWith('image/');
+    const isPdf = file.mimetype === 'application/pdf';
+    const willOcr = !ocrText && (isImage || isPdf);
+    const ocrStatus = ocrText
+      ? 'DONE'
+      : willOcr
+        ? 'PENDING'
+        : file.mimetype === 'text/plain'
+          ? 'FAILED'
+          : 'NONE';
 
     const attachment = await this.prisma.attachment.create({
       data: {
@@ -102,15 +150,11 @@ export class AttachmentsService {
         sizeBytes: file.size,
         storageKey,
         ocrText,
+        ocrStatus,
       },
     });
 
-    // Images have no extractable text layer: OCR them in the background so the
-    // upload returns immediately and ocrText (searchable + suggestions) is
-    // filled when the recognition finishes.
-    if (!ocrText && file.mimetype.startsWith('image/')) {
-      void this.runImageOcr(attachment.id, file.buffer);
-    }
+    if (willOcr) void this.runOcr(attachment.id, file.buffer, file.mimetype);
 
     return attachment;
   }
@@ -120,7 +164,7 @@ export class AttachmentsService {
       where: { componentId },
       orderBy: { createdAt: 'desc' },
       // Don't ship the (possibly large) ocrText in the list.
-      select: { id: true, kind: true, fileName: true, contentType: true, sizeBytes: true, createdAt: true },
+      select: { id: true, kind: true, fileName: true, contentType: true, sizeBytes: true, createdAt: true, ocrStatus: true },
     });
   }
 
@@ -141,7 +185,7 @@ export class AttachmentsService {
 
   /** Set/replace the searchable text (e.g. from an external OCR worker). */
   async setOcrText(id: string, text: string) {
-    return this.prisma.attachment.update({ where: { id }, data: { ocrText: text } });
+    return this.prisma.attachment.update({ where: { id }, data: { ocrText: text, ocrStatus: text ? 'DONE' : 'FAILED' } });
   }
 
   /**

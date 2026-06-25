@@ -692,6 +692,8 @@ export interface Attachment {
   contentType: string;
   sizeBytes: number;
   createdAt: string;
+  /** Text-extraction state: NONE | PENDING | DONE | FAILED. */
+  ocrStatus: 'NONE' | 'PENDING' | 'DONE' | 'FAILED';
 }
 export function listAttachments(componentId: string) {
   return request<Attachment[]>(`/components/${componentId}/attachments`);

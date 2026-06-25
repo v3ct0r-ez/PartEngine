@@ -373,6 +373,17 @@ function FieldInput({ field, value, onChange }: { field: FieldTemplate; value: u
   );
 }
 
+/** Small badge showing the datasheet/image text-extraction outcome. */
+function OcrBadge({ status }: { status: 'NONE' | 'PENDING' | 'DONE' | 'FAILED' }) {
+  if (status === 'DONE')
+    return <span className="rounded-full border border-green-600/40 bg-green-600/10 px-1.5 py-0.5 text-[10px] font-semibold text-green-600">Testo OK</span>;
+  if (status === 'FAILED')
+    return <span className="rounded-full border border-red-600/40 bg-red-600/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-600">Errore</span>;
+  if (status === 'PENDING')
+    return <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">OCR in corso…</span>;
+  return null;
+}
+
 function AttachmentsPanel({
   componentId,
   onSuggest,
@@ -385,6 +396,8 @@ function AttachmentsPanel({
   const { data: files = [] } = useQuery({
     queryKey: ['attachments', componentId],
     queryFn: () => listAttachments(componentId),
+    // Poll while any attachment's OCR is still running so the badge updates.
+    refetchInterval: (q) => (q.state.data?.some((a) => a.ocrStatus === 'PENDING') ? 2500 : false),
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ['attachments', componentId] });
 
@@ -428,7 +441,8 @@ function AttachmentsPanel({
               {a.fileName}
             </button>
             <span className="text-xs text-muted-foreground">{(a.sizeBytes / 1024).toFixed(0)} KB · {a.kind}</span>
-            {a.kind === 'DATASHEET' && (
+            <OcrBadge status={a.ocrStatus} />
+            {a.ocrStatus === 'DONE' && (
               <button type="button" onClick={() => suggest.mutate(a.id)} className="text-xs text-primary hover:underline">
                 suggerisci parametri
               </button>
