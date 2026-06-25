@@ -714,11 +714,19 @@ export async function uploadAttachment(componentId: string, file: File) {
 export function deleteAttachment(id: string) {
   return request<{ deleted: boolean }>(`/attachments/${id}`, { method: 'DELETE' });
 }
+export interface FieldSuggestion {
+  suggestions: Record<string, number>;
+  footprint?: string;
+  tolerance?: number;
+  dielectric?: string;
+  /** Where the values came from: decoded from the MPN, or parsed from the datasheet text. */
+  source?: 'mpn' | 'ocr';
+  /** MPN scheme matched, when source === 'mpn' (e.g. "YAGEO RC"). */
+  family?: string;
+}
 export function suggestAttachmentFields(id: string, mpn?: string) {
   const qs = mpn?.trim() ? `?mpn=${encodeURIComponent(mpn.trim())}` : '';
-  return request<{ suggestions: Record<string, number>; footprint?: string; tolerance?: number }>(
-    `/attachments/${id}/suggest-fields${qs}`,
-  );
+  return request<FieldSuggestion>(`/attachments/${id}/suggest-fields${qs}`);
 }
 /** Fetch (with auth) and open an attachment in a new tab. */
 export async function openAttachment(id: string) {

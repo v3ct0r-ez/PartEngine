@@ -13,6 +13,7 @@ import {
   uploadAttachment,
   type Category,
   type CategoryField,
+  type FieldSuggestion,
 } from '@/lib/api';
 import { getComponent } from '@/lib/api';
 import {
@@ -316,8 +317,10 @@ export function ComponentEditor({
             onSuggest={(s) => {
               setParams((p) => {
                 const next = { ...p };
+                const has = (key: string) => templates.some((f) => f.key === key);
                 for (const [k, v] of Object.entries(s.suggestions)) next[k] = String(v);
-                if (s.tolerance != null && 'tolerance' in next) next.tolerance = String(s.tolerance);
+                if (s.tolerance != null && has('tolerance')) next.tolerance = String(s.tolerance);
+                if (s.dielectric && has('dielectric')) next.dielectric = s.dielectric;
                 if (s.footprint && footprintKey) next[footprintKey] = s.footprint;
                 return next;
               });
@@ -395,7 +398,7 @@ function AttachmentsPanel({
   componentId: string;
   mpn: string;
   onMpnChange: (mpn: string) => void;
-  onSuggest: (s: { suggestions: Record<string, number>; footprint?: string; tolerance?: number }) => void;
+  onSuggest: (s: FieldSuggestion) => void;
 }) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -414,7 +417,13 @@ function AttachmentsPanel({
   const del = useMutation({ mutationFn: deleteAttachment, onSuccess: refresh });
   const suggest = useMutation({
     mutationFn: (vars: { id: string; mpn: string }) => suggestAttachmentFields(vars.id, vars.mpn),
-    onSuccess: (s) => onSuggest(s),
+    onSuccess: (s) => {
+      onSuggest(s);
+      const n = Object.keys(s.suggestions).length + (s.footprint ? 1 : 0) + (s.tolerance != null ? 1 : 0) + (s.dielectric ? 1 : 0);
+      if (s.source === 'mpn') toast(`Parametri dal MPN (${s.family}): ${n} campi compilati.`);
+      else if (n === 0) toast('Nessun parametro riconosciuto nel datasheet.', 'error');
+      else toast(`Parametri dal datasheet: ${n} campi compilati.`);
+    },
   });
 
   // The MPN identifies the specific variant inside a family datasheet, so it's

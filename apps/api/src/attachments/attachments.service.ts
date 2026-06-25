@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { parseSearchQuery } from '@partengine/core';
+import { decodeMpn, parseSearchQuery } from '@partengine/core';
 import { AttachmentKind } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import * as os from 'node:os';
@@ -205,16 +205,35 @@ export class AttachmentsService {
       include: { component: { include: { category: { include: { fields: true } } } } },
     });
     if (!att) throw new NotFoundException('Attachment not found');
-    if (!att.ocrText) return { suggestions: {}, footprint: undefined };
+    const fieldKeys = new Set(att.component.category.fields.map((f) => f.key));
 
+    // 1) MPN decoding first — deterministic and reliable for passive families,
+    // where a family datasheet wouldn't state the variant's values in text.
+    const decoded = mpn ? decodeMpn(mpn) : null;
+    if (decoded) {
+      const suggestions: Record<string, number> = {};
+      for (const [key, value] of Object.entries(decoded.params)) {
+        if (fieldKeys.has(key)) suggestions[key] = value;
+      }
+      return {
+        suggestions,
+        footprint: decoded.footprint,
+        tolerance: decoded.tolerance,
+        dielectric: decoded.dielectric,
+        source: 'mpn' as const,
+        family: decoded.family,
+      };
+    }
+
+    // 2) Fall back to parsing the datasheet text (scoped to the MPN occurrence).
+    if (!att.ocrText) return { suggestions: {}, footprint: undefined, source: 'ocr' as const };
     const text = this.scopeToMpn(att.ocrText, mpn).slice(0, 8000);
     const parsed = parseSearchQuery(text);
-    const fieldKeys = new Set(att.component.category.fields.map((f) => f.key));
     const suggestions: Record<string, number> = {};
     for (const [key, value] of Object.entries(parsed.params)) {
       if (fieldKeys.has(key)) suggestions[key] = value;
     }
-    return { suggestions, footprint: parsed.footprint, tolerance: parsed.tolerance };
+    return { suggestions, footprint: parsed.footprint, tolerance: parsed.tolerance, source: 'ocr' as const };
   }
 
   /**

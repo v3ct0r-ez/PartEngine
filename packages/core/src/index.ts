@@ -7,4 +7,5 @@ export * from './version.js';
 export * from './alerts.js';
 export * from './bom.js';
 export * from './naming.js';
+export * from './mpn.js';
 export * from './taxonomy.js';
