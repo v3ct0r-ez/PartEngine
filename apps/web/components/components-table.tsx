@@ -91,14 +91,16 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
   );
 }
 
-/** Header label + (optional) server sort field for a column key. */
+/** Header label + (optional) server sort field for a column key.
+ * Only "Valore" (unit-aware) and "Footprint" are sortable; the other columns
+ * are plain headers (the list keeps its default order — internalCode asc). */
 function header(key: string, valueField?: ValueField): { label: string; sortField?: string } {
   switch (key) {
-    case 'internalCode': return { label: 'Codice', sortField: 'internalCode' };
-    case 'name': return { label: 'Nome', sortField: 'name' };
-    case 'category': return { label: 'Categoria', sortField: 'category' };
-    case 'mpn': return { label: 'MPN', sortField: 'mpn' };
-    case 'manufacturer': return { label: 'Produttore', sortField: 'manufacturer' };
+    case 'internalCode': return { label: 'Codice' };
+    case 'name': return { label: 'Nome' };
+    case 'category': return { label: 'Categoria' };
+    case 'mpn': return { label: 'MPN' };
+    case 'manufacturer': return { label: 'Produttore' };
     case 'value': return { label: `Valore${valueField?.unit ? ` (${valueField.unit})` : ''}`, sortField: valueField?.key };
     case 'footprint': return { label: 'Footprint', sortField: 'footprint' };
     case 'stock': return { label: 'Q.tà magazzino' };
