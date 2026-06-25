@@ -203,10 +203,13 @@ export function ComponentEditor({
 
   const canSave = internalCode && name && categoryId && Object.keys(fieldErrors).length === 0;
 
-  async function save() {
-    setBusy(true);
-    setError(null);
-    const body = {
+  // The component may be created on the fly (before the user hits Save) so that
+  // attachments — which need an id — work in the "new component" window too.
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const componentId = component?.id ?? createdId;
+
+  function buildBody() {
+    return {
       internalCode,
       name,
       categoryId,
@@ -223,9 +226,39 @@ export function ComponentEditor({
       avgPrice: avgPrice !== '' ? Number(avgPrice) : undefined,
       currency: currency || undefined,
     };
+  }
+
+  /**
+   * Ensure a component id exists, creating it if needed (without closing the
+   * editor). Used by the attachments panel so files can be added while still on
+   * the "new component" window. Returns null if required fields are missing.
+   */
+  async function ensureComponentId(): Promise<string | null> {
+    if (componentId) return componentId;
+    if (!canSave) {
+      setError('Compila i campi obbligatori (codice, nome, categoria) prima di allegare file.');
+      return null;
+    }
+    setBusy(true);
+    setError(null);
     try {
-      if (editing) await updateComponent(component!.id, body);
-      else await createComponent(body);
+      const created = await createComponent(buildBody());
+      setCreatedId(created.id);
+      return created.id;
+    } catch (e) {
+      setError((e as Error).message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (componentId) await updateComponent(componentId, buildBody());
+      else await createComponent(buildBody());
       onSaved();
     } catch (e) {
       setError((e as Error).message);
@@ -309,9 +342,9 @@ export function ComponentEditor({
           <Field label="Valuta"><input className={inp} value={currency} onChange={(e) => setCurrency(e.target.value)} /></Field>
         </div>
 
-        {editing && component && (
-          <AttachmentsPanel
-            componentId={component.id}
+        <AttachmentsPanel
+            componentId={componentId}
+            ensureComponentId={ensureComponentId}
             mpn={mpn ?? ''}
             onMpnChange={(v) => setMpn(v)}
             onSuggest={(s) => {
@@ -326,7 +359,6 @@ export function ComponentEditor({
               });
             }}
           />
-        )}
 
         {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
 
@@ -391,11 +423,15 @@ function OcrBadge({ status }: { status: 'NONE' | 'PENDING' | 'DONE' | 'FAILED' }
 
 function AttachmentsPanel({
   componentId,
+  ensureComponentId,
   mpn,
   onMpnChange,
   onSuggest,
 }: {
-  componentId: string;
+  /** The component id, or null while creating a not-yet-saved component. */
+  componentId: string | null;
+  /** Create the component on demand and return its id (for the "new" window). */
+  ensureComponentId: () => Promise<string | null>;
   mpn: string;
   onMpnChange: (mpn: string) => void;
   onSuggest: (s: FieldSuggestion) => void;
@@ -404,14 +440,19 @@ function AttachmentsPanel({
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: files = [] } = useQuery({
     queryKey: ['attachments', componentId],
-    queryFn: () => listAttachments(componentId),
+    queryFn: () => listAttachments(componentId!),
+    enabled: !!componentId,
     // Poll while any attachment's OCR is still running so the badge updates.
     refetchInterval: (q) => (q.state.data?.some((a) => a.ocrStatus === 'PENDING') ? 2500 : false),
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ['attachments', componentId] });
 
   const upload = useMutation({
-    mutationFn: (file: File) => uploadAttachment(componentId, file),
+    mutationFn: async (file: File) => {
+      const id = await ensureComponentId(); // create the component first if needed
+      if (!id) return null;
+      return uploadAttachment(id, file);
+    },
     onSuccess: refresh,
   });
   const del = useMutation({ mutationFn: deleteAttachment, onSuccess: refresh });
