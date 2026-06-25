@@ -531,10 +531,6 @@ model Attachment {
   contentType String
   sizeBytes   Int
   storageKey  String // S3 object key
-  ocrText     String? // extracted text (datasheet OCR) — also fed into search
-  // Text-extraction state: NONE (n/a), PENDING (image/scanned-PDF OCR running),
-  // DONE (text available), FAILED (attempted, nothing usable).
-  ocrStatus   String         @default("NONE")
   createdAt   DateTime       @default(now())
 
   @@index([componentId, kind])

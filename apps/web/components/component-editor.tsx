@@ -8,13 +8,10 @@ import {
   listAttachments,
   listManufacturers,
   openAttachment,
-  suggestAttachmentFields,
   updateComponent,
   uploadAttachment,
-  aiExtractAttachment,
   type Category,
   type CategoryField,
-  type FieldSuggestion,
 } from '@/lib/api';
 import { getComponent } from '@/lib/api';
 import {
@@ -23,7 +20,7 @@ import {
   validateParameters,
   type FieldTemplate,
 } from '@partengine/core';
-import { confirmDialog, promptDialog, toast } from '@/components/ui-dialogs';
+import { confirmDialog, promptDialog } from '@/components/ui-dialogs';
 import { InfoDot } from '@/components/info-dot';
 import { lookupAcronym } from '@/lib/glossary';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -343,25 +340,7 @@ export function ComponentEditor({
           <Field label="Valuta"><input className={inp} value={currency} onChange={(e) => setCurrency(e.target.value)} /></Field>
         </div>
 
-        <AttachmentsPanel
-            componentId={componentId}
-            ensureComponentId={ensureComponentId}
-            mpn={mpn ?? ''}
-            onMpnChange={(v) => setMpn(v)}
-            onSuggest={(s) => {
-              setParams((p) => {
-                const next = { ...p };
-                const has = (key: string) => templates.some((f) => f.key === key);
-                for (const [k, v] of Object.entries(s.suggestions)) next[k] = String(v);
-                // AI extraction returns raw per-field values keyed by field key.
-                if (s.paramValues) for (const [k, v] of Object.entries(s.paramValues)) if (has(k)) next[k] = String(v);
-                if (s.tolerance != null && has('tolerance')) next.tolerance = String(s.tolerance);
-                if (s.dielectric && has('dielectric')) next.dielectric = s.dielectric;
-                if (s.footprint && footprintKey) next[footprintKey] = s.footprint;
-                return next;
-              });
-            }}
-          />
+        <AttachmentsPanel componentId={componentId} ensureComponentId={ensureComponentId} />
 
         {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
 
@@ -413,31 +392,14 @@ function FieldInput({ field, value, onChange }: { field: FieldTemplate; value: u
   );
 }
 
-/** Small badge showing the datasheet/image text-extraction outcome. */
-function OcrBadge({ status }: { status: 'NONE' | 'PENDING' | 'DONE' | 'FAILED' }) {
-  if (status === 'DONE')
-    return <span className="rounded-full border border-green-600/40 bg-green-600/10 px-1.5 py-0.5 text-[10px] font-semibold text-green-600">Testo OK</span>;
-  if (status === 'FAILED')
-    return <span className="rounded-full border border-red-600/40 bg-red-600/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-600">Errore</span>;
-  if (status === 'PENDING')
-    return <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">OCR in corso…</span>;
-  return null;
-}
-
 function AttachmentsPanel({
   componentId,
   ensureComponentId,
-  mpn,
-  onMpnChange,
-  onSuggest,
 }: {
   /** The component id, or null while creating a not-yet-saved component. */
   componentId: string | null;
   /** Create the component on demand and return its id (for the "new" window). */
   ensureComponentId: () => Promise<string | null>;
-  mpn: string;
-  onMpnChange: (mpn: string) => void;
-  onSuggest: (s: FieldSuggestion) => void;
 }) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -445,8 +407,6 @@ function AttachmentsPanel({
     queryKey: ['attachments', componentId],
     queryFn: () => listAttachments(componentId!),
     enabled: !!componentId,
-    // Poll while any attachment's OCR is still running so the badge updates.
-    refetchInterval: (q) => (q.state.data?.some((a) => a.ocrStatus === 'PENDING') ? 2500 : false),
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ['attachments', componentId] });
 
@@ -459,64 +419,6 @@ function AttachmentsPanel({
     onSuccess: refresh,
   });
   const del = useMutation({ mutationFn: deleteAttachment, onSuccess: refresh });
-  const suggest = useMutation({
-    mutationFn: (vars: { id: string; mpn: string }) => suggestAttachmentFields(vars.id, vars.mpn),
-    onSuccess: (s) => {
-      onSuggest(s);
-      const n = Object.keys(s.suggestions).length + (s.footprint ? 1 : 0) + (s.tolerance != null ? 1 : 0) + (s.dielectric ? 1 : 0);
-      if (s.source === 'mpn') toast(`Parametri dal MPN (${s.family}): ${n} campi compilati.`);
-      else if (n === 0) toast('Nessun parametro riconosciuto nel datasheet.', 'error');
-      else toast(`Parametri dal datasheet: ${n} campi compilati.`);
-    },
-  });
-
-  // The MPN identifies the specific variant inside a family datasheet, so it's
-  // used to scope parsing. If it's missing, ask for it explicitly before
-  // suggesting (otherwise a family datasheet would yield arbitrary values).
-  async function runSuggest(attachmentId: string) {
-    let effectiveMpn = mpn.trim();
-    if (!effectiveMpn) {
-      const entered = (await promptDialog(
-        'Per estrarre i parametri dal datasheet serve il MPN (identifica la variante nella famiglia). Inseriscilo:',
-      ))?.trim();
-      if (!entered) {
-        toast('MPN richiesto per i parametri suggeriti.', 'error');
-        return;
-      }
-      effectiveMpn = entered;
-      onMpnChange(entered); // keep what the user typed in the form
-    }
-    suggest.mutate({ id: attachmentId, mpn: effectiveMpn });
-  }
-
-  // AI extraction via the configured provider (desktop only — key lives in settings).
-  const ai = useMutation({
-    mutationFn: async (attachmentId: string) => {
-      const cfg = await window.partengine!.settings.get();
-      const key = cfg.settings.aiApiKey?.trim();
-      if (!key) throw new Error('Configura la API key AI in Impostazioni.');
-      return aiExtractAttachment(attachmentId, {
-        apiKey: key,
-        model: cfg.settings.aiModel?.trim() || 'gemini-2.5-flash-lite',
-        baseUrl: cfg.settings.aiBaseUrl?.trim() || 'https://generativelanguage.googleapis.com/v1beta/openai',
-        mpn: mpn.trim() || undefined,
-      });
-    },
-    onSuccess: (s) => {
-      onSuggest(s);
-      const n = Object.keys(s.paramValues ?? {}).length;
-      if (n === 0) toast('L\'AI non ha riconosciuto parametri nel datasheet.', 'error');
-      else toast(`Parametri dall'AI (${s.model}): ${n} campi compilati.`);
-    },
-    onError: (e) => toast((e as Error).message, 'error'),
-  });
-  const aiAvailable = typeof window !== 'undefined' && !!window.partengine?.isDesktop;
-  const [aiConfigured, setAiConfigured] = useState(false);
-  useEffect(() => {
-    if (aiAvailable) {
-      window.partengine!.settings.get().then((c) => setAiConfigured(!!c.settings.aiApiKey?.trim())).catch(() => {});
-    }
-  }, [aiAvailable]);
 
   return (
     <div className="mt-5 border-t border-border pt-4">
@@ -548,25 +450,6 @@ function AttachmentsPanel({
               {a.fileName}
             </button>
             <span className="text-xs text-muted-foreground">{(a.sizeBytes / 1024).toFixed(0)} KB · {a.kind}</span>
-            <OcrBadge status={a.ocrStatus} />
-            {a.ocrStatus === 'DONE' && (
-              <button type="button" onClick={() => runSuggest(a.id)} className="text-xs text-primary hover:underline">
-                suggerisci parametri
-              </button>
-            )}
-            {a.ocrStatus === 'DONE' && aiAvailable && (
-              aiConfigured ? (
-                <button type="button" onClick={() => ai.mutate(a.id)} disabled={ai.isPending}
-                  className="text-xs font-medium text-violet-600 hover:underline disabled:opacity-50">
-                  {ai.isPending && ai.variables === a.id ? 'AI…' : '✨ Estrai con AI'}
-                </button>
-              ) : (
-                <a href="/settings" title="Configura la API key per l'estrazione AI"
-                  className="text-xs text-muted-foreground hover:text-foreground hover:underline">
-                  ✨ Configura AI
-                </a>
-              )
-            )}
             <button type="button" onClick={() => del.mutate(a.id)} className="ml-auto text-xs text-red-600 hover:underline">
               elimina
             </button>
@@ -574,9 +457,6 @@ function AttachmentsPanel({
         ))}
         {files.length === 0 && <li className="text-xs text-muted-foreground">Nessun allegato.</li>}
       </ul>
-      {suggest.isSuccess && Object.keys(suggest.data.suggestions).length === 0 && (
-        <p className="mt-1 text-xs text-muted-foreground">Nessun parametro riconosciuto nel testo.</p>
-      )}
     </div>
   );
 }

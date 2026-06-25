@@ -68,19 +68,15 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - **AC met:** building a kit decrements stock atomically; BOM shows the shortage
   list (PARTIAL/MISSING per line + overall status).
 
-## Sprint 7 — Attachments, datasheets & OCR ✅
+## Sprint 7 — Attachments ✅
 - Upload/list/download/delete attachments via a pluggable StorageService
   (local FS — works in the all-in-one desktop, no MinIO needed; S3 adapter is the
   server alternative).
-- Datasheet text extraction: **PDF text layer via pdf-parse** (pure JS, no native
-  deps) + `.txt`; stored in `Attachment.ocrText` and made **searchable** (component
-  search also matches attachment ocrText). Manual `ocr-text` endpoint lets a
-  server-side tesseract/BullMQ worker fill text for scanned/image PDFs.
-- **Field suggestion** from the datasheet text (reuses the unit-aware NL parser)
-  → fills category parameters + footprint in the editor.
-- UI: attachments panel in the component editor (upload, open, delete, "suggerisci
-  parametri").
-- **AC met:** uploaded datasheet text is searchable; suggestions populate fields.
+- UI: attachments panel in the component editor (upload, open, delete), available
+  in both the new-component and edit windows.
+- **AC met:** files can be attached to a component, opened, and removed.
+- Note: datasheet text extraction / OCR / AI parameter-suggestion were prototyped
+  and then removed by request — the attach button only attaches the file.
 
 ## Sprint 8 — Barcode/QR, reports & dashboard ✅
 - QR **labels**: per-component QR (encodes the internal code) + print window

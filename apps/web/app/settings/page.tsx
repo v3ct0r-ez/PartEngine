@@ -47,10 +47,6 @@ export default function SettingsPage() {
     await b.save({ printerName: name });
     setData(await b.get());
   }
-  async function saveAi(patch: { aiApiKey?: string; aiModel?: string; aiBaseUrl?: string }) {
-    await b.save(patch);
-    setData(await b.get());
-  }
 
   const rows: { key: 'dataDir' | 'storageDir' | 'backupDir'; label: string; help: string; value: string; warn?: boolean }[] = [
     { key: 'dataDir', label: 'Cartella database', value: data.paths.dataDir,
@@ -107,49 +103,6 @@ export default function SettingsPage() {
           </div>
         </div>
         {printers.length === 0 && <p className="mt-2 text-xs text-muted-foreground">Nessuna stampante rilevata. Collegane una e premi ↻.</p>}
-      </div>
-
-      <div className="rounded-lg border border-border p-4">
-        <div className="mb-1 text-sm font-semibold">Estrazione AI dei parametri (datasheet)</div>
-        <p className="mb-2 text-xs text-muted-foreground">
-          Usa un LLM via endpoint OpenAI-compatibile per estrarre i parametri dal datasheet (pulsante &quot;Estrai con AI&quot; nell&apos;editor).
-          Predefinito: <span className="font-mono">Google Gemini</span> (piano gratuito).
-        </p>
-        <div className="mb-3 rounded-md border border-border bg-muted/30 p-3">
-          <div className="mb-1 text-xs font-semibold">Come ottenere la API key gratuita (Google Gemini)</div>
-          <ol className="ml-4 list-decimal space-y-0.5 text-[11px] text-muted-foreground">
-            <li>Apri <span className="font-mono">aistudio.google.com/apikey</span> e accedi con un account Google.</li>
-            <li>Clicca <span className="font-medium">&quot;Create API key&quot;</span> (Crea chiave API).</li>
-            <li>Copia la chiave generata (inizia con <span className="font-mono">AIza…</span>).</li>
-            <li>Incollala nel campo <span className="font-medium">API key</span> qui sotto. Fatto!</li>
-          </ol>
-          <button
-            type="button"
-            onClick={() => window.partengine?.openExternal?.('https://aistudio.google.com/apikey')}
-            className="mt-2 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted"
-          >
-            Apri Google AI Studio ↗
-          </button>
-          <p className="mt-2 text-[11px] text-muted-foreground">Il piano gratuito ha limiti di quota; i datasheet inviati sono di norma pubblici.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 sm:col-span-2"><span className="text-xs text-muted-foreground">API key</span>
-            <input type="password" className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="AIza…"
-              defaultValue={data.settings.aiApiKey ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiApiKey ?? '')) saveAi({ aiApiKey: e.target.value }); }} /></label>
-          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Modello</span>
-            <input list="ai-models" className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="gemini-2.5-flash-lite"
-              defaultValue={data.settings.aiModel ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiModel ?? '')) saveAi({ aiModel: e.target.value }); }} />
-            <datalist id="ai-models">
-              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (quota gratuita più alta)</option>
-              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-            </datalist></label>
-          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Endpoint (OpenAI-compatibile)</span>
-            <input className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono text-xs" placeholder="https://generativelanguage.googleapis.com/v1beta/openai"
-              defaultValue={data.settings.aiBaseUrl ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiBaseUrl ?? '')) saveAi({ aiBaseUrl: e.target.value }); }} /></label>
-        </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">Lasciando Modello/Endpoint vuoti si usa <span className="font-mono">gemini-2.5-flash-lite</span> (quota gratuita più alta). Se ottieni errori di quota (429), scegli un modello <span className="font-medium">Flash-Lite</span> o attendi qualche minuto. Per altri provider (Groq, OpenRouter…) imposta endpoint e modello corrispondenti.</p>
       </div>
 
       <div className="rounded-lg border border-border p-4">

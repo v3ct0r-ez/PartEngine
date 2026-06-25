@@ -692,8 +692,6 @@ export interface Attachment {
   contentType: string;
   sizeBytes: number;
   createdAt: string;
-  /** Text-extraction state: NONE | PENDING | DONE | FAILED. */
-  ocrStatus: 'NONE' | 'PENDING' | 'DONE' | 'FAILED';
 }
 export function listAttachments(componentId: string) {
   return request<Attachment[]>(`/components/${componentId}/attachments`);
@@ -713,33 +711,6 @@ export async function uploadAttachment(componentId: string, file: File) {
 }
 export function deleteAttachment(id: string) {
   return request<{ deleted: boolean }>(`/attachments/${id}`, { method: 'DELETE' });
-}
-export interface FieldSuggestion {
-  suggestions: Record<string, number>;
-  footprint?: string;
-  tolerance?: number;
-  dielectric?: string;
-  /** Raw per-field values (AI extraction) applied directly to the form params. */
-  paramValues?: Record<string, string>;
-  /** Where the values came from: decoded from the MPN, parsed from text, or the LLM. */
-  source?: 'mpn' | 'ocr' | 'ai';
-  /** MPN scheme matched, when source === 'mpn' (e.g. "YAGEO RC"). */
-  family?: string;
-  /** Model used, when source === 'ai'. */
-  model?: string;
-}
-export function suggestAttachmentFields(id: string, mpn?: string) {
-  const qs = mpn?.trim() ? `?mpn=${encodeURIComponent(mpn.trim())}` : '';
-  return request<FieldSuggestion>(`/attachments/${id}/suggest-fields${qs}`);
-}
-export function aiExtractAttachment(
-  id: string,
-  body: { apiKey: string; model: string; baseUrl: string; mpn?: string },
-) {
-  return request<FieldSuggestion>(`/attachments/${id}/ai-extract`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
 }
 /** Fetch (with auth) and open an attachment in a new tab. */
 export async function openAttachment(id: string) {

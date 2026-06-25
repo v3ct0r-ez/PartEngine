@@ -245,8 +245,6 @@ export class ComponentsService {
         { tags: { has: text } },
         // Alternative manufacturers/MPNs (single logical part) are searchable.
         { aliases: { has: text } },
-        // Datasheet/attachment extracted text is searchable too.
-        { attachments: { some: { ocrText: { contains: text, mode: 'insensitive' } } } },
       ];
     }
 
