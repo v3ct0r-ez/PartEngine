@@ -47,6 +47,10 @@ export default function SettingsPage() {
     await b.save({ printerName: name });
     setData(await b.get());
   }
+  async function saveAi(patch: { aiApiKey?: string; aiModel?: string; aiBaseUrl?: string }) {
+    await b.save(patch);
+    setData(await b.get());
+  }
 
   const rows: { key: 'dataDir' | 'storageDir' | 'backupDir'; label: string; help: string; value: string; warn?: boolean }[] = [
     { key: 'dataDir', label: 'Cartella database', value: data.paths.dataDir,
@@ -103,6 +107,26 @@ export default function SettingsPage() {
           </div>
         </div>
         {printers.length === 0 && <p className="mt-2 text-xs text-muted-foreground">Nessuna stampante rilevata. Collegane una e premi ↻.</p>}
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-1 text-sm font-semibold">Estrazione AI dei parametri (datasheet)</div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Usa un LLM via endpoint OpenAI-compatibile per estrarre i parametri dal datasheet (pulsante &quot;Estrai con AI&quot; nell&apos;editor).
+          Predefinito: <span className="font-mono">Google Gemini</span> (piano gratuito). Crea una API key gratuita su Google AI Studio.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 sm:col-span-2"><span className="text-xs text-muted-foreground">API key</span>
+            <input type="password" className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="AIza…"
+              defaultValue={data.settings.aiApiKey ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiApiKey ?? '')) saveAi({ aiApiKey: e.target.value }); }} /></label>
+          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Modello</span>
+            <input className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="gemini-2.0-flash"
+              defaultValue={data.settings.aiModel ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiModel ?? '')) saveAi({ aiModel: e.target.value }); }} /></label>
+          <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Endpoint (OpenAI-compatibile)</span>
+            <input className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono text-xs" placeholder="https://generativelanguage.googleapis.com/v1beta/openai"
+              defaultValue={data.settings.aiBaseUrl ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiBaseUrl ?? '')) saveAi({ aiBaseUrl: e.target.value }); }} /></label>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">Lasciando Modello/Endpoint vuoti si usano i predefiniti Gemini. Per altri provider (Groq, OpenRouter…) imposta endpoint e modello corrispondenti.</p>
       </div>
 
       <div className="rounded-lg border border-border p-4">

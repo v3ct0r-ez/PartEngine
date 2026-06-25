@@ -13,13 +13,20 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 import type { Response } from 'express';
 import { Roles } from '../auth/roles.decorator';
 import { AttachmentsService, type UploadedFile as PeFile } from './attachments.service';
 
 class OcrTextDto {
   @IsString() text: string;
+}
+
+class AiExtractDto {
+  @IsString() apiKey: string;
+  @IsString() model: string;
+  @IsString() baseUrl: string;
+  @IsOptional() @IsString() mpn?: string;
 }
 
 @ApiTags('attachments')
@@ -64,5 +71,11 @@ export class AttachmentsController {
   @Get('attachments/:id/suggest-fields')
   suggest(@Param('id') id: string, @Query('mpn') mpn?: string) {
     return this.attachments.suggestFields(id, mpn);
+  }
+
+  @Roles('WAREHOUSE_MANAGER', 'TECHNICIAN')
+  @Post('attachments/:id/ai-extract')
+  aiExtract(@Param('id') id: string, @Body() dto: AiExtractDto) {
+    return this.attachments.aiExtract(id, dto);
   }
 }

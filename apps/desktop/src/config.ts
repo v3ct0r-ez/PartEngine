@@ -48,6 +48,10 @@ export interface UserSettings {
   backupKeep?: number;
   /** Name of the printer used for silent label printing (empty = system default). */
   printerName?: string;
+  /** AI datasheet extraction (OpenAI-compatible endpoint, e.g. Google Gemini free tier). */
+  aiApiKey?: string;
+  aiModel?: string;
+  aiBaseUrl?: string;
 }
 
 export function settingsFilePath(): string {

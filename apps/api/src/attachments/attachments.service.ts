@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { decodeMpn, parseSearchQuery } from '@partengine/core';
 import { AttachmentKind } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
@@ -234,6 +234,95 @@ export class AttachmentsService {
       if (fieldKeys.has(key)) suggestions[key] = value;
     }
     return { suggestions, footprint: parsed.footprint, tolerance: parsed.tolerance, source: 'ocr' as const };
+  }
+
+  /**
+   * Extract parameters from the datasheet with an LLM (provider-agnostic via an
+   * OpenAI-compatible chat-completions endpoint, e.g. Google Gemini's free tier).
+   * The model uses the MPN to pick the right variant out of a family datasheet
+   * and returns each category field's value, which we map straight into the
+   * editor's params. Best-effort: provider/parse errors surface as a 400.
+   */
+  async aiExtract(id: string, opts: { apiKey: string; model: string; baseUrl: string; mpn?: string }) {
+    const att = await this.prisma.attachment.findUnique({
+      where: { id },
+      include: { component: { include: { category: { include: { fields: true } } } } },
+    });
+    if (!att) throw new NotFoundException('Attachment not found');
+    if (!att.ocrText) return { suggestions: {}, paramValues: {}, source: 'ai' as const };
+
+    const fields = att.component.category.fields;
+    const fieldList = fields
+      .map((f) => {
+        const options = Array.isArray(f.options) ? (f.options as string[]) : [];
+        const meta = `${f.type}${f.unit ? `, unit ${f.unit}` : ''}${options.length ? `, options: ${options.join(' | ')}` : ''}`;
+        return `- ${f.key} (${f.label}) [${meta}]`;
+      })
+      .join('\n');
+    const text = att.ocrText.slice(0, 12000);
+
+    const system =
+      'You extract electronic-component parameters from a datasheet for ONE specific manufacturer part number (MPN). ' +
+      'Datasheets often describe a whole family of variants — use the given MPN to select the correct values. ' +
+      'Only return a value when the datasheet supports it for THIS MPN; omit fields you are unsure about. Reply with a single JSON object and no prose.';
+    const user =
+      `MPN: ${opts.mpn?.trim() || '(unknown — infer from the text if possible)'}\n\n` +
+      `Fields to fill. For QUANTITY include the unit (e.g. "100kΩ", "25V", "100mW"). For ENUM use exactly one of the listed options. For footprint/package use the package code (e.g. "0603", "SOT-23").\n${fieldList}\n\n` +
+      `Return JSON shaped exactly as {"values": {"<fieldKey>": "<value>"}} using only the field keys above.\n\n` +
+      `--- DATASHEET TEXT ---\n${text}`;
+
+    const url = `${opts.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+    let res: globalThis.Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${opts.apiKey}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: opts.model,
+          temperature: 0,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+        }),
+      });
+    } catch (err) {
+      throw new BadRequestException(`AI provider unreachable: ${(err as Error).message}`);
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new BadRequestException(`AI provider error ${res.status}: ${body.slice(0, 300)}`);
+    }
+    const data: any = await res.json().catch(() => null);
+    const content: string = data?.choices?.[0]?.message?.content ?? '';
+    const parsed = this.parseJsonLoose(content);
+    const values = parsed && typeof parsed.values === 'object' && parsed.values ? parsed.values : parsed;
+
+    const fieldKeys = new Set(fields.map((f) => f.key));
+    const paramValues: Record<string, string> = {};
+    if (values && typeof values === 'object') {
+      for (const [key, value] of Object.entries(values)) {
+        if (fieldKeys.has(key) && value != null && String(value).trim() !== '') {
+          paramValues[key] = String(value).trim();
+        }
+      }
+    }
+    return { suggestions: {}, paramValues, source: 'ai' as const, model: opts.model };
+  }
+
+  /** Parse a JSON object out of an LLM reply, tolerating ```json fences / prose. */
+  private parseJsonLoose(s: string): any {
+    if (!s) return null;
+    const fenced = s.replace(/```(?:json)?/gi, '');
+    const start = fenced.indexOf('{');
+    const end = fenced.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      return JSON.parse(fenced.slice(start, end + 1));
+    } catch {
+      return null;
+    }
   }
 
   /**

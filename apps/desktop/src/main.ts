@@ -118,6 +118,9 @@ function sanitizeSettings(patch: unknown): UserSettings {
     if (Number.isFinite(n) && n >= 0) out.backupKeep = Math.min(n, 1000);
   }
   if (typeof p.printerName === 'string') out.printerName = p.printerName.slice(0, 200);
+  if (typeof p.aiApiKey === 'string') out.aiApiKey = p.aiApiKey.slice(0, 400);
+  if (typeof p.aiModel === 'string') out.aiModel = p.aiModel.slice(0, 200);
+  if (typeof p.aiBaseUrl === 'string') out.aiBaseUrl = p.aiBaseUrl.slice(0, 400);
   return out;
 }
 

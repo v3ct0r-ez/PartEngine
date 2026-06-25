@@ -11,6 +11,7 @@ import {
   suggestAttachmentFields,
   updateComponent,
   uploadAttachment,
+  aiExtractAttachment,
   type Category,
   type CategoryField,
   type FieldSuggestion,
@@ -352,6 +353,8 @@ export function ComponentEditor({
                 const next = { ...p };
                 const has = (key: string) => templates.some((f) => f.key === key);
                 for (const [k, v] of Object.entries(s.suggestions)) next[k] = String(v);
+                // AI extraction returns raw per-field values keyed by field key.
+                if (s.paramValues) for (const [k, v] of Object.entries(s.paramValues)) if (has(k)) next[k] = String(v);
                 if (s.tolerance != null && has('tolerance')) next.tolerance = String(s.tolerance);
                 if (s.dielectric && has('dielectric')) next.dielectric = s.dielectric;
                 if (s.footprint && footprintKey) next[footprintKey] = s.footprint;
@@ -486,6 +489,29 @@ function AttachmentsPanel({
     suggest.mutate({ id: attachmentId, mpn: effectiveMpn });
   }
 
+  // AI extraction via the configured provider (desktop only — key lives in settings).
+  const ai = useMutation({
+    mutationFn: async (attachmentId: string) => {
+      const cfg = await window.partengine!.settings.get();
+      const key = cfg.settings.aiApiKey?.trim();
+      if (!key) throw new Error('Configura la API key AI in Impostazioni.');
+      return aiExtractAttachment(attachmentId, {
+        apiKey: key,
+        model: cfg.settings.aiModel?.trim() || 'gemini-2.0-flash',
+        baseUrl: cfg.settings.aiBaseUrl?.trim() || 'https://generativelanguage.googleapis.com/v1beta/openai',
+        mpn: mpn.trim() || undefined,
+      });
+    },
+    onSuccess: (s) => {
+      onSuggest(s);
+      const n = Object.keys(s.paramValues ?? {}).length;
+      if (n === 0) toast('L\'AI non ha riconosciuto parametri nel datasheet.', 'error');
+      else toast(`Parametri dall'AI (${s.model}): ${n} campi compilati.`);
+    },
+    onError: (e) => toast((e as Error).message, 'error'),
+  });
+  const aiAvailable = typeof window !== 'undefined' && !!window.partengine?.isDesktop;
+
   return (
     <div className="mt-5 border-t border-border pt-4">
       <div className="mb-2 flex items-center justify-between">
@@ -520,6 +546,12 @@ function AttachmentsPanel({
             {a.ocrStatus === 'DONE' && (
               <button type="button" onClick={() => runSuggest(a.id)} className="text-xs text-primary hover:underline">
                 suggerisci parametri
+              </button>
+            )}
+            {a.ocrStatus === 'DONE' && aiAvailable && (
+              <button type="button" onClick={() => ai.mutate(a.id)} disabled={ai.isPending}
+                className="text-xs font-medium text-violet-600 hover:underline disabled:opacity-50">
+                {ai.isPending && ai.variables === a.id ? 'AI…' : '✨ Estrai con AI'}
               </button>
             )}
             <button type="button" onClick={() => del.mutate(a.id)} className="ml-auto text-xs text-red-600 hover:underline">
