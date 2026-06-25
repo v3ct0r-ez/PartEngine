@@ -129,6 +129,8 @@ CREATE TABLE "Category" (
     "description" TEXT,
     "icon" TEXT,
     "isSystem" BOOLEAN NOT NULL DEFAULT false,
+    "isGroup" BOOLEAN NOT NULL DEFAULT false,
+    "codePrefix" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
@@ -378,7 +380,6 @@ CREATE TABLE "Attachment" (
     "contentType" TEXT NOT NULL,
     "sizeBytes" INTEGER NOT NULL,
     "storageKey" TEXT NOT NULL,
-    "ocrText" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Attachment_pkey" PRIMARY KEY ("id")
