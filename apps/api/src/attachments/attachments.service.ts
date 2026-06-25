@@ -314,8 +314,24 @@ export class AttachmentsService {
         providerMsg = raw;
       }
       if (res.status === 429) {
+        // Surface Google's own quota detail (which metric, suggested retry delay)
+        // so the user can tell a transient per-minute limit from a free-tier-not-
+        // available situation (a brand-new key that 429s immediately).
+        let detail = '';
+        try {
+          const j = JSON.parse(raw);
+          const err = Array.isArray(j) ? j[0]?.error : j?.error;
+          const details: any[] = err?.details ?? [];
+          const quota = details.find((d) => String(d?.['@type']).includes('QuotaFailure'));
+          const retry = details.find((d) => String(d?.['@type']).includes('RetryInfo'));
+          const qid = quota?.violations?.[0]?.quotaId || quota?.violations?.[0]?.quotaMetric || '';
+          if (qid) detail += ` Quota: ${qid}.`;
+          if (retry?.retryDelay) detail += ` Riprova tra ${retry.retryDelay}.`;
+        } catch {
+          /* keep generic */
+        }
         throw new BadRequestException(
-          'Quota AI esaurita (piano gratuito): hai superato il limite di richieste. Attendi qualche minuto e riprova, oppure cambia modello in Impostazioni. Dettagli: https://ai.google.dev/gemini-api/docs/rate-limits',
+          `Quota AI (429): limite del piano gratuito raggiunto.${detail} Se la chiave è NUOVA e va subito in 429, il piano gratuito potrebbe non essere disponibile nel tuo paese/progetto: prova un modello Flash-Lite, oppure cambia provider in Impostazioni (es. Groq, gratuito). Limiti: https://ai.google.dev/gemini-api/docs/rate-limits`,
         );
       }
       if (res.status === 401 || res.status === 403) {
