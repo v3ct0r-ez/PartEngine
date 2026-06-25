@@ -21,14 +21,15 @@ choice** (a requirement of the spec: *"Ogni scelta tecnica deve essere motivata"
               ┌───────▼──────┐   ┌───────▼───────┐  ┌──────▼──────┐
               │ PostgreSQL    │   │ S3 / MinIO    │  │ BullMQ /    │
               │ FTS + pg_trgm │   │ datasheets,   │  │ Redis (jobs:│
-              │ partitioning  │   │ images, label │  │ OCR, alerts)│
+              │ partitioning  │   │ images, label │  │ reports,    │
+              │               │   │               │  │ alerts)     │
               └───────────────┘   └───────────────┘  └─────────────┘
 ```
 
 A **modular monolith** is chosen over microservices. Rationale: a single team and a single
 transactional domain (inventory must be strongly consistent — you cannot oversell a reserved
 part) benefit far more from ACID transactions and local calls than from network boundaries.
-NestJS modules give us clean seams so individual modules (e.g. OCR, reporting) can be extracted
+NestJS modules give us clean seams so individual modules (e.g. reporting, exports) can be extracted
 into separate services later *if* scale demands it, without rewriting the domain.
 
 ## 2. Frontend
@@ -82,7 +83,7 @@ instead of scanning JSONB. This hybrid gives schema flexibility **and** query sp
 
 ## 5. Async work — Redis + BullMQ
 
-OCR/datasheet parsing, label batch generation, report exports, and alert evaluation are
+Label batch generation, report exports, and alert evaluation are
 offloaded to a job queue so API requests stay fast. This is the one place we add Redis;
 it doubles as the rate-limit store.
 

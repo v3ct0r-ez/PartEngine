@@ -28,7 +28,6 @@ const ACRONYMS: Record<string, string> = {
   LED: 'Light-Emitting Diode — diodo a emissione luminosa',
   LDO: 'Low-Dropout Regulator — regolatore a bassa caduta',
   PDF: 'Portable Document Format',
-  OCR: 'Optical Character Recognition — riconoscimento testo',
   DDT: 'Documento Di Trasporto',
 };
 

@@ -75,7 +75,7 @@ Each story carries acceptance criteria; "Done" = code + tests (≥80% on touched
 - UI: attachments panel in the component editor (upload, open, delete), available
   in both the new-component and edit windows.
 - **AC met:** files can be attached to a component, opened, and removed.
-- Note: datasheet text extraction / OCR / AI parameter-suggestion were prototyped
+- Note: datasheet text extraction and AI parameter-suggestion were prototyped
   and then removed by request — the attach button only attaches the file.
 
 ## Sprint 8 — Barcode/QR, reports & dashboard ✅

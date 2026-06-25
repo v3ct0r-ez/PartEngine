@@ -2,8 +2,8 @@
 
 ## Three layers
 
-1. **Full-text search (FTS)** — name, internal code, MPN, manufacturer, tags, and datasheet
-   OCR text are concatenated into a generated `search_vector tsvector` column with a GIN index.
+1. **Full-text search (FTS)** — name, internal code, MPN, manufacturer, tags, and aliases
+   are concatenated into a maintained `search_vector tsvector` column with a GIN index.
    Ranked with `ts_rank`.
 2. **Fuzzy search (`pg_trgm`)** — typo-tolerant matching on `mpn` / `internalCode` via
    `gin_trgm_ops` indexes and `similarity()` / `%`. Catches "STM32F013" → "STM32F103".
