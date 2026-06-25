@@ -144,7 +144,7 @@ export default function LocationsPage() {
         )}
 
         {/* Location tree */}
-        <section className="space-y-3">
+        <section className="max-w-4xl space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase text-muted-foreground">
               Struttura {selected ? `· ${selected.name}` : ''}
