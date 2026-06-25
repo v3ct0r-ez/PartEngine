@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Res,
   UploadedFile,
   UseInterceptors,
@@ -61,7 +62,7 @@ export class AttachmentsController {
   }
 
   @Get('attachments/:id/suggest-fields')
-  suggest(@Param('id') id: string) {
-    return this.attachments.suggestFields(id);
+  suggest(@Param('id') id: string, @Query('mpn') mpn?: string) {
+    return this.attachments.suggestFields(id, mpn);
   }
 }

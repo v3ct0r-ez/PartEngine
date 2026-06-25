@@ -192,8 +192,14 @@ export class AttachmentsService {
    * Suggest component parameter values from a datasheet's extracted text by
    * reusing the natural-language parser (unit-aware): returns { fieldKey: value }
    * for the component's category fields it can confidently fill, plus footprint.
+   *
+   * Family datasheets list many values (a resistor family varies only by
+   * resistance), and the parser keeps the last value per unit — meaningless for
+   * a family. When an `mpn` is given and found in the text, we narrow parsing to
+   * the window around that occurrence, so the values belonging to that specific
+   * variant win.
    */
-  async suggestFields(id: string) {
+  async suggestFields(id: string, mpn?: string) {
     const att = await this.prisma.attachment.findUnique({
       where: { id },
       include: { component: { include: { category: { include: { fields: true } } } } },
@@ -201,12 +207,28 @@ export class AttachmentsService {
     if (!att) throw new NotFoundException('Attachment not found');
     if (!att.ocrText) return { suggestions: {}, footprint: undefined };
 
-    const parsed = parseSearchQuery(att.ocrText.slice(0, 8000));
+    const text = this.scopeToMpn(att.ocrText, mpn).slice(0, 8000);
+    const parsed = parseSearchQuery(text);
     const fieldKeys = new Set(att.component.category.fields.map((f) => f.key));
     const suggestions: Record<string, number> = {};
     for (const [key, value] of Object.entries(parsed.params)) {
       if (fieldKeys.has(key)) suggestions[key] = value;
     }
     return { suggestions, footprint: parsed.footprint, tolerance: parsed.tolerance };
+  }
+
+  /**
+   * Narrow the OCR text to the neighbourhood of the MPN occurrence (the table
+   * row / paragraph for that specific part), so a family datasheet resolves to
+   * the variant's values. Falls back to the full text if the MPN isn't found.
+   */
+  private scopeToMpn(text: string, mpn?: string): string {
+    const needle = mpn?.trim();
+    if (!needle) return text;
+    const idx = text.toLowerCase().indexOf(needle.toLowerCase());
+    if (idx < 0) return text;
+    const start = Math.max(0, idx - 200);
+    const end = Math.min(text.length, idx + needle.length + 400);
+    return text.slice(start, end);
   }
 }

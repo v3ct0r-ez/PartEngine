@@ -714,9 +714,10 @@ export async function uploadAttachment(componentId: string, file: File) {
 export function deleteAttachment(id: string) {
   return request<{ deleted: boolean }>(`/attachments/${id}`, { method: 'DELETE' });
 }
-export function suggestAttachmentFields(id: string) {
+export function suggestAttachmentFields(id: string, mpn?: string) {
+  const qs = mpn?.trim() ? `?mpn=${encodeURIComponent(mpn.trim())}` : '';
   return request<{ suggestions: Record<string, number>; footprint?: string; tolerance?: number }>(
-    `/attachments/${id}/suggest-fields`,
+    `/attachments/${id}/suggest-fields${qs}`,
   );
 }
 /** Fetch (with auth) and open an attachment in a new tab. */

@@ -21,7 +21,7 @@ import {
   validateParameters,
   type FieldTemplate,
 } from '@partengine/core';
-import { confirmDialog, promptDialog } from '@/components/ui-dialogs';
+import { confirmDialog, promptDialog, toast } from '@/components/ui-dialogs';
 import { InfoDot } from '@/components/info-dot';
 import { lookupAcronym } from '@/lib/glossary';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -311,6 +311,8 @@ export function ComponentEditor({
         {editing && component && (
           <AttachmentsPanel
             componentId={component.id}
+            mpn={mpn ?? ''}
+            onMpnChange={(v) => setMpn(v)}
             onSuggest={(s) => {
               setParams((p) => {
                 const next = { ...p };
@@ -386,9 +388,13 @@ function OcrBadge({ status }: { status: 'NONE' | 'PENDING' | 'DONE' | 'FAILED' }
 
 function AttachmentsPanel({
   componentId,
+  mpn,
+  onMpnChange,
   onSuggest,
 }: {
   componentId: string;
+  mpn: string;
+  onMpnChange: (mpn: string) => void;
   onSuggest: (s: { suggestions: Record<string, number>; footprint?: string; tolerance?: number }) => void;
 }) {
   const qc = useQueryClient();
@@ -407,9 +413,28 @@ function AttachmentsPanel({
   });
   const del = useMutation({ mutationFn: deleteAttachment, onSuccess: refresh });
   const suggest = useMutation({
-    mutationFn: suggestAttachmentFields,
+    mutationFn: (vars: { id: string; mpn: string }) => suggestAttachmentFields(vars.id, vars.mpn),
     onSuccess: (s) => onSuggest(s),
   });
+
+  // The MPN identifies the specific variant inside a family datasheet, so it's
+  // used to scope parsing. If it's missing, ask for it explicitly before
+  // suggesting (otherwise a family datasheet would yield arbitrary values).
+  async function runSuggest(attachmentId: string) {
+    let effectiveMpn = mpn.trim();
+    if (!effectiveMpn) {
+      const entered = (await promptDialog(
+        'Per estrarre i parametri dal datasheet serve il MPN (identifica la variante nella famiglia). Inseriscilo:',
+      ))?.trim();
+      if (!entered) {
+        toast('MPN richiesto per i parametri suggeriti.', 'error');
+        return;
+      }
+      effectiveMpn = entered;
+      onMpnChange(entered); // keep what the user typed in the form
+    }
+    suggest.mutate({ id: attachmentId, mpn: effectiveMpn });
+  }
 
   return (
     <div className="mt-5 border-t border-border pt-4">
@@ -443,7 +468,7 @@ function AttachmentsPanel({
             <span className="text-xs text-muted-foreground">{(a.sizeBytes / 1024).toFixed(0)} KB · {a.kind}</span>
             <OcrBadge status={a.ocrStatus} />
             {a.ocrStatus === 'DONE' && (
-              <button type="button" onClick={() => suggest.mutate(a.id)} className="text-xs text-primary hover:underline">
+              <button type="button" onClick={() => runSuggest(a.id)} className="text-xs text-primary hover:underline">
                 suggerisci parametri
               </button>
             )}
