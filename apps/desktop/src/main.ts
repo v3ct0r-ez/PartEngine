@@ -78,7 +78,7 @@ if (!app.requestSingleInstanceLock()) {
   log('Another PartEngine instance is already running — exiting.', 'warn');
   app.quit();
 } else {
-  app.on('second-instance', () => mainWindow?.focus());
+  app.on('second-instance', () => showMainWindow());
   app.whenReady().then(bootstrap).catch(fatal);
 }
 
@@ -266,6 +266,23 @@ function createMainWindow() {
     loadingWindow = undefined;
     mainWindow?.show();
   });
+  // Clear the reference when the window is closed so the tray / second-instance
+  // handlers don't call methods on a destroyed BrowserWindow ("Object has been
+  // destroyed"); they recreate it via showMainWindow() instead.
+  mainWindow.on('closed', () => {
+    mainWindow = undefined;
+  });
+}
+
+/** Show the main window, recreating it if it was closed (tray "Apri", relaunch). */
+function showMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  } else {
+    createMainWindow();
+  }
 }
 
 function createTray() {
@@ -280,7 +297,7 @@ function createTray() {
   tray.setToolTip(`PartEngine — ${lanAddr}`);
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Apri PartEngine', click: () => mainWindow?.show() },
+      { label: 'Apri PartEngine', click: () => showMainWindow() },
       { label: `Indirizzo LAN: ${lanAddr}`, enabled: false },
       { type: 'separator' },
       { label: 'Esci', click: () => app.quit() },

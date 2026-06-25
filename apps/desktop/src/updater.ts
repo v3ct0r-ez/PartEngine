@@ -71,9 +71,10 @@ export class UpdaterManager {
     autoUpdater.on('error', (err) => {
       const msg = err?.message ?? String(err);
       // No published release yet (or private repo without a token) → 404 on the
-      // releases feed. That's "nothing to update to", not a real error.
-      if (/404/.test(msg)) {
-        log('[updater] no published release yet (404) — nothing to update');
+      // releases feed, or "No published versions on GitHub" when the repo has no
+      // releases at all. Either way it's "nothing to update to", not a real error.
+      if (/404|No published versions/i.test(msg)) {
+        log('[updater] no published release yet — nothing to update');
         this.set({ phase: 'not-available', error: null });
         return;
       }
@@ -99,7 +100,11 @@ export class UpdaterManager {
     try {
       await autoUpdater.checkForUpdates();
     } catch (err) {
-      this.set({ phase: 'error', error: (err as Error).message });
+      const msg = (err as Error).message;
+      // checkForUpdates() rejects with the same "no releases" condition that the
+      // 'error' event reports; keep it benign so the banner shows "up to date".
+      if (/404|No published versions/i.test(msg)) this.set({ phase: 'not-available', error: null });
+      else this.set({ phase: 'error', error: msg });
     }
     return this.state;
   }
