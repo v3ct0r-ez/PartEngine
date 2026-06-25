@@ -259,7 +259,11 @@ export class AttachmentsService {
         return `- ${f.key} (${f.label}) [${meta}]`;
       })
       .join('\n');
-    const text = att.ocrText.slice(0, 12000);
+    // Keep the prompt small and on-topic: a hard char budget (~3–4k tokens, far
+    // below any free-tier per-minute token limit) so even a huge datasheet never
+    // saturates the quota, and — when the MPN is known — the datasheet header
+    // (ordering legend) plus the window around the MPN's own table row.
+    const text = this.selectAiText(att.ocrText, opts.mpn);
 
     const system =
       'You extract electronic-component parameters from a datasheet for ONE specific manufacturer part number (MPN). ' +
@@ -337,6 +341,26 @@ export class AttachmentsService {
       }
     }
     return { suggestions: {}, paramValues, source: 'ai' as const, model: opts.model };
+  }
+
+  /**
+   * Pick the slice of datasheet text to send to the LLM, bounded to a safe token
+   * budget so a request never approaches the provider's per-minute token limit.
+   * If the MPN is found, send the document header (where ordering/legend tables
+   * live) plus the neighbourhood of the MPN; otherwise the leading section.
+   */
+  private selectAiText(ocrText: string, mpn?: string): string {
+    const MAX_CHARS = 12000; // ≈ 3–4k tokens — well under free-tier TPM (≥250k)
+    const text = ocrText;
+    if (text.length <= MAX_CHARS) return text;
+
+    const needle = mpn?.trim();
+    const idx = needle ? text.toLowerCase().indexOf(needle.toLowerCase()) : -1;
+    if (idx < 0) return text.slice(0, MAX_CHARS);
+
+    const head = text.slice(0, 3000); // ordering/legend usually near the top
+    const around = text.slice(Math.max(0, idx - 3000), idx + 6000); // the MPN's section
+    return `${head}\n…\n${around}`.slice(0, MAX_CHARS);
   }
 
   /** Parse a JSON object out of an LLM reply, tolerating ```json fences / prose. */
