@@ -176,6 +176,12 @@ function registerIpc() {
     return { ok: true };
   });
 
+  // Open an external https URL in the user's default browser.
+  ipcMain.handle('shell:openExternal', (_e, url: unknown) => {
+    if (typeof url === 'string' && /^https:\/\//i.test(url)) void shell.openExternal(url);
+    return { ok: true };
+  });
+
   // Silent label printing: render the HTML in an offscreen window and print to
   // the chosen (or default) printer with no dialog, at the 50×30 mm page size.
   ipcMain.handle('print:listPrinters', async () => {

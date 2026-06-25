@@ -50,6 +50,7 @@ export interface PartEngineBridge {
     label: (html: string) => Promise<{ ok: boolean; error?: string }>;
     listPrinters: () => Promise<DesktopPrinter[]>;
   };
+  openExternal: (url: string) => void;
 }
 
 declare global {

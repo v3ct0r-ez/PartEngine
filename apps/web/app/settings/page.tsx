@@ -111,10 +111,27 @@ export default function SettingsPage() {
 
       <div className="rounded-lg border border-border p-4">
         <div className="mb-1 text-sm font-semibold">Estrazione AI dei parametri (datasheet)</div>
-        <p className="mb-3 text-xs text-muted-foreground">
+        <p className="mb-2 text-xs text-muted-foreground">
           Usa un LLM via endpoint OpenAI-compatibile per estrarre i parametri dal datasheet (pulsante &quot;Estrai con AI&quot; nell&apos;editor).
-          Predefinito: <span className="font-mono">Google Gemini</span> (piano gratuito). Crea una API key gratuita su Google AI Studio.
+          Predefinito: <span className="font-mono">Google Gemini</span> (piano gratuito).
         </p>
+        <div className="mb-3 rounded-md border border-border bg-muted/30 p-3">
+          <div className="mb-1 text-xs font-semibold">Come ottenere la API key gratuita (Google Gemini)</div>
+          <ol className="ml-4 list-decimal space-y-0.5 text-[11px] text-muted-foreground">
+            <li>Apri <span className="font-mono">aistudio.google.com/apikey</span> e accedi con un account Google.</li>
+            <li>Clicca <span className="font-medium">&quot;Create API key&quot;</span> (Crea chiave API).</li>
+            <li>Copia la chiave generata (inizia con <span className="font-mono">AIza…</span>).</li>
+            <li>Incollala nel campo <span className="font-medium">API key</span> qui sotto. Fatto!</li>
+          </ol>
+          <button
+            type="button"
+            onClick={() => window.partengine?.openExternal?.('https://aistudio.google.com/apikey')}
+            className="mt-2 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted"
+          >
+            Apri Google AI Studio ↗
+          </button>
+          <p className="mt-2 text-[11px] text-muted-foreground">Il piano gratuito ha limiti di quota; i datasheet inviati sono di norma pubblici.</p>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 sm:col-span-2"><span className="text-xs text-muted-foreground">API key</span>
             <input type="password" className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="AIza…"

@@ -42,4 +42,6 @@ contextBridge.exposeInMainWorld('partengine', {
     /** List the installed printers (name + default flag). */
     listPrinters: () => ipcRenderer.invoke('print:listPrinters'),
   },
+  /** Open an external https URL in the user's default browser. */
+  openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 });

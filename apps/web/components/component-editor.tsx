@@ -511,6 +511,12 @@ function AttachmentsPanel({
     onError: (e) => toast((e as Error).message, 'error'),
   });
   const aiAvailable = typeof window !== 'undefined' && !!window.partengine?.isDesktop;
+  const [aiConfigured, setAiConfigured] = useState(false);
+  useEffect(() => {
+    if (aiAvailable) {
+      window.partengine!.settings.get().then((c) => setAiConfigured(!!c.settings.aiApiKey?.trim())).catch(() => {});
+    }
+  }, [aiAvailable]);
 
   return (
     <div className="mt-5 border-t border-border pt-4">
@@ -549,10 +555,17 @@ function AttachmentsPanel({
               </button>
             )}
             {a.ocrStatus === 'DONE' && aiAvailable && (
-              <button type="button" onClick={() => ai.mutate(a.id)} disabled={ai.isPending}
-                className="text-xs font-medium text-violet-600 hover:underline disabled:opacity-50">
-                {ai.isPending && ai.variables === a.id ? 'AI…' : '✨ Estrai con AI'}
-              </button>
+              aiConfigured ? (
+                <button type="button" onClick={() => ai.mutate(a.id)} disabled={ai.isPending}
+                  className="text-xs font-medium text-violet-600 hover:underline disabled:opacity-50">
+                  {ai.isPending && ai.variables === a.id ? 'AI…' : '✨ Estrai con AI'}
+                </button>
+              ) : (
+                <a href="/settings" title="Configura la API key per l'estrazione AI"
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                  ✨ Configura AI
+                </a>
+              )
             )}
             <button type="button" onClick={() => del.mutate(a.id)} className="ml-auto text-xs text-red-600 hover:underline">
               elimina
