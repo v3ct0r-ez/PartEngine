@@ -272,21 +272,30 @@ export class AttachmentsService {
       `--- DATASHEET TEXT ---\n${text}`;
 
     const url = `${opts.baseUrl.replace(/\/+$/, '')}/chat/completions`;
-    let res: globalThis.Response;
-    try {
-      res = await fetch(url, {
+    const payload = JSON.stringify({
+      model: opts.model,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    });
+    const doFetch = () =>
+      fetch(url, {
         method: 'POST',
         headers: { authorization: `Bearer ${opts.apiKey}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          model: opts.model,
-          temperature: 0,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-        }),
+        body: payload,
       });
+
+    let res: globalThis.Response;
+    try {
+      res = await doFetch();
+      // A 429 is often a transient per-minute limit — wait once and retry.
+      if (res.status === 429) {
+        await new Promise((r) => setTimeout(r, 6000));
+        res = await doFetch();
+      }
     } catch (err) {
       throw new BadRequestException(`AI provider unreachable: ${(err as Error).message}`);
     }

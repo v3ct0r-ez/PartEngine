@@ -137,13 +137,19 @@ export default function SettingsPage() {
             <input type="password" className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="AIza…"
               defaultValue={data.settings.aiApiKey ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiApiKey ?? '')) saveAi({ aiApiKey: e.target.value }); }} /></label>
           <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Modello</span>
-            <input className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="gemini-2.0-flash"
-              defaultValue={data.settings.aiModel ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiModel ?? '')) saveAi({ aiModel: e.target.value }); }} /></label>
+            <input list="ai-models" className="rounded-md border border-border bg-background px-3 py-1.5 text-sm" placeholder="gemini-2.5-flash-lite"
+              defaultValue={data.settings.aiModel ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiModel ?? '')) saveAi({ aiModel: e.target.value }); }} />
+            <datalist id="ai-models">
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (quota gratuita più alta)</option>
+              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            </datalist></label>
           <label className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Endpoint (OpenAI-compatibile)</span>
             <input className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono text-xs" placeholder="https://generativelanguage.googleapis.com/v1beta/openai"
               defaultValue={data.settings.aiBaseUrl ?? ''} onBlur={(e) => { if (e.target.value !== (data!.settings.aiBaseUrl ?? '')) saveAi({ aiBaseUrl: e.target.value }); }} /></label>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">Lasciando Modello/Endpoint vuoti si usano i predefiniti Gemini. Per altri provider (Groq, OpenRouter…) imposta endpoint e modello corrispondenti.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">Lasciando Modello/Endpoint vuoti si usa <span className="font-mono">gemini-2.5-flash-lite</span> (quota gratuita più alta). Se ottieni errori di quota (429), scegli un modello <span className="font-medium">Flash-Lite</span> o attendi qualche minuto. Per altri provider (Groq, OpenRouter…) imposta endpoint e modello corrispondenti.</p>
       </div>
 
       <div className="rounded-lg border border-border p-4">

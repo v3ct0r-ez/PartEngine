@@ -497,7 +497,7 @@ function AttachmentsPanel({
       if (!key) throw new Error('Configura la API key AI in Impostazioni.');
       return aiExtractAttachment(attachmentId, {
         apiKey: key,
-        model: cfg.settings.aiModel?.trim() || 'gemini-2.0-flash',
+        model: cfg.settings.aiModel?.trim() || 'gemini-2.5-flash-lite',
         baseUrl: cfg.settings.aiBaseUrl?.trim() || 'https://generativelanguage.googleapis.com/v1beta/openai',
         mpn: mpn.trim() || undefined,
       });
