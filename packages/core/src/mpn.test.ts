@@ -52,6 +52,37 @@ describe('decodeMpn — resistors', () => {
     expect(d.params.resistance).toBe(10_000);
     expect(d.tolerance).toBe(1);
   });
+  it('decodes Panasonic ERA-3AEB1002V (0.1%)', () => {
+    const d = decodeMpn('ERA-3AEB1002V')!;
+    expect(d.family).toBe('Panasonic ERA');
+    expect(d.footprint).toBe('0603');
+    expect(d.params.resistance).toBe(10_000);
+    expect(d.tolerance).toBe(0.1);
+  });
+  it('decodes KOA RK73H2ATTD1002F', () => {
+    const d = decodeMpn('RK73H2ATTD1002F')!;
+    expect(d.footprint).toBe('0805');
+    expect(d.params.resistance).toBe(10_000);
+    expect(d.tolerance).toBe(1);
+  });
+  it('decodes Rohm MCR03EZPFX1002', () => {
+    const d = decodeMpn('MCR03EZPFX1002')!;
+    expect(d.footprint).toBe('0603');
+    expect(d.params.resistance).toBe(10_000);
+    expect(d.tolerance).toBe(1);
+  });
+  it('decodes Bourns CR0603-FX-1002ELF', () => {
+    const d = decodeMpn('CR0603-FX-1002ELF')!;
+    expect(d.footprint).toBe('0603');
+    expect(d.params.resistance).toBe(10_000);
+    expect(d.tolerance).toBe(1);
+  });
+  it('decodes Susumu RG1608P-102-B-T5 (metric size, 0.1%)', () => {
+    const d = decodeMpn('RG1608P-102-B-T5')!;
+    expect(d.footprint).toBe('0603');
+    expect(d.params.resistance).toBe(1_000);
+    expect(d.tolerance).toBe(0.1);
+  });
 });
 
 describe('decodeMpn — capacitors', () => {
@@ -68,6 +99,23 @@ describe('decodeMpn — capacitors', () => {
     expect(d.footprint).toBe('0603');
     expect(d.params.capacitance).toBeCloseTo(1e-7);
     expect(d.tolerance).toBe(10);
+  });
+  it('decodes TDK C1608X7R1H104K080AC (metric size + voltage)', () => {
+    const d = decodeMpn('C1608X7R1H104K080AC')!;
+    expect(d.family).toBe('TDK C');
+    expect(d.footprint).toBe('0603');
+    expect(d.params.capacitance).toBeCloseTo(1e-7);
+    expect(d.params.voltage).toBe(50);
+    expect(d.tolerance).toBe(10);
+    expect(d.dielectric).toBe('X7R');
+  });
+  it('decodes KEMET C0805C104K5RAC', () => {
+    const d = decodeMpn('C0805C104K5RAC')!;
+    expect(d.family).toBe('KEMET C');
+    expect(d.footprint).toBe('0805');
+    expect(d.params.capacitance).toBeCloseTo(1e-7);
+    expect(d.tolerance).toBe(10);
+    expect(d.dielectric).toBe('X7R');
   });
 });
 
