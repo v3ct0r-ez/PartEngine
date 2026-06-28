@@ -40,9 +40,9 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
   if (isError) return <div className="p-4 text-sm text-red-500">Errore nel caricamento.</div>;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
       <table className="w-full text-sm">
-        <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+        <thead className="border-b border-border bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             {columns.map((key) => {
               const h = header(key, valueField);
@@ -71,10 +71,10 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
                 if (window.getSelection()?.toString()) return;
                 onRowClick?.(c);
               }}
-              className={`border-t border-border hover:bg-muted/40 ${onRowClick ? 'cursor-pointer' : ''}`}
+              className={`border-t border-border transition-colors odd:bg-muted/20 hover:bg-primary/5 ${onRowClick ? 'cursor-pointer' : ''}`}
             >
               {columns.map((key) => (
-                <td key={key} className="px-3 py-2">{cell(key, c, valueField)}</td>
+                <td key={key} className={`px-3 py-2 ${key === 'stock' || key === 'value' ? 'tabular-nums' : ''}`}>{cell(key, c, valueField)}</td>
               ))}
             </tr>
           ))}
