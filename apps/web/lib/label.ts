@@ -13,6 +13,8 @@ export interface LabelPrefs {
   /** Label size in millimetres. */
   widthMm: number;
   heightMm: number;
+  /** Safe inner margin (padding) in millimetres on every side. */
+  marginMm: number;
   /** Include the QR on QR-type labels. */
   qrEnabled: boolean;
   /** Side the QR sits on. */
@@ -30,6 +32,7 @@ export interface LabelPrefs {
 export const DEFAULT_LABEL_PREFS: LabelPrefs = {
   widthMm: 50,
   heightMm: 30,
+  marginMm: 2,
   qrEnabled: true,
   qrPosition: 'left',
   qrSizeMm: 26,
@@ -144,7 +147,9 @@ function labelDoc(widthMm: number, heightMm: number, title: string, body: string
 export async function buildLabelHtml(spec: LabelSpec, prefs: LabelPrefs = DEFAULT_LABEL_PREFS): Promise<string> {
   const W = clampNum(prefs.widthMm, 20, 120);
   const H = clampNum(prefs.heightMm, 15, 120);
-  const pad = 2, gap = 2;
+  // Configurable safe margin; never larger than half the smallest side.
+  const pad = clampNum(prefs.marginMm ?? 2, 0, Math.min(W, H) / 2 - 1);
+  const gap = 2;
   const useQr = spec.qr !== false && prefs.qrEnabled;
   const showCode = prefs.showCode;
   const showName = prefs.showName && !!spec.name;

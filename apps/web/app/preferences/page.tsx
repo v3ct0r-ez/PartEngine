@@ -202,6 +202,16 @@ function LabelPrefsSection() {
         </div>
       </div>
 
+      {/* Margine interno */}
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Margine (mm)</span>
+        <input type="number" min={0} max={10} step={0.5} className={`${inp} w-24`} value={lab.marginMm}
+          onChange={(e) => {
+            const m = Number(e.target.value);
+            set({ marginMm: Number.isFinite(m) ? m : lab.marginMm });
+          }} />
+      </label>
+
       {/* QR */}
       <label className="flex items-center justify-between gap-3 text-sm">
         <span className="text-muted-foreground">Mostra QR</span>
@@ -220,7 +230,7 @@ function LabelPrefsSection() {
           </label>
           <label className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">Dimensione QR (mm)</span>
-            <input type="number" min={8} max={lab.heightMm} className={`${inp} w-24`} value={lab.qrSizeMm}
+            <input type="number" min={8} max={Math.round(lab.heightMm - 2 * lab.marginMm)} className={`${inp} w-24`} value={lab.qrSizeMm}
               onChange={(e) => set({ qrSizeMm: Number(e.target.value) || lab.qrSizeMm })} />
           </label>
           <label className="flex items-center justify-between gap-3 text-sm">

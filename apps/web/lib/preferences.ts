@@ -55,6 +55,7 @@ export function parseLabelPrefs(v: unknown): LabelPrefs {
   return {
     widthMm: num(o.widthMm, d.widthMm, 20, 120),
     heightMm: num(o.heightMm, d.heightMm, 15, 120),
+    marginMm: num(o.marginMm, d.marginMm, 0, 10),
     qrEnabled: bool(o.qrEnabled, d.qrEnabled),
     qrPosition: o.qrPosition === 'right' ? 'right' : 'left',
     qrSizeMm: num(o.qrSizeMm, d.qrSizeMm, 8, 120),
