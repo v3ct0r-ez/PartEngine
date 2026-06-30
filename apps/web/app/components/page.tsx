@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ComponentEditor } from '@/components/component-editor';
 import { ComponentsTable } from '@/components/components-table';
 import { EconomicPanel } from '@/components/economic-panel';
@@ -179,7 +180,7 @@ export default function ComponentsPage() {
             className="w-40 rounded-md border border-border bg-background px-3 py-2 text-sm"
             title="Scanner USB: inquadra il QR del componente"
           />
-          <a href="/categories" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Categorie</a>
+          <Link href="/categories" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Categorie</Link>
           <button onClick={openNew} disabled={categories.length === 0}
             className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">+ Nuovo</button>
         </div>

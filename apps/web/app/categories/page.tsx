@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   addCategoryField,
   createCategory,
@@ -53,7 +54,7 @@ export default function CategoriesPage() {
     <div className="space-y-5">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Categorie & parametri</h1>
-        <a href="/components" className="text-sm text-primary hover:underline">← Componenti</a>
+        <Link href="/components" className="text-sm text-primary hover:underline">← Componenti</Link>
       </header>
 
       <form onSubmit={(e) => { e.preventDefault(); if (slug && name && (kind === 'group' || parentId)) create.mutate(); }}

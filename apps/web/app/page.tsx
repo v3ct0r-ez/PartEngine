@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icons';
+import Link from 'next/link';
 import { downloadReport, getDashboard } from '@/lib/api';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -105,7 +106,7 @@ export default function DashboardPage() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Vai a <a className="text-primary underline" href="/components">Componenti</a> per cercare, creare, scansionare e gestire il magazzino.
+        Vai a <Link className="text-primary underline" href="/components">Componenti</Link> per cercare, creare, scansionare e gestire il magazzino.
       </p>
       {dl.isError && <p className="text-sm text-red-500">{(dl.error as Error).message}</p>}
     </div>

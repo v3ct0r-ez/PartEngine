@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icons';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 // Route → shared icon name (see components/icons.tsx).
@@ -39,7 +40,7 @@ export function SideNav() {
           {section.items.map(([label, href]) => {
             const active = isActive(href);
             return (
-              <a
+              <Link
                 key={href}
                 href={href}
                 aria-current={active ? 'page' : undefined}
@@ -53,7 +54,7 @@ export function SideNav() {
                 <span className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-opacity ${active ? 'opacity-100' : 'opacity-0'}`} />
                 <span className={active ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-foreground'}><Icon name={ICON_NAME[href]} /></span>
                 {label}
-              </a>
+              </Link>
             );
           })}
         </div>
