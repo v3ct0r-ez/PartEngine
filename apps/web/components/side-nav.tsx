@@ -34,7 +34,7 @@ export function SideNav() {
       {SECTIONS.map((section, i) => (
         <div key={i} className="space-y-1">
           {section.heading && (
-            <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">{section.heading}</div>
+            <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{section.heading}</div>
           )}
           {section.items.map(([label, href]) => {
             const active = isActive(href);
