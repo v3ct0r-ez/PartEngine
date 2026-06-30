@@ -65,7 +65,7 @@ export default function DashboardPage() {
           return (
             <div
               key={k.label}
-              className={`group rounded-xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${k.warn ? 'border-current/20' : 'border-border hover:border-primary/40'}`}
+              className="group rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{k.label}</div>
@@ -77,7 +77,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="rounded-xl border border-border p-5">
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="font-semibold">Distribuzione per categoria</h2>
           {total > 0 && <span className="text-xs text-muted-foreground">{total.toLocaleString('it-IT')} componenti</span>}

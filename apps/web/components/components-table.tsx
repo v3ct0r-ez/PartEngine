@@ -40,7 +40,7 @@ export function ComponentsTable({ onRowClick }: { onRowClick?: (c: ComponentRow)
   if (isError) return <div className="p-4 text-sm text-red-500">Errore nel caricamento.</div>;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
+    <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
           <tr>

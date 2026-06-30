@@ -10,9 +10,15 @@ const config: Config = {
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        // Page tone behind cards — slightly tinted/deeper than the card surface.
+        app: 'hsl(var(--app-bg))',
+        // Raised surface (cards, inputs, modals) — sits above `app`.
+        card: 'hsl(var(--card))',
+        'card-foreground': 'hsl(var(--foreground))',
         muted: 'hsl(var(--muted))',
         'muted-foreground': 'hsl(var(--muted-foreground))',
         border: 'hsl(var(--border))',
+        ring: 'hsl(var(--ring))',
         primary: 'hsl(var(--primary))',
         'primary-foreground': 'hsl(var(--primary-foreground))',
       },

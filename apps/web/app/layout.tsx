@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="min-h-0 flex-1 overflow-hidden">
           <AuthGate>
           <div className="flex h-full">
-            <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-muted/30 px-3 py-4 md:flex">
+            <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-card px-3 py-4 md:flex">
               <Logo size={44} className="mb-6 px-2" />
               <SideNav />
               <div className="mt-auto px-2 pt-4">
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </aside>
             <div className="flex-1 overflow-auto">
               <UpdateBanner />
-              <div className="flex items-center justify-end gap-1 border-b border-border px-6 py-2">
+              <div className="flex items-center justify-end gap-1 border-b border-border bg-card px-6 py-2">
                 <NotificationsBell />
                 <AccountMenu />
               </div>
