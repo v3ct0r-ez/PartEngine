@@ -66,6 +66,13 @@ export function parseLabelPrefs(v: unknown): LabelPrefs {
     showName: bool(o.showName, d.showName),
     logoInQr: bool(o.logoInQr, d.logoInQr),
     qrLogoScale: num(o.qrLogoScale, d.qrLogoScale, 10, 40),
+    gapMm: num(o.gapMm, d.gapMm, 0, 20),
+    textAlign: o.textAlign === 'center' || o.textAlign === 'right' ? o.textAlign : 'left',
+    textColor: typeof o.textColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.textColor) ? o.textColor : d.textColor,
+    codeFontMm: num(o.codeFontMm, d.codeFontMm, 1.2, 12),
+    nameFontMm: num(o.nameFontMm, d.nameFontMm, 1, 12),
+    nameAutoFit: bool(o.nameAutoFit, d.nameAutoFit),
+    border: bool(o.border, d.border),
   };
 }
 

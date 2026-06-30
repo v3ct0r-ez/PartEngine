@@ -35,6 +35,20 @@ export interface LabelPrefs {
   logoInQr: boolean;
   /** Logo size as a percentage of the QR width (when logoInQr). */
   qrLogoScale: number;
+  /** Space between the QR and the text column, in millimetres. */
+  gapMm: number;
+  /** Horizontal alignment of the text column. */
+  textAlign: 'left' | 'center' | 'right';
+  /** Text colour as #rrggbb (code + name). */
+  textColor: string;
+  /** Code text size in millimetres. */
+  codeFontMm: number;
+  /** Name text size in millimetres (when shown alongside the code). */
+  nameFontMm: number;
+  /** Auto-fit the name to the column when it's the only text (no code). */
+  nameAutoFit: boolean;
+  /** Draw a thin border around the label. */
+  border: boolean;
 }
 
 export const DEFAULT_LABEL_PREFS: LabelPrefs = {
@@ -51,6 +65,13 @@ export const DEFAULT_LABEL_PREFS: LabelPrefs = {
   showName: true,
   logoInQr: true,
   qrLogoScale: 26,
+  gapMm: 2,
+  textAlign: 'left',
+  textColor: '#111111',
+  codeFontMm: 3.6,
+  nameFontMm: 2.5,
+  nameAutoFit: true,
+  border: false,
 };
 
 const clampNum = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
@@ -148,9 +169,9 @@ function labelDoc(widthMm: number, heightMm: number, title: string, body: string
       .label.center { flex-direction: column; justify-content: center; text-align: center; gap: 1mm; }
       .qr { image-rendering: pixelated; }
       .info { min-width: 0; overflow: hidden; }
-      .code { font-weight: 700; font-size: 3.6mm; line-height: 1.05; letter-spacing: 0.01em; overflow-wrap: anywhere; }
+      .code { font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; overflow-wrap: anywhere; }
       .bigcode { font-weight: 800; font-size: 10mm; line-height: 0.95; letter-spacing: 0.02em; }
-      .name { font-weight: 500; font-size: 2.5mm; line-height: 1.2; margin-top: 1.2mm; color: #111;
+      .name { font-weight: 500; line-height: 1.2; margin-top: 1.2mm;
               overflow-wrap: anywhere; /* break over-long words instead of clipping */
               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       /* When the name is the only text (no code), it fills the column; the font
@@ -170,10 +191,17 @@ export async function buildLabelHtml(spec: LabelSpec, prefs: LabelPrefs = DEFAUL
   const H = clampNum(prefs.heightMm, 15, 120);
   // Configurable safe margin; never larger than half the smallest side.
   const pad = clampNum(prefs.marginMm ?? 2, 0, Math.min(W, H) / 2 - 1);
-  const gap = 2;
+  const gap = clampNum(prefs.gapMm ?? 2, 0, Math.max(W - pad * 2 - 8, 0));
   const useQr = spec.qr !== false && prefs.qrEnabled;
   const showCode = prefs.showCode;
   const showName = prefs.showName && !!spec.name;
+  const color = prefs.textColor ?? '#111111';
+  const align = prefs.textAlign ?? 'left';
+  const codeMm = clampNum(prefs.codeFontMm ?? 3.6, 1.2, 12);
+  const nameMm = clampNum(prefs.nameFontMm ?? 2.5, 1, 12);
+  // Optional border, inside the W×H box (box-sizing: border-box) so it never
+  // grows the label past its physical size.
+  const border = prefs.border ? `;border:0.2mm solid ${color}` : '';
 
   if (useQr) {
     const qrMm = clampNum(prefs.qrSizeMm, 8, Math.min(H - pad * 2, W - pad * 2 - 8));
@@ -188,25 +216,25 @@ export async function buildLabelHtml(spec: LabelSpec, prefs: LabelPrefs = DEFAUL
       color: prefs.qrColor ?? '#000000',
     });
     const nameOnly = !showCode;
-    const nameFont = nameOnly && showName ? fitNameFontMm(spec.name ?? '', colW, colH) : null;
-    const info = `<div class="info" style="flex:1;width:${colW}mm">${
-      showCode ? `<div class="code mono">${escapeHtml(spec.code)}</div>` : ''
+    const nameSize = nameOnly && (prefs.nameAutoFit ?? true) ? fitNameFontMm(spec.name ?? '', colW, colH) : nameMm;
+    const info = `<div class="info" style="flex:1;width:${colW}mm;text-align:${align}">${
+      showCode ? `<div class="code mono" style="font-size:${codeMm}mm;color:${color}">${escapeHtml(spec.code)}</div>` : ''
     }${
       showName
-        ? `<div class="name sans${nameOnly ? ' only' : ''}"${nameFont ? ` style="font-size:${nameFont}mm"` : ''}>${escapeHtml(spec.name ?? '')}</div>`
+        ? `<div class="name sans${nameOnly ? ' only' : ''}" style="font-size:${nameSize}mm;color:${color}">${escapeHtml(spec.name ?? '')}</div>`
         : ''
     }</div>`;
     const qrImg = `<img class="qr" style="width:${qrMm}mm;height:${qrMm}mm;flex:0 0 ${qrMm}mm" src="${dataUrl}" />`;
     const body = `<div class="label" style="width:${W}mm;height:${H}mm;padding:${pad}mm;gap:${gap}mm${
       prefs.qrPosition === 'right' ? ';flex-direction:row-reverse' : ''
-    }">${qrImg}${info}</div>`;
+    }${border}">${qrImg}${info}</div>`;
     return labelDoc(W, H, spec.code, body);
   }
 
   // Text-only label (e.g. root locations): big centred code (+ optional name).
-  const body = `<div class="label center" style="width:${W}mm;height:${H}mm;padding:${pad}mm">${
-    showCode ? `<div class="bigcode mono">${escapeHtml(spec.code)}</div>` : ''
-  }${showName ? `<div class="name sans">${escapeHtml(spec.name ?? '')}</div>` : ''}</div>`;
+  const body = `<div class="label center" style="width:${W}mm;height:${H}mm;padding:${pad}mm${border}">${
+    showCode ? `<div class="bigcode mono" style="color:${color}">${escapeHtml(spec.code)}</div>` : ''
+  }${showName ? `<div class="name sans" style="font-size:${nameMm}mm;color:${color}">${escapeHtml(spec.name ?? '')}</div>` : ''}</div>`;
   return labelDoc(W, H, spec.code, body);
 }
 

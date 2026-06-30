@@ -234,6 +234,14 @@ function LabelPrefsSection() {
               onChange={(e) => set({ qrSizeMm: Number(e.target.value) || lab.qrSizeMm })} />
           </label>
           <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Spazio QR–testo (mm)</span>
+            <input type="number" min={0} max={20} step={0.5} className={`${inp} w-24`} value={lab.gapMm}
+              onChange={(e) => {
+                const g = Number(e.target.value);
+                set({ gapMm: Number.isFinite(g) ? g : lab.gapMm });
+              }} />
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">Correzione errori</span>
             <select className={inp} value={lab.qrEcLevel}
               onChange={(e) => set({ qrEcLevel: e.target.value as 'L' | 'M' | 'Q' | 'H' })}>
@@ -286,6 +294,40 @@ function LabelPrefsSection() {
           </label>
         </div>
       </div>
+
+      {/* Testo e layout */}
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Allineamento testo</span>
+        <select className={inp} value={lab.textAlign}
+          onChange={(e) => set({ textAlign: e.target.value as 'left' | 'center' | 'right' })}>
+          <option value="left">Sinistra</option>
+          <option value="center">Centro</option>
+          <option value="right">Destra</option>
+        </select>
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Colore testo</span>
+        <input type="color" className="h-8 w-12 cursor-pointer rounded border border-border bg-background" value={lab.textColor}
+          onChange={(e) => set({ textColor: e.target.value })} />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Dimensione testo Codice (mm)</span>
+        <input type="number" min={1.2} max={12} step={0.1} className={`${inp} w-24`} value={lab.codeFontMm}
+          onChange={(e) => { const n = Number(e.target.value); set({ codeFontMm: Number.isFinite(n) ? n : lab.codeFontMm }); }} />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Dimensione testo Nome (mm)</span>
+        <input type="number" min={1} max={12} step={0.1} className={`${inp} w-24`} value={lab.nameFontMm}
+          onChange={(e) => { const n = Number(e.target.value); set({ nameFontMm: Number.isFinite(n) ? n : lab.nameFontMm }); }} />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Adatta il Nome allo spazio (se senza Codice)</span>
+        <input type="checkbox" checked={lab.nameAutoFit} onChange={(e) => set({ nameAutoFit: e.target.checked })} className="h-4 w-4" />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Bordo etichetta</span>
+        <input type="checkbox" checked={lab.border} onChange={(e) => set({ border: e.target.checked })} className="h-4 w-4" />
+      </label>
 
       {/* Live preview */}
       <div>
