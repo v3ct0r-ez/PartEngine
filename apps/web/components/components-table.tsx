@@ -144,7 +144,7 @@ function Th({
         title="Ordina (clic: crescente → decrescente → predefinito)"
       >
         <AutoAcronyms>{label}</AutoAcronyms>
-        <span className={active ? 'text-foreground' : 'text-muted-foreground/30'}>{active ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+        <span className={active ? 'text-foreground' : 'text-muted-foreground'}>{active ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
       </button>
     </th>
   );

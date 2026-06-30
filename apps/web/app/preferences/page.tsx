@@ -207,23 +207,28 @@ function LabelPrefsSection() {
         <span className="text-muted-foreground">Mostra QR</span>
         <input type="checkbox" checked={lab.qrEnabled} onChange={(e) => set({ qrEnabled: e.target.checked })} className="h-4 w-4" />
       </label>
-      <label className="flex items-center justify-between gap-3 text-sm">
-        <span className={lab.qrEnabled ? 'text-muted-foreground' : 'text-muted-foreground/40'}>Posizione QR</span>
-        <select className={inp} value={lab.qrPosition} disabled={!lab.qrEnabled}
-          onChange={(e) => set({ qrPosition: e.target.value as 'left' | 'right' })}>
-          <option value="left">Sinistra</option>
-          <option value="right">Destra</option>
-        </select>
-      </label>
-      <label className="flex items-center justify-between gap-3 text-sm">
-        <span className={lab.qrEnabled ? 'text-muted-foreground' : 'text-muted-foreground/40'}>Dimensione QR (mm)</span>
-        <input type="number" min={8} max={lab.heightMm} className={`${inp} w-24`} value={lab.qrSizeMm} disabled={!lab.qrEnabled}
-          onChange={(e) => set({ qrSizeMm: Number(e.target.value) || lab.qrSizeMm })} />
-      </label>
-      <label className="flex items-center justify-between gap-3 text-sm">
-        <span className={lab.qrEnabled ? 'text-muted-foreground' : 'text-muted-foreground/40'}>Logo nel QR</span>
-        <input type="checkbox" checked={lab.logoInQr} disabled={!lab.qrEnabled} onChange={(e) => set({ logoInQr: e.target.checked })} className="h-4 w-4" />
-      </label>
+      {/* QR sub-options appear only when the QR is enabled (no disabled/dimmed rows). */}
+      {lab.qrEnabled && (
+        <>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Posizione QR</span>
+            <select className={inp} value={lab.qrPosition}
+              onChange={(e) => set({ qrPosition: e.target.value as 'left' | 'right' })}>
+              <option value="left">Sinistra</option>
+              <option value="right">Destra</option>
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Dimensione QR (mm)</span>
+            <input type="number" min={8} max={lab.heightMm} className={`${inp} w-24`} value={lab.qrSizeMm}
+              onChange={(e) => set({ qrSizeMm: Number(e.target.value) || lab.qrSizeMm })} />
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Logo nel QR</span>
+            <input type="checkbox" checked={lab.logoInQr} onChange={(e) => set({ logoInQr: e.target.checked })} className="h-4 w-4" />
+          </label>
+        </>
+      )}
 
       {/* Valori stampati */}
       <div>
