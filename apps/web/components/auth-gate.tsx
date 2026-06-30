@@ -1,6 +1,5 @@
 'use client';
 
-import { ChromaLogo } from '@/components/chroma-logo';
 import { LogoMark } from '@/components/logo';
 import { getAuthStatus, getMe, getToken, login, setupAdmin } from '@/lib/api';
 import { useEffect, useState } from 'react';
@@ -67,15 +66,23 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
   );
 }
 
-/** Animated logo (logo.mp4) with its background chroma-keyed out, falling back
- * to the static mark if the video can't play. */
+/**
+ * Animated logo: a pre-rendered, transparent animated WebP (the green screen is
+ * chroma-keyed offline at build time, not at runtime). A plain <img> avoids the
+ * video decode + canvas readback that silently failed in the packaged desktop
+ * build; it plays once (loop=1) and freezes on the last frame. Falls back to the
+ * static mark if the image can't load. */
 function AnimatedLogo() {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <LogoMark size={120} />;
   return (
-    <ChromaLogo
-      src="/logo.mp4"
-      height={120}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo.webp"
+      alt="PartEngine"
+      onError={() => setFailed(true)}
       className="mx-auto drop-shadow"
-      fallback={<LogoMark size={120} />}
+      style={{ height: 120, width: 'auto' }}
     />
   );
 }
