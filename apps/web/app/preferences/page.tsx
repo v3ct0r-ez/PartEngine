@@ -2,7 +2,7 @@
 
 import { useTheme } from '@/components/theme';
 import type { ThemePref } from '@/lib/api';
-import { buildLabelHtml, type LabelPrefs } from '@/lib/label';
+import { buildLabelHtml, DEFAULT_LABEL_PREFS, type LabelPrefs } from '@/lib/label';
 import {
   COMPONENT_COLUMNS,
   COMPONENT_TABS,
@@ -158,6 +158,11 @@ function LabelPrefsSection() {
     setLab(next);
     update.mutate({ label: next });
   }
+  function reset() {
+    setDirty(true);
+    setLab(DEFAULT_LABEL_PREFS);
+    update.mutate({ label: DEFAULT_LABEL_PREFS });
+  }
 
   // Live preview of a representative QR label.
   const [html, setHtml] = useState<string | null>(null);
@@ -173,7 +178,16 @@ function LabelPrefsSection() {
 
   return (
     <section className={card}>
-      <h2 className="font-semibold">Etichette di stampa</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold">Etichette di stampa</h2>
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          Ripristina predefiniti
+        </button>
+      </div>
 
       {/* Dimensione */}
       <div className="space-y-2">
