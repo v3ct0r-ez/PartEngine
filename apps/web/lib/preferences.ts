@@ -1,6 +1,7 @@
 'use client';
 
 import { getPreferences, updatePreferences, type Preferences } from '@/lib/api';
+import { DEFAULT_LABEL_PREFS, type LabelPrefs } from '@/lib/label';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export type ComponentTab = 'warehouse' | 'params' | 'eco';
@@ -30,13 +31,38 @@ export interface AppPrefs {
   componentColumns: string[];
   /** Rows fetched per page in the components list. */
   pageSize: number;
+  /** Print-label styling (size, QR, printed values). */
+  label: LabelPrefs;
 }
 
 export const DEFAULT_PREFS: AppPrefs = {
   defaultComponentTab: 'warehouse',
   componentColumns: ['internalCode', 'name', 'category', 'mpn', 'value', 'footprint'],
   pageSize: 50,
+  label: DEFAULT_LABEL_PREFS,
 };
+
+/** Coerce a loosely-typed blob into valid LabelPrefs (with defaults). */
+export function parseLabelPrefs(v: unknown): LabelPrefs {
+  const d = DEFAULT_LABEL_PREFS;
+  if (typeof v !== 'object' || v === null) return d;
+  const o = v as Record<string, unknown>;
+  const num = (x: unknown, def: number, min: number, max: number) => {
+    const n = Number(x);
+    return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : def;
+  };
+  const bool = (x: unknown, def: boolean) => (typeof x === 'boolean' ? x : def);
+  return {
+    widthMm: num(o.widthMm, d.widthMm, 20, 120),
+    heightMm: num(o.heightMm, d.heightMm, 15, 120),
+    qrEnabled: bool(o.qrEnabled, d.qrEnabled),
+    qrPosition: o.qrPosition === 'right' ? 'right' : 'left',
+    qrSizeMm: num(o.qrSizeMm, d.qrSizeMm, 8, 120),
+    showCode: bool(o.showCode, d.showCode),
+    showName: bool(o.showName, d.showName),
+    logoInQr: bool(o.logoInQr, d.logoInQr),
+  };
+}
 
 /** Coerce the loosely-typed uiState blob into a valid AppPrefs (with defaults). */
 export function parsePrefs(ui: Record<string, unknown> | undefined): AppPrefs {
@@ -52,6 +78,7 @@ export function parsePrefs(ui: Record<string, unknown> | undefined): AppPrefs {
     defaultComponentTab: tab,
     componentColumns: cols.length ? cols : DEFAULT_PREFS.componentColumns,
     pageSize: Number.isFinite(ps) && ps > 0 ? Math.min(Math.floor(ps), 200) : DEFAULT_PREFS.pageSize,
+    label: parseLabelPrefs(u.label),
   };
 }
 

@@ -32,7 +32,7 @@ export function LabelButton({ internalCode, name }: { internalCode: string; name
         <QrIcon />
       </button>
       {open && (
-        <LabelPreviewModal spec={{ code: internalCode, name, qr: true, showCode: false }} onClose={() => setOpen(false)} />
+        <LabelPreviewModal spec={{ code: internalCode, name, qr: true }} onClose={() => setOpen(false)} />
       )}
     </>
   );

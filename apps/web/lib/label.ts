@@ -3,11 +3,42 @@ import QRCode from 'qrcode';
 export type LabelSpec = {
   code: string;
   name?: string;
+  /** Structural: a QR-type label (component, slot) vs a text-only label (root
+   *  location). The QR itself can still be turned off globally via LabelPrefs. */
   qr?: boolean;
-  /** Show the human-readable code text next to the QR (default true). The QR
-   *  always encodes `code`; set false to print only the name (e.g. components). */
-  showCode?: boolean;
 };
+
+/** User-configurable print-label styling (persisted in preferences). */
+export interface LabelPrefs {
+  /** Label size in millimetres. */
+  widthMm: number;
+  heightMm: number;
+  /** Include the QR on QR-type labels. */
+  qrEnabled: boolean;
+  /** Side the QR sits on. */
+  qrPosition: 'left' | 'right';
+  /** QR square size in millimetres. */
+  qrSizeMm: number;
+  /** Print the human-readable code text. */
+  showCode: boolean;
+  /** Print the name text. */
+  showName: boolean;
+  /** Composite the app logo in the QR centre. */
+  logoInQr: boolean;
+}
+
+export const DEFAULT_LABEL_PREFS: LabelPrefs = {
+  widthMm: 50,
+  heightMm: 30,
+  qrEnabled: true,
+  qrPosition: 'left',
+  qrSizeMm: 26,
+  showCode: true,
+  showName: true,
+  logoInQr: true,
+};
+
+const clampNum = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -33,16 +64,16 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 }
 
 /**
- * Render a QR for `text` with the app logo composited in the centre. Uses the
- * highest error-correction level (H, ~30%) and keeps the logo small (~26%) so
- * the code stays reliably scannable. Falls back to a plain QR if the logo or
- * canvas isn't available.
+ * Render a QR for `text` with (optionally) the app logo composited in the centre.
+ * Uses the highest error-correction level (H, ~30%) and keeps the logo small
+ * (~26%) so the code stays reliably scannable. Falls back to a plain QR if the
+ * logo or canvas isn't available.
  */
-async function qrDataUrlWithLogo(text: string, size: number): Promise<string> {
+async function qrDataUrlWithLogo(text: string, size: number, withLogo: boolean): Promise<string> {
   const canvas = document.createElement('canvas');
   await QRCode.toCanvas(canvas, text, { margin: 1, width: size, errorCorrectionLevel: 'H' });
   const ctx = canvas.getContext('2d');
-  if (!ctx) return canvas.toDataURL('image/png');
+  if (!ctx || !withLogo) return canvas.toDataURL('image/png');
   try {
     const logo = await loadImage('/logo.png');
     const lw = canvas.width * 0.26;
@@ -63,46 +94,24 @@ async function qrDataUrlWithLogo(text: string, size: number): Promise<string> {
 }
 
 /**
- * Pick a font size (mm) so a name-only label fills the ~17.5×25 mm text column
- * without clipping: bounded both by the longest word (must fit one line) and by
- * the total length (must fit the area). Generalises to every category — long
- * names like "Guaine termorestringenti" simply shrink to fit.
+ * Pick a font size (mm) so a name-only label fills the given text column without
+ * clipping: bounded both by the longest word (must fit one line) and by the
+ * total length (must fit the area). Generalises to any label/column size.
  */
-function fitNameFontMm(name: string): number {
-  const W = 17.5, H = 25; // usable text column (mm), next to the 26mm QR
+function fitNameFontMm(name: string, colW: number, colH: number): number {
   const charW = 0.55, lineH = 1.25; // approx Inter metrics relative to font size
   const len = Math.max(name.length, 1);
   const longest = name.split(/\s+/).reduce((m, w) => Math.max(m, w.length), 1);
-  const byWord = W / (charW * longest); // longest word fits on a line
-  const byArea = Math.sqrt((W * H * 0.82) / (charW * lineH * len)); // total text fits the area
-  return Math.max(1.8, Math.min(3.4, byWord, byArea));
+  const byWord = colW / (charW * longest); // longest word fits on a line
+  const byArea = Math.sqrt((colW * colH * 0.82) / (charW * lineH * len)); // total text fits the area
+  return Math.max(1.6, Math.min(4, byWord, byArea));
 }
 
-/**
- * Builds the full HTML document for a 50×30 mm thermal label. With `qr` (default)
- * it's the horizontal layout — a 26 mm QR (encoding `code`) on the left, `code` +
- * `name` on the right. With `qr: false` it's a text-only label: a large centred
- * `code` (+ optional `name`), used for root locations (e.g. "A-01").
- *
- * The exact same document is used both for the on-screen preview (rendered in an
- * iframe and scaled up) and for printing, so what the user sees is what prints.
- */
-export async function buildLabelHtml({ code, name = '', qr = true, showCode = true }: LabelSpec): Promise<string> {
-  // Higher resolution than the print size so the QR stays crisp at 203 dpi.
-  const dataUrl = qr ? await qrDataUrlWithLogo(code, 360) : '';
-
-  const body = qr
-    ? `<div class="label">
-         <img class="qr" src="${dataUrl}" />
-         <div class="info">${showCode ? `<div class="code mono">${escapeHtml(code)}</div>` : ''}${name ? `<div class="name sans${showCode ? '' : ' only'}"${!showCode ? ` style="font-size:${fitNameFontMm(name)}mm"` : ''}>${escapeHtml(name)}</div>` : ''}</div>
-       </div>`
-    : `<div class="label center">
-         <div class="bigcode mono">${escapeHtml(code)}</div>${name ? `<div class="name sans">${escapeHtml(name)}</div>` : ''}
-       </div>`;
-
-  return `<!doctype html><html><head><title>${escapeHtml(code)}</title>
+/** The shared HTML document shell (page size + font/layout CSS). */
+function labelDoc(widthMm: number, heightMm: number, title: string, body: string): string {
+  return `<!doctype html><html><head><title>${escapeHtml(title)}</title>
     <style>
-      @page { size: 50mm 30mm; margin: 0; }
+      @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
       * { box-sizing: border-box; }
       html, body { margin: 0;
         /* Crisp, high-contrast glyphs for both the screen preview and the printer. */
@@ -111,11 +120,10 @@ export async function buildLabelHtml({ code, name = '', qr = true, showCode = tr
       .mono { font-family: "JetBrains Mono", "Roboto Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, Menlo, Consolas, monospace;
         font-feature-settings: "tnum" 1, "zero" 1; font-variant-ligatures: none; }
       .sans { font-family: "Inter", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif; }
-      /* 2mm safe padding inside the 50x30 label (printers clip the very edge). */
-      .label { width: 50mm; height: 30mm; padding: 2mm; display: flex; align-items: center; gap: 2mm; }
+      .label { display: flex; align-items: center; }
       .label.center { flex-direction: column; justify-content: center; text-align: center; gap: 1mm; }
-      .qr { width: 26mm; height: 26mm; flex: 0 0 26mm; image-rendering: pixelated; }
-      .info { flex: 1; min-width: 0; overflow: hidden; }
+      .qr { image-rendering: pixelated; }
+      .info { min-width: 0; overflow: hidden; }
       .code { font-weight: 700; font-size: 3.6mm; line-height: 1.05; letter-spacing: 0.01em; overflow-wrap: anywhere; }
       .bigcode { font-weight: 800; font-size: 10mm; line-height: 0.95; letter-spacing: 0.02em; }
       .name { font-weight: 500; font-size: 2.5mm; line-height: 1.2; margin-top: 1.2mm; color: #111;
@@ -125,6 +133,49 @@ export async function buildLabelHtml({ code, name = '', qr = true, showCode = tr
          size is set inline (auto-fit) and it may use more lines. */
       .name.only { font-weight: 600; line-height: 1.2; margin-top: 0; -webkit-line-clamp: 8; }
     </style></head><body>${body}</body></html>`;
+}
+
+/**
+ * Builds the full HTML document for a thermal label, honouring the user's
+ * LabelPrefs (size, QR on/off + side + size, which texts to print, logo). The
+ * exact same document drives the on-screen preview and the print, so what the
+ * user sees is what prints.
+ */
+export async function buildLabelHtml(spec: LabelSpec, prefs: LabelPrefs = DEFAULT_LABEL_PREFS): Promise<string> {
+  const W = clampNum(prefs.widthMm, 20, 120);
+  const H = clampNum(prefs.heightMm, 15, 120);
+  const pad = 2, gap = 2;
+  const useQr = spec.qr !== false && prefs.qrEnabled;
+  const showCode = prefs.showCode;
+  const showName = prefs.showName && !!spec.name;
+
+  if (useQr) {
+    const qrMm = clampNum(prefs.qrSizeMm, 8, Math.min(H - pad * 2, W - pad * 2 - 8));
+    const colW = Math.max(W - pad * 2 - qrMm - gap, 6);
+    const colH = H - pad * 2;
+    // Higher resolution than the print size so the QR stays crisp at 203 dpi.
+    const dataUrl = await qrDataUrlWithLogo(spec.code, 360, prefs.logoInQr);
+    const nameOnly = !showCode;
+    const nameFont = nameOnly && showName ? fitNameFontMm(spec.name ?? '', colW, colH) : null;
+    const info = `<div class="info" style="flex:1;width:${colW}mm">${
+      showCode ? `<div class="code mono">${escapeHtml(spec.code)}</div>` : ''
+    }${
+      showName
+        ? `<div class="name sans${nameOnly ? ' only' : ''}"${nameFont ? ` style="font-size:${nameFont}mm"` : ''}>${escapeHtml(spec.name ?? '')}</div>`
+        : ''
+    }</div>`;
+    const qrImg = `<img class="qr" style="width:${qrMm}mm;height:${qrMm}mm;flex:0 0 ${qrMm}mm" src="${dataUrl}" />`;
+    const body = `<div class="label" style="width:${W}mm;height:${H}mm;padding:${pad}mm;gap:${gap}mm${
+      prefs.qrPosition === 'right' ? ';flex-direction:row-reverse' : ''
+    }">${qrImg}${info}</div>`;
+    return labelDoc(W, H, spec.code, body);
+  }
+
+  // Text-only label (e.g. root locations): big centred code (+ optional name).
+  const body = `<div class="label center" style="width:${W}mm;height:${H}mm;padding:${pad}mm">${
+    showCode ? `<div class="bigcode mono">${escapeHtml(spec.code)}</div>` : ''
+  }${showName ? `<div class="name sans">${escapeHtml(spec.name ?? '')}</div>` : ''}</div>`;
+  return labelDoc(W, H, spec.code, body);
 }
 
 /**
@@ -168,7 +219,6 @@ function browserPrintHtml(html: string): void {
 }
 
 /** Builds and immediately prints a label (no preview). */
-export async function printLabel(spec: LabelSpec): Promise<void> {
-  printLabelHtml(await buildLabelHtml(spec));
+export async function printLabel(spec: LabelSpec, prefs?: LabelPrefs): Promise<void> {
+  printLabelHtml(await buildLabelHtml(spec, prefs));
 }
-

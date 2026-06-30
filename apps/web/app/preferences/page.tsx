@@ -2,6 +2,7 @@
 
 import { useTheme } from '@/components/theme';
 import type { ThemePref } from '@/lib/api';
+import { buildLabelHtml, type LabelPrefs } from '@/lib/label';
 import {
   COMPONENT_COLUMNS,
   COMPONENT_TABS,
@@ -121,10 +122,141 @@ export default function PreferencesPage() {
         </div>
       </section>
 
+      <LabelPrefsSection />
+
       {update.isError && <p className="text-sm text-red-500">Salvataggio non riuscito. Riprova.</p>}
       <p className="text-xs text-muted-foreground">
         Le preferenze sono salvate sul tuo profilo e si applicano automaticamente.
       </p>
     </div>
+  );
+}
+
+const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
+  { label: '50 × 30 mm', w: 50, h: 30 },
+  { label: '40 × 30 mm', w: 40, h: 30 },
+  { label: '60 × 40 mm', w: 60, h: 40 },
+  { label: '100 × 50 mm', w: 100, h: 50 },
+];
+
+/** Print-label customisation: size, QR position/size, which values to print. */
+function LabelPrefsSection() {
+  const prefs = usePrefs();
+  const update = useUpdatePrefs();
+
+  // Working copy, (re)seeded from saved prefs until the user starts editing.
+  const [lab, setLab] = useState<LabelPrefs>(prefs.label);
+  const [dirty, setDirty] = useState(false);
+  const savedKey = JSON.stringify(prefs.label);
+  useEffect(() => {
+    if (!dirty) setLab(prefs.label);
+  }, [savedKey, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function set(patch: Partial<LabelPrefs>) {
+    const next = { ...lab, ...patch };
+    setDirty(true);
+    setLab(next);
+    update.mutate({ label: next });
+  }
+
+  // Live preview of a representative QR label.
+  const [html, setHtml] = useState<string | null>(null);
+  const labKey = JSON.stringify(lab);
+  useEffect(() => {
+    let alive = true;
+    buildLabelHtml({ code: 'R-0001', name: 'Resistenza 10kΩ 0603', qr: true }, lab).then((h) => { if (alive) setHtml(h); });
+    return () => { alive = false; };
+  }, [labKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const presetValue = SIZE_PRESETS.find((p) => p.w === lab.widthMm && p.h === lab.heightMm)?.label ?? 'custom';
+  const scale = Math.min(3, 150 / lab.widthMm);
+
+  return (
+    <section className={card}>
+      <h2 className="font-semibold">Etichette di stampa</h2>
+
+      {/* Dimensione */}
+      <div className="space-y-2">
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">Dimensione</span>
+          <select
+            className={inp}
+            value={presetValue}
+            onChange={(e) => {
+              const p = SIZE_PRESETS.find((x) => x.label === e.target.value);
+              if (p) set({ widthMm: p.w, heightMm: p.h });
+            }}
+          >
+            {SIZE_PRESETS.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
+            <option value="custom">Personalizzata…</option>
+          </select>
+        </label>
+        <div className="flex items-center justify-end gap-2 text-sm">
+          <span className="text-xs text-muted-foreground">Larghezza</span>
+          <input type="number" min={20} max={120} className={`${inp} w-20`} value={lab.widthMm}
+            onChange={(e) => set({ widthMm: Number(e.target.value) || lab.widthMm })} />
+          <span className="text-xs text-muted-foreground">× Altezza</span>
+          <input type="number" min={15} max={120} className={`${inp} w-20`} value={lab.heightMm}
+            onChange={(e) => set({ heightMm: Number(e.target.value) || lab.heightMm })} />
+          <span className="text-xs text-muted-foreground">mm</span>
+        </div>
+      </div>
+
+      {/* QR */}
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Mostra QR</span>
+        <input type="checkbox" checked={lab.qrEnabled} onChange={(e) => set({ qrEnabled: e.target.checked })} className="h-4 w-4" />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className={lab.qrEnabled ? 'text-muted-foreground' : 'text-muted-foreground/40'}>Posizione QR</span>
+        <select className={inp} value={lab.qrPosition} disabled={!lab.qrEnabled}
+          onChange={(e) => set({ qrPosition: e.target.value as 'left' | 'right' })}>
+          <option value="left">Sinistra</option>
+          <option value="right">Destra</option>
+        </select>
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className={lab.qrEnabled ? 'text-muted-foreground' : 'text-muted-foreground/40'}>Dimensione QR (mm)</span>
+        <input type="number" min={8} max={lab.heightMm} className={`${inp} w-24`} value={lab.qrSizeMm} disabled={!lab.qrEnabled}
+          onChange={(e) => set({ qrSizeMm: Number(e.target.value) || lab.qrSizeMm })} />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className={lab.qrEnabled ? 'text-muted-foreground' : 'text-muted-foreground/40'}>Logo nel QR</span>
+        <input type="checkbox" checked={lab.logoInQr} disabled={!lab.qrEnabled} onChange={(e) => set({ logoInQr: e.target.checked })} className="h-4 w-4" />
+      </label>
+
+      {/* Valori stampati */}
+      <div>
+        <p className="mb-2 text-sm text-muted-foreground">Valori stampati</p>
+        <div className="space-y-2 rounded border border-border p-3">
+          <label className="flex items-center gap-3 text-sm">
+            <input type="checkbox" checked={lab.showCode} onChange={(e) => set({ showCode: e.target.checked })} className="h-4 w-4" />
+            <span>Codice</span>
+          </label>
+          <label className="flex items-center gap-3 text-sm">
+            <input type="checkbox" checked={lab.showName} onChange={(e) => set({ showName: e.target.checked })} className="h-4 w-4" />
+            <span>Nome</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div>
+        <p className="mb-2 text-sm text-muted-foreground">Anteprima</p>
+        <div className="flex justify-center rounded border border-border bg-white p-4">
+          <div style={{ width: `calc(${lab.widthMm}mm * ${scale})`, height: `calc(${lab.heightMm}mm * ${scale})` }}>
+            {html && (
+              <iframe
+                title="Anteprima etichetta"
+                srcDoc={html}
+                scrolling="no"
+                className="border border-border bg-white"
+                style={{ width: `${lab.widthMm}mm`, height: `${lab.heightMm}mm`, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
