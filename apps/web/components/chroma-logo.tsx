@@ -44,6 +44,12 @@ export function ChromaLogo({
     let raf = 0;
     let sized = false;
     let done = false; // freeze after the clip ends
+    let lastT = 0; // last processed timestamp (for throttling)
+    const MIN_DELTA = 1000 / 30; // cap the chroma loop at ~30fps
+    // Cap the processing resolution: the output is only ~120px tall, so scanning
+    // the video's full native resolution every frame just starves the main
+    // thread (and made fast typing in the setup form drop/scramble keystrokes).
+    const MAX_W = 192;
     const [kr, kg, kb] = keyColor;
     const tFull = threshold * 255;
     const tEdge = tFull * 1.35;
@@ -51,12 +57,16 @@ export function ChromaLogo({
     // crop is stable and never clips an intro frame).
     let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
 
-    const draw = () => {
+    const draw = (t = 0) => {
       if (!done) raf = requestAnimationFrame(draw);
       if (video.readyState < 2 || !video.videoWidth) return;
+      // Throttle: yield the main thread to input/layout between frames.
+      if (t && t - lastT < MIN_DELTA) return;
+      lastT = t;
       if (!sized) {
-        buf.width = video.videoWidth;
-        buf.height = video.videoHeight;
+        const scale = Math.min(1, MAX_W / video.videoWidth);
+        buf.width = Math.max(1, Math.round(video.videoWidth * scale));
+        buf.height = Math.max(1, Math.round(video.videoHeight * scale));
         sized = true;
       }
       const w = buf.width, h = buf.height;
