@@ -59,9 +59,13 @@ export function parseLabelPrefs(v: unknown): LabelPrefs {
     qrEnabled: bool(o.qrEnabled, d.qrEnabled),
     qrPosition: o.qrPosition === 'right' ? 'right' : 'left',
     qrSizeMm: num(o.qrSizeMm, d.qrSizeMm, 8, 120),
+    qrEcLevel: o.qrEcLevel === 'L' || o.qrEcLevel === 'M' || o.qrEcLevel === 'Q' || o.qrEcLevel === 'H' ? o.qrEcLevel : d.qrEcLevel,
+    qrMarginModules: Math.round(num(o.qrMarginModules, d.qrMarginModules, 0, 8)),
+    qrColor: typeof o.qrColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.qrColor) ? o.qrColor : d.qrColor,
     showCode: bool(o.showCode, d.showCode),
     showName: bool(o.showName, d.showName),
     logoInQr: bool(o.logoInQr, d.logoInQr),
+    qrLogoScale: num(o.qrLogoScale, d.qrLogoScale, 10, 40),
   };
 }
 

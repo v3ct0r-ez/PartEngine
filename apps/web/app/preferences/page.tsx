@@ -234,9 +234,41 @@ function LabelPrefsSection() {
               onChange={(e) => set({ qrSizeMm: Number(e.target.value) || lab.qrSizeMm })} />
           </label>
           <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Correzione errori</span>
+            <select className={inp} value={lab.qrEcLevel}
+              onChange={(e) => set({ qrEcLevel: e.target.value as 'L' | 'M' | 'Q' | 'H' })}>
+              <option value="L">Bassa (L · 7%)</option>
+              <option value="M">Media (M · 15%)</option>
+              <option value="Q">Alta (Q · 25%)</option>
+              <option value="H">Massima (H · 30%)</option>
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Zona di rispetto (moduli)</span>
+            <input type="number" min={0} max={8} step={1} className={`${inp} w-24`} value={lab.qrMarginModules}
+              onChange={(e) => set({ qrMarginModules: Math.round(Number(e.target.value)) })} />
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Colore moduli</span>
+            <input type="color" className="h-8 w-12 cursor-pointer rounded border border-border bg-background" value={lab.qrColor}
+              onChange={(e) => set({ qrColor: e.target.value })} />
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">Logo nel QR</span>
             <input type="checkbox" checked={lab.logoInQr} onChange={(e) => set({ logoInQr: e.target.checked })} className="h-4 w-4" />
           </label>
+          {lab.logoInQr && (
+            <label className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-muted-foreground">Dimensione logo (%)</span>
+              <input type="number" min={10} max={40} step={1} className={`${inp} w-24`} value={lab.qrLogoScale}
+                onChange={(e) => set({ qrLogoScale: Number(e.target.value) || lab.qrLogoScale })} />
+            </label>
+          )}
+          {lab.logoInQr && lab.qrEcLevel !== 'H' && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Con il logo al centro è consigliata la correzione errori Massima (H) per restare leggibile.
+            </p>
+          )}
         </>
       )}
 

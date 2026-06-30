@@ -21,12 +21,20 @@ export interface LabelPrefs {
   qrPosition: 'left' | 'right';
   /** QR square size in millimetres. */
   qrSizeMm: number;
+  /** Error-correction level: L 7% · M 15% · Q 25% · H 30% (H needed for a logo). */
+  qrEcLevel: 'L' | 'M' | 'Q' | 'H';
+  /** Quiet-zone width around the QR, in modules. */
+  qrMarginModules: number;
+  /** Module (foreground) colour as #rrggbb. */
+  qrColor: string;
   /** Print the human-readable code text. */
   showCode: boolean;
   /** Print the name text. */
   showName: boolean;
   /** Composite the app logo in the QR centre. */
   logoInQr: boolean;
+  /** Logo size as a percentage of the QR width (when logoInQr). */
+  qrLogoScale: number;
 }
 
 export const DEFAULT_LABEL_PREFS: LabelPrefs = {
@@ -36,9 +44,13 @@ export const DEFAULT_LABEL_PREFS: LabelPrefs = {
   qrEnabled: true,
   qrPosition: 'left',
   qrSizeMm: 26,
+  qrEcLevel: 'H',
+  qrMarginModules: 1,
+  qrColor: '#000000',
   showCode: true,
   showName: true,
   logoInQr: true,
+  qrLogoScale: 26,
 };
 
 const clampNum = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
@@ -72,14 +84,23 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
  * (~26%) so the code stays reliably scannable. Falls back to a plain QR if the
  * logo or canvas isn't available.
  */
-async function qrDataUrlWithLogo(text: string, size: number, withLogo: boolean): Promise<string> {
+async function qrDataUrlWithLogo(
+  text: string,
+  size: number,
+  opts: { withLogo: boolean; logoScale: number; margin: number; ecLevel: 'L' | 'M' | 'Q' | 'H'; color: string },
+): Promise<string> {
   const canvas = document.createElement('canvas');
-  await QRCode.toCanvas(canvas, text, { margin: 1, width: size, errorCorrectionLevel: 'H' });
+  await QRCode.toCanvas(canvas, text, {
+    margin: opts.margin,
+    width: size,
+    errorCorrectionLevel: opts.ecLevel,
+    color: { dark: opts.color, light: '#ffffff' },
+  });
   const ctx = canvas.getContext('2d');
-  if (!ctx || !withLogo) return canvas.toDataURL('image/png');
+  if (!ctx || !opts.withLogo) return canvas.toDataURL('image/png');
   try {
     const logo = await loadImage('/logo.png');
-    const lw = canvas.width * 0.26;
+    const lw = canvas.width * (opts.logoScale / 100);
     const lh = lw * (logo.naturalHeight / logo.naturalWidth || 1);
     const lx = (canvas.width - lw) / 2;
     const ly = (canvas.height - lh) / 2;
@@ -159,7 +180,13 @@ export async function buildLabelHtml(spec: LabelSpec, prefs: LabelPrefs = DEFAUL
     const colW = Math.max(W - pad * 2 - qrMm - gap, 6);
     const colH = H - pad * 2;
     // Higher resolution than the print size so the QR stays crisp at 203 dpi.
-    const dataUrl = await qrDataUrlWithLogo(spec.code, 360, prefs.logoInQr);
+    const dataUrl = await qrDataUrlWithLogo(spec.code, 360, {
+      withLogo: prefs.logoInQr,
+      logoScale: prefs.qrLogoScale ?? 26,
+      margin: prefs.qrMarginModules ?? 1,
+      ecLevel: prefs.qrEcLevel ?? 'H',
+      color: prefs.qrColor ?? '#000000',
+    });
     const nameOnly = !showCode;
     const nameFont = nameOnly && showName ? fitNameFontMm(spec.name ?? '', colW, colH) : null;
     const info = `<div class="info" style="flex:1;width:${colW}mm">${
