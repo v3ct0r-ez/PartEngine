@@ -11,6 +11,7 @@ import { SavedViews } from '@/components/saved-views';
 import { WarehouseOperations } from '@/components/warehouse-operations';
 import { getComponent, listCategories, listRecent, recordRecent, searchComponents, type Category, type ComponentRow } from '@/lib/api';
 import { usePrefs } from '@/lib/preferences';
+import { playSound } from '@/lib/sound';
 import { useUiStore } from '@/lib/store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -32,6 +33,7 @@ export default function ComponentsPage() {
   // Track a component as "recent" whenever its card is opened, and start on the
   // user's preferred detail tab.
   function openComponent(c: ComponentRow) {
+    playSound('open');
     setSelected(c);
     setTab(prefs.defaultComponentTab);
     recordRecent({ kind: 'component', refId: c.id, label: `${c.internalCode} · ${c.name}` }).catch(() => {});

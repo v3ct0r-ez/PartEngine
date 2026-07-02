@@ -9,6 +9,7 @@ import { DialogHost } from '@/components/ui-dialogs';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Logo } from '@/components/logo';
 import { NotificationsBell } from '@/components/notifications-bell';
+import { SoundSync } from '@/components/sound-sync';
 import { ThemeApplier } from '@/components/theme';
 import { UpdateBanner } from '@/components/update-banner';
 import { Providers } from './providers';
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <DesktopTitleBar />
             <div className="min-h-0 flex-1 overflow-hidden">
           <AuthGate>
+          <SoundSync />
           <div className="flex h-full">
             <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-card px-3 py-4 md:flex">
               <Logo size={44} className="mb-6 px-2" />

@@ -12,6 +12,7 @@
  *   if (await confirmDialog('Eliminare?'))   // returns Promise<boolean>
  *   const v = await promptDialog('Nome?')    // returns Promise<string|null>
  */
+import { playSound } from '@/lib/sound';
 import { useState } from 'react';
 import { create } from 'zustand';
 
@@ -40,6 +41,7 @@ const useStore = create<DialogStore>((set) => ({
   dialog: null,
   push: (message, kind) => {
     const id = seq++;
+    playSound(kind === 'error' ? 'error' : 'success');
     set((s) => ({ toasts: [...s.toasts, { id, message, kind }] }));
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 4500);
   },

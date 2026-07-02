@@ -3,6 +3,7 @@
 import { useTheme } from '@/components/theme';
 import type { ThemePref } from '@/lib/api';
 import { buildLabelHtml, DEFAULT_LABEL_PREFS, type LabelPrefs } from '@/lib/label';
+import { configureSound, playSound } from '@/lib/sound';
 import {
   COMPONENT_COLUMNS,
   COMPONENT_TABS,
@@ -73,6 +74,8 @@ export default function PreferencesPage() {
         </label>
       </section>
 
+      <SoundSection />
+
       <section className={card}>
         <h2 className="font-semibold">Scheda componente</h2>
         <label className="flex items-center justify-between gap-3 text-sm">
@@ -129,6 +132,47 @@ export default function PreferencesPage() {
         Le preferenze sono salvate sul tuo profilo e si applicano automaticamente.
       </p>
     </div>
+  );
+}
+
+/** UI sound settings: on/off, volume, and a preview. */
+function SoundSection() {
+  const prefs = usePrefs();
+  const update = useUpdatePrefs();
+  const [vol, setVol] = useState(prefs.soundVolume);
+  useEffect(() => { setVol(prefs.soundVolume); }, [prefs.soundVolume]);
+
+  return (
+    <section className={card}>
+      <h2 className="font-semibold">Suoni</h2>
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">Suoni interfaccia</span>
+        <input type="checkbox" checked={prefs.soundEnabled} className="h-4 w-4"
+          onChange={(e) => {
+            update.mutate({ soundEnabled: e.target.checked });
+            configureSound({ enabled: e.target.checked, volume: prefs.soundVolume });
+            if (e.target.checked) playSound('success');
+          }} />
+      </label>
+      {prefs.soundEnabled && (
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">Volume</span>
+          <input
+            type="range" min={0} max={1} step={0.05} value={vol} className="w-40 cursor-pointer"
+            onChange={(e) => { const v = Number(e.target.value); setVol(v); configureSound({ enabled: true, volume: v }); }}
+            onPointerUp={() => { update.mutate({ soundVolume: vol }); playSound('open'); }}
+            onKeyUp={() => { update.mutate({ soundVolume: vol }); }}
+          />
+        </label>
+      )}
+      {prefs.soundEnabled && (
+        <button type="button"
+          onClick={() => { configureSound({ enabled: true, volume: vol }); playSound('notify'); }}
+          className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          Prova suono
+        </button>
+      )}
+    </section>
   );
 }
 

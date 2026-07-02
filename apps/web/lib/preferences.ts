@@ -33,6 +33,10 @@ export interface AppPrefs {
   pageSize: number;
   /** Print-label styling (size, QR, printed values). */
   label: LabelPrefs;
+  /** Play short UI sounds on key actions (save, error, open). */
+  soundEnabled: boolean;
+  /** UI sound volume, 0..1. */
+  soundVolume: number;
 }
 
 export const DEFAULT_PREFS: AppPrefs = {
@@ -40,6 +44,8 @@ export const DEFAULT_PREFS: AppPrefs = {
   componentColumns: ['internalCode', 'name', 'category', 'mpn', 'value', 'footprint'],
   pageSize: 50,
   label: DEFAULT_LABEL_PREFS,
+  soundEnabled: true,
+  soundVolume: 0.5,
 };
 
 /** Coerce a loosely-typed blob into valid LabelPrefs (with defaults). */
@@ -86,11 +92,14 @@ export function parsePrefs(ui: Record<string, unknown> | undefined): AppPrefs {
     ? (u.componentColumns as unknown[]).filter((k): k is string => typeof k === 'string' && COLUMN_KEYS.includes(k))
     : [];
   const ps = Number(u.pageSize);
+  const vol = Number(u.soundVolume);
   return {
     defaultComponentTab: tab,
     componentColumns: cols.length ? cols : DEFAULT_PREFS.componentColumns,
     pageSize: Number.isFinite(ps) && ps > 0 ? Math.min(Math.floor(ps), 200) : DEFAULT_PREFS.pageSize,
     label: parseLabelPrefs(u.label),
+    soundEnabled: typeof u.soundEnabled === 'boolean' ? u.soundEnabled : DEFAULT_PREFS.soundEnabled,
+    soundVolume: Number.isFinite(vol) ? Math.min(Math.max(vol, 0), 1) : DEFAULT_PREFS.soundVolume,
   };
 }
 
