@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icons';
+import { playSound } from '@/lib/sound';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -43,6 +44,7 @@ export function SideNav() {
               <Link
                 key={href}
                 href={href}
+                onClick={() => { if (!active) playSound('click'); }}
                 aria-current={active ? 'page' : undefined}
                 className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                   active
