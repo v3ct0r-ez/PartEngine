@@ -9,6 +9,7 @@ import {
   reserveStock,
   type MovementType,
 } from '@/lib/api';
+import { playSound } from '@/lib/sound';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -85,7 +86,8 @@ export function WarehouseOperations({ componentId }: { componentId: string }) {
         reason: reason || undefined,
         reference: reference || undefined,
       }),
-    onSuccess: () => { setQty(''); setReason(''); setReference(''); refresh(); },
+    onSuccess: () => { playSound('success'); setQty(''); setReason(''); setReference(''); refresh(); },
+    onError: () => playSound('error'),
   });
 
   const [allocLoc, setAllocLoc] = useState('');

@@ -48,14 +48,17 @@ export default function ComponentsPage() {
   const [tab, setTab] = useState<'warehouse' | 'params' | 'eco'>('warehouse');
 
   function openNew() {
+    playSound('click');
     setEditing(null);
     setEditorOpen(true);
   }
   function openEdit(c: ComponentRow) {
+    playSound('click');
     setEditing(c);
     setEditorOpen(true);
   }
   function onSaved() {
+    playSound('success');
     setEditorOpen(false);
     qc.invalidateQueries({ queryKey: ['components'] });
     qc.invalidateQueries({ queryKey: ['stock'] });
@@ -140,7 +143,7 @@ export default function ComponentsPage() {
           ] as const).map(([k, label]) => (
             <button
               key={k}
-              onClick={() => setTab(k)}
+              onClick={() => { if (tab !== k) playSound('click'); setTab(k); }}
               className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${
                 tab === k
                   ? 'border-primary text-primary'

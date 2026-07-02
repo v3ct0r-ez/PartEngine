@@ -1,8 +1,9 @@
 'use client';
 
 import { listNotifications, markAllNotificationsRead, markNotificationRead } from '@/lib/api';
+import { playSound } from '@/lib/sound';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const KIND_STYLES: Record<string, string> = {
   OUT_OF_STOCK: 'text-red-600',
@@ -40,6 +41,14 @@ export function NotificationsBell() {
   });
 
   const unread = data?.filter((n) => !n.isRead).length ?? 0;
+
+  // Chime when a new unread notification arrives (not on the first load).
+  const prevUnread = useRef<number | null>(null);
+  useEffect(() => {
+    if (data === undefined) return;
+    if (prevUnread.current !== null && unread > prevUnread.current) playSound('notify');
+    prevUnread.current = unread;
+  }, [data, unread]);
 
   return (
     <div className="relative">
