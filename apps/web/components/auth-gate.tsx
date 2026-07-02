@@ -76,18 +76,14 @@ function AnimatedLogo() {
   const [failed, setFailed] = useState(false);
   if (failed) return <LogoMark size={120} />;
   return (
-    // The logo artwork has a dark "grunge"/spark border designed for a dark
-    // backdrop; on a light card it reads as dirt. Seat it on a dark rounded
-    // plaque so it looks intentional and clean in both themes.
-    <div className="mx-auto w-fit rounded-2xl bg-slate-950 px-6 py-4 shadow-lg ring-1 ring-white/10">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/logo.webp"
-        alt="PartEngine"
-        onError={() => setFailed(true)}
-        style={{ height: 108, width: 'auto' }}
-      />
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo.webp"
+      alt="PartEngine"
+      onError={() => setFailed(true)}
+      className="mx-auto drop-shadow"
+      style={{ height: 120, width: 'auto' }}
+    />
   );
 }
 
