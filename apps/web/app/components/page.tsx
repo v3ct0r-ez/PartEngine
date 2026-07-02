@@ -73,6 +73,19 @@ export default function ComponentsPage() {
     if (hit) openComponent(hit);
   }
 
+  // Enter in the search box: open the component when the query is an exact
+  // internal-code match (or the only result); otherwise keep the filtered list
+  // so text searches don't jump to an arbitrary component.
+  async function onSearchEnter(q: string) {
+    const c = q.trim();
+    if (!c) return;
+    const res = await searchComponents({ q: c, limit: 5 });
+    const hit =
+      res.items.find((x) => x.internalCode.toLowerCase() === c.toLowerCase()) ??
+      (res.items.length === 1 ? res.items[0] : null);
+    if (hit) openComponent(hit);
+  }
+
   const toEditing = (c: ComponentRow | null) =>
     c
       ? {
@@ -166,6 +179,7 @@ export default function ComponentsPage() {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void onSearchEnter(text); }}
             placeholder='Ricerca — es. "resistenza 10k 1% 0603"'
             className="w-80 rounded-md border border-border bg-background px-3 py-2 text-sm"
           />
