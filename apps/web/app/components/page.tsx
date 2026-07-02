@@ -73,6 +73,7 @@ export default function ComponentsPage() {
     const res = await searchComponents({ q: c, limit: 5 });
     const hit = res.items.find((x) => x.internalCode.toLowerCase() === c.toLowerCase()) ?? res.items[0];
     if (hit) openComponent(hit);
+    else playSound('error'); // nothing matched the scanned code
   }
 
   // Enter in the search box: open the component when the query is an exact
@@ -86,6 +87,7 @@ export default function ComponentsPage() {
       res.items.find((x) => x.internalCode.toLowerCase() === c.toLowerCase()) ??
       (res.items.length === 1 ? res.items[0] : null);
     if (hit) openComponent(hit);
+    else if (res.items.length === 0) playSound('error'); // no component found
   }
 
   const toEditing = (c: ComponentRow | null) =>
