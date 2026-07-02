@@ -64,7 +64,7 @@ export function NotificationsBell() {
         )}
       </button>
       {open && (
-        <div className="absolute z-10 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border border-border bg-background shadow-lg">
+        <div className="absolute right-0 z-10 mt-1 max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-border bg-background shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-sm font-medium">Notifiche</span>
             <button onClick={() => readAll.mutate()} className="text-xs text-primary hover:underline">
