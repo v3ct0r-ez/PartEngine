@@ -31,12 +31,37 @@ function audioCtx(): AudioContext | null {
   }
 }
 
+let unlocked = false;
+/**
+ * Resume + warm up the audio graph on the first user gesture. A freshly created
+ * AudioContext starts suspended and takes a moment to spin up, so the very first
+ * tone would otherwise come out quieter than the rest. Playing a silent blip
+ * here gets the context fully running before any real sound.
+ */
+export function unlockAudio() {
+  if (unlocked) return;
+  const context = audioCtx();
+  if (!context) return;
+  unlocked = true;
+  try {
+    const osc = context.createOscillator();
+    const g = context.createGain();
+    g.gain.value = 0.00005; // effectively silent
+    osc.connect(g).connect(context.destination);
+    osc.start();
+    osc.stop(context.currentTime + 0.03);
+  } catch {
+    /* best-effort warm-up */
+  }
+}
+
 type Tone = { f: number; at: number; dur: number; type?: OscillatorType; gain?: number };
 
 function playTones(seq: Tone[]) {
   const context = audioCtx();
   if (!context) return;
-  const now = context.currentTime;
+  // Small lead so the envelope's attack isn't clipped right at context start.
+  const now = context.currentTime + 0.02;
   for (const s of seq) {
     const osc = context.createOscillator();
     const g = context.createGain();
