@@ -18,11 +18,18 @@ describe('stockAlertKind', () => {
 describe('evaluateComponentAlerts', () => {
   it('combines stock + datasheet alerts', () => {
     expect(
-      evaluateComponentAlerts({ available: 4, minQty: 10, hasDatasheet: false }),
+      evaluateComponentAlerts({ available: 4, minQty: 10, hasDatasheet: false, hasLocation: true }),
     ).toEqual(['CRITICAL_STOCK', 'MISSING_DATASHEET']);
   });
-  it('returns nothing when healthy and documented', () => {
-    expect(evaluateComponentAlerts({ available: 50, minQty: 10, hasDatasheet: true })).toEqual([]);
+  it('flags a ghost component with no location', () => {
+    expect(
+      evaluateComponentAlerts({ available: 50, minQty: 10, hasDatasheet: true, hasLocation: false }),
+    ).toEqual(['NO_LOCATION']);
+  });
+  it('returns nothing when healthy, documented and placed', () => {
+    expect(
+      evaluateComponentAlerts({ available: 50, minQty: 10, hasDatasheet: true, hasLocation: true }),
+    ).toEqual([]);
   });
 });
 
@@ -47,6 +54,7 @@ describe('stockAlertMessage', () => {
     expect(stockAlertMessage('LOW_STOCK', 'R10k', 4, 5)).toContain('sotto scorta minima');
     expect(stockAlertMessage('MISSING_DATASHEET', 'R10k', 0, 0)).toContain('datasheet mancante');
     expect(stockAlertMessage('ORDER_LATE', 'PO-1', 0, 0)).toContain('ritardo');
+    expect(stockAlertMessage('NO_LOCATION', 'R10k', 0, 0)).toContain('nessuna ubicazione');
   });
 
   it('embeds the label and quantities', () => {

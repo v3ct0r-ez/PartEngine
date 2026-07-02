@@ -546,6 +546,7 @@ enum NotificationKind {
   OUT_OF_STOCK
   ORDER_LATE
   MISSING_DATASHEET
+  NO_LOCATION
 }
 
 model Notification {

@@ -11,6 +11,7 @@ const KIND_STYLES: Record<string, string> = {
   LOW_STOCK: 'text-amber-600',
   ORDER_LATE: 'text-purple-600',
   MISSING_DATASHEET: 'text-blue-600',
+  NO_LOCATION: 'text-teal-600',
 };
 const KIND_LABEL: Record<string, string> = {
   OUT_OF_STOCK: 'Esaurito',
@@ -18,6 +19,7 @@ const KIND_LABEL: Record<string, string> = {
   LOW_STOCK: 'Scorta bassa',
   ORDER_LATE: 'Ordine in ritardo',
   MISSING_DATASHEET: 'Datasheet mancante',
+  NO_LOCATION: 'Senza ubicazione',
 };
 
 /** Notification bell with unread badge and a dropdown list. Polls the alert engine. */

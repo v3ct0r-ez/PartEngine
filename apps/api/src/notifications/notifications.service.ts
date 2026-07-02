@@ -8,7 +8,15 @@ import {
 } from '@partengine/core';
 import { PrismaService } from '../prisma/prisma.service';
 
-const STOCK_KINDS: NotificationKind[] = ['LOW_STOCK', 'CRITICAL_STOCK', 'OUT_OF_STOCK'];
+// Component-scoped alert kinds (ORDER_LATE is PurchaseOrder-scoped, handled
+// separately). Any of these no longer active for a component is auto-resolved.
+const COMPONENT_KINDS: NotificationKind[] = [
+  'LOW_STOCK',
+  'CRITICAL_STOCK',
+  'OUT_OF_STOCK',
+  'MISSING_DATASHEET',
+  'NO_LOCATION',
+];
 
 /**
  * Alert engine. Evaluation rules live in @partengine/core; this service decides
@@ -59,8 +67,11 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     const { available } = summarizeStock(levels);
     const minQty = Number(component.minQty);
     const hasDatasheet = component.attachments.length > 0 || !!component.datasheetUrl;
+    // A component "has a location" once it's placed in at least one (a StockLevel
+    // row exists) — otherwise it's a ghost part with no physical home.
+    const hasLocation = component.stockLevels.length > 0;
 
-    const active = evaluateComponentAlerts({ available, minQty, hasDatasheet });
+    const active = evaluateComponentAlerts({ available, minQty, hasDatasheet, hasLocation });
 
     // Raise newly-active alerts (deduped against existing unread ones)…
     for (const kind of active) {
@@ -71,11 +82,12 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         stockAlertMessage(kind, component.name, available, minQty),
       );
     }
-    // …and auto-resolve stock alerts that no longer apply.
-    const staleStock = STOCK_KINDS.filter((k) => !active.includes(k));
-    if (staleStock.length) {
+    // …and auto-resolve component alerts that no longer apply (stock recovered,
+    // datasheet added, or the part was finally placed in a location).
+    const stale = COMPONENT_KINDS.filter((k) => !active.includes(k));
+    if (stale.length) {
       await this.prisma.notification.updateMany({
-        where: { entityId: component.id, kind: { in: staleStock }, isRead: false },
+        where: { entityId: component.id, kind: { in: stale }, isRead: false },
         data: { isRead: true },
       });
     }
@@ -103,7 +115,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   /** Bounded periodic sweep. Production: batch via a queue across all components. */
   async evaluateAll(limit = 1000) {
     const candidates = await this.prisma.component.findMany({
-      where: { deletedAt: null, minQty: { gt: 0 } },
+      // Scan components that can carry an alert: a stock threshold to check, or
+      // no location at all (ghost part). Datasheet-only components with minQty 0
+      // and a location are skipped as an optimisation.
+      where: { deletedAt: null, OR: [{ minQty: { gt: 0 } }, { stockLevels: { none: {} } }] },
       select: { id: true },
       take: limit,
     });

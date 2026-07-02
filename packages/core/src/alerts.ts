@@ -10,7 +10,8 @@ export type NotificationKind =
   | 'CRITICAL_STOCK'
   | 'OUT_OF_STOCK'
   | 'ORDER_LATE'
-  | 'MISSING_DATASHEET';
+  | 'MISSING_DATASHEET'
+  | 'NO_LOCATION';
 
 /** Map stock health to the matching stock notification kind (or null if OK). */
 export function stockAlertKind(available: number, minQty: number): NotificationKind | null {
@@ -30,6 +31,8 @@ export interface ComponentAlertInput {
   available: number;
   minQty: number;
   hasDatasheet: boolean;
+  /** Whether the component is assigned to at least one warehouse location. */
+  hasLocation: boolean;
 }
 
 /** All notification kinds that currently apply to a single component. */
@@ -38,6 +41,8 @@ export function evaluateComponentAlerts(input: ComponentAlertInput): Notificatio
   const stock = stockAlertKind(input.available, input.minQty);
   if (stock) kinds.push(stock);
   if (!input.hasDatasheet) kinds.push('MISSING_DATASHEET');
+  // "Ghost" component: exists in the catalog but isn't placed anywhere.
+  if (!input.hasLocation) kinds.push('NO_LOCATION');
   return kinds;
 }
 
@@ -69,5 +74,7 @@ export function stockAlertMessage(
       return `${label}: datasheet mancante.`;
     case 'ORDER_LATE':
       return `${label}: ordine in ritardo.`;
+    case 'NO_LOCATION':
+      return `${label}: nessuna ubicazione assegnata.`;
   }
 }
